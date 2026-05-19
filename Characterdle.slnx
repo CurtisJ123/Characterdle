@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="characterdle.client/characterdle.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="Characterdle.Server/Characterdle.Server.csproj" />
+</Solution>
