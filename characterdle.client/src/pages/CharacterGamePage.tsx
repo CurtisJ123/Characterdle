@@ -12,13 +12,13 @@ export function CharacterGamePage({ onNavigate }: CharacterGamePageProps) {
     <main className="page centered-page">
       <section className="game-hero">
         <p className="eyebrow">Universe: ASOIAF</p>
-        <h1>Daily ASOIAF Characterdle</h1>
-        <p>Guess the mystery character by house, culture, region, allegiance, and first book appearance.</p>
+        <h1>Daily Character Game</h1>
+        <p>Guess the hidden character using the available attribute clues.</p>
       </section>
 
       <label className="search-box">
         <span>Search</span>
-        <input type="text" placeholder="Type a character name, e.g. Arya Stark..." />
+        <input type="text" placeholder="Type a character name..." />
       </label>
 
       <section className="guess-table" aria-label="Character guesses">

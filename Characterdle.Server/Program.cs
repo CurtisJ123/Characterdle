@@ -1,4 +1,7 @@
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
 // Add services to the container.
 
@@ -16,7 +19,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.MapGet("/api/status", () => Results.Ok(new
 {

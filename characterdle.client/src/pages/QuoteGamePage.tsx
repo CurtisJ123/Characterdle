@@ -10,7 +10,7 @@ export function QuoteGamePage({ onNavigate }: QuoteGamePageProps) {
       <section className="game-hero">
         <p className="eyebrow">Universe: ASOIAF</p>
         <h1>Who said it?</h1>
-        <p>Identify the Westerosi legend behind the words.</p>
+        <p>Identify the correct speaker.</p>
       </section>
 
       <section className="quote-card glass-card" aria-label="Quote challenge">
@@ -22,7 +22,7 @@ export function QuoteGamePage({ onNavigate }: QuoteGamePageProps) {
       <section className="quote-form" aria-label="Submit a quote guess">
         <label>
           <span>Character guess</span>
-          <input type="text" defaultValue="Eddard Stark" />
+          <input type="text" defaultValue="Example Guess" />
         </label>
         <p className="error-copy">That is incorrect. Try again.</p>
         <div className="quote-actions">
@@ -41,8 +41,8 @@ export function QuoteGamePage({ onNavigate }: QuoteGamePageProps) {
         <article className="previous-card">
           <span className="miss-icon" aria-hidden="true">x</span>
           <div>
-            <strong>Eddard Stark</strong>
-            <p>House Stark - The North</p>
+            <strong>Example Guess</strong>
+            <p>Previous attempt</p>
           </div>
           <span className="status-badge">Incorrect</span>
         </article>

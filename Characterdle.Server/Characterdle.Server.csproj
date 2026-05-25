@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>2d3b0bdd-cc4b-4590-bd4b-f27d7cc05b5a</UserSecretsId>
     <SpaRoot>..\characterdle.client</SpaRoot>
     <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
     <SpaProxyServerUrl>https://localhost:20724</SpaProxyServerUrl>

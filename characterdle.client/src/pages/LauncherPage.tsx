@@ -1,23 +1,29 @@
 import { asoiafUniverse, leaderboardRows } from '../data/prototypeData';
 import { MiniLeaderboardCard } from '../components/launcher/MiniLeaderboardCard';
 import { PrototypePathCard } from '../components/launcher/PrototypePathCard';
-import { StreakCard } from '../components/launcher/StreakCard';
+import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
 import type { NavigateToPage } from '../types/routes';
+import type { UserProfile } from '../types/user';
 
 interface LauncherPageProps {
+  authError: Error | null;
+  isUserLoading: boolean;
   onNavigate: NavigateToPage;
+  user: UserProfile | null;
 }
 
-export function LauncherPage({ onNavigate }: LauncherPageProps) {
+export function LauncherPage({ authError, isUserLoading, onNavigate, user }: LauncherPageProps) {
   return (
     <main className="page page-launcher">
       <section className="hero-section">
-        <p className="eyebrow">Daily character deduction</p>
+        <p className="eyebrow">
+          {user ? `Welcome, ${user.displayName}` : 'Daily character game'}
+        </p>
         <h1>Choose Your Universe</h1>
         <p>
-          The prototype is focused on A Song of Ice and Fire. Beat the character
-          board to unlock the quote round, then test the final victory screen.
+          The current build is focused on one universe.
+          Complete the character round to unlock the quote round.
         </p>
       </section>
 
@@ -27,7 +33,7 @@ export function LauncherPage({ onNavigate }: LauncherPageProps) {
         </div>
 
         <aside className="dashboard-rail" aria-label="Player snapshot">
-          <StreakCard />
+          <UserProfileCard error={authError} isLoading={isUserLoading} user={user} />
           <MiniLeaderboardCard rows={leaderboardRows} onViewAll={() => onNavigate('leaderboard')} />
           <PrototypePathCard onPlay={() => onNavigate('game')} onTestVictory={() => onNavigate('stats')} />
         </aside>

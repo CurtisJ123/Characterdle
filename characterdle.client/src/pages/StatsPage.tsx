@@ -13,16 +13,16 @@ export function StatsPage({ onNavigate }: StatsPageProps) {
       <section className="victory-header">
         <p className="eyebrow">Daily result</p>
         <h1>Victory</h1>
-        <p>You completed the character board and quote challenge.</p>
+        <p>You completed the current run.</p>
       </section>
 
       <section className="stats-layout">
         <article className="character-reveal glass-card">
           <div className="portrait-card" aria-hidden="true">
-            <span>CL</span>
+            <span>EC</span>
           </div>
-          <span className="pill">Daily Character</span>
-          <h2>Cersei Lannister</h2>
+          <span className="pill">Current Answer</span>
+          <h2>Example Character</h2>
           <p>Universe: ASOIAF</p>
           <button className="primary-button" type="button">Share</button>
         </article>
@@ -40,13 +40,13 @@ export function StatsPage({ onNavigate }: StatsPageProps) {
           <section className="mode-cards">
             <button className="mode-card glass-card" type="button" onClick={() => onNavigate('game')}>
               <span>Play Again</span>
-              <strong>ASOIAF Characterdle</strong>
+              <strong>Character Game</strong>
               <small>Restart the character guessing prototype.</small>
             </button>
             <button className="mode-card glass-card" type="button" onClick={() => onNavigate('launcher')}>
               <span>Back to Launcher</span>
               <strong>Daily Hub</strong>
-              <small>Return to the ASOIAF launcher screen.</small>
+              <small>Return to the main launcher screen.</small>
             </button>
           </section>
         </div>

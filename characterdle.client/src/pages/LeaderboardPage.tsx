@@ -7,11 +7,11 @@ export function LeaderboardPage() {
     <main className="page">
       <section className="leaderboard-hero">
         <article className="champion-card glass-card">
-          <div className="champion-avatar" aria-hidden="true">CC</div>
+          <div className="champion-avatar" aria-hidden="true">P1</div>
           <div>
-            <span className="pill">Current Champion</span>
-            <h1>CrowCaller</h1>
-            <p>Master of the Wall, the North, and awkward succession claims.</p>
+            <span className="pill">Top Player</span>
+            <h1>PlayerOne</h1>
+            <p>Current top score in the sample leaderboard.</p>
             <dl className="champion-stats">
               <div>
                 <dt>Total Wins</dt>
@@ -30,10 +30,10 @@ export function LeaderboardPage() {
         </article>
 
         <aside className="glass-card pulse-card">
-          <h2>Global Pulse</h2>
+          <h2>Overview</h2>
           <MetricRow label="Active Today" value="12,402" />
           <MetricRow label="Characters Solved" value="89.2k" />
-          <MetricRow label="Hardest Region" value="Essos" danger />
+          <MetricRow label="Hardest Category" value="Region" danger />
           <button className="primary-button" type="button">View Your Rank</button>
         </aside>
       </section>
@@ -45,11 +45,11 @@ export function LeaderboardPage() {
           <button type="button">All-Time</button>
         </div>
         <div className="filter-pills">
-          <span>All ASOIAF</span>
-          <span>Stark</span>
-          <span>Targaryen</span>
-          <span>Lannister</span>
-          <span>Night Watch</span>
+          <span>All Players</span>
+          <span>Fastest</span>
+          <span>Most Wins</span>
+          <span>Top Streaks</span>
+          <span>Lowest Average</span>
         </div>
       </section>
 

@@ -4,12 +4,25 @@ import { BrandButton } from './BrandButton';
 
 interface SiteHeaderProps {
   currentPage: Page;
+  isAuthenticated: boolean;
+  isUserLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onNavigate: NavigateToPage;
+  onSignOut: () => Promise<void> | void;
+  userDisplayName?: string;
 }
 
-export function SiteHeader({ currentPage, onAuthNavigate, onNavigate }: SiteHeaderProps) {
+export function SiteHeader({
+  currentPage,
+  isAuthenticated,
+  isUserLoading,
+  onAuthNavigate,
+  onNavigate,
+  onSignOut,
+  userDisplayName,
+}: SiteHeaderProps) {
   const activeNav = currentPage === 'game' || currentPage === 'quote' ? 'launcher' : currentPage;
+  const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
 
   return (
     <header className="site-header">
@@ -31,8 +44,21 @@ export function SiteHeader({ currentPage, onAuthNavigate, onNavigate }: SiteHead
         </nav>
 
         <div className="header-actions" aria-label="Account actions">
-          <button className="icon-button" type="button" onClick={() => onAuthNavigate('login')}>Profile</button>
-          <button className="icon-button" type="button">Settings</button>
+          <button
+            className="profile-button"
+            type="button"
+            onClick={() => (isAuthenticated ? onNavigate('auth') : onAuthNavigate('login'))}
+          >
+            <span>{profileLabel}</span>
+          </button>
+          <button
+            className="icon-button"
+            data-label={isAuthenticated ? 'Out' : 'Join'}
+            type="button"
+            onClick={() => (isAuthenticated ? onSignOut() : onAuthNavigate('signup'))}
+          >
+            {isAuthenticated ? 'Log out' : 'Sign up'}
+          </button>
         </div>
       </div>
     </header>

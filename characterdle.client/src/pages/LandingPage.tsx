@@ -23,12 +23,11 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
 
       <section className="landing-hero">
         <div className="landing-copy">
-          <p className="eyebrow">A daily lore deduction game</p>
-          <h1>Prove you know the realm.</h1>
+          <p className="eyebrow">Daily character guessing</p>
+          <h1>Play the daily challenge.</h1>
           <p>
-            Characterdle turns fandom knowledge into a clean daily puzzle.
-            Start with A Song of Ice and Fire, solve the character board,
-            then unlock a quote challenge from the same universe.
+            Characterdle is a daily guessing game.
+            Start with the character board, then continue into the quote round.
           </p>
           <div className="landing-actions">
             <button className="primary-button large-button" type="button" onClick={() => onAuthNavigate('signup')}>
@@ -41,11 +40,11 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
         </div>
 
         <aside className="landing-preview glass-card" aria-label="Game preview">
-          <span className="pill">ASOIAF Daily</span>
-          <h2>Today&apos;s Path</h2>
+          <span className="pill">Daily mode</span>
+          <h2>How it works</h2>
           <ol>
             <li>Guess the hidden character.</li>
-            <li>Use house, culture, and region clues.</li>
+            <li>Use the attribute clues to narrow it down.</li>
             <li>Beat the board to unlock the quote.</li>
             <li>Finish the run and share your stats.</li>
           </ol>
