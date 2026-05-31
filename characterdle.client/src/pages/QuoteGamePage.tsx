@@ -1,3 +1,4 @@
+import { useUniverse } from '../hooks/useUniverse';
 import type { NavigateToPage } from '../types/routes';
 
 interface QuoteGamePageProps {
@@ -5,10 +6,12 @@ interface QuoteGamePageProps {
 }
 
 export function QuoteGamePage({ onNavigate }: QuoteGamePageProps) {
+  const { selectedUniverse } = useUniverse();
+
   return (
     <main className="page quote-page">
       <section className="game-hero">
-        <p className="eyebrow">Universe: ASOIAF</p>
+        <p className="eyebrow">Universe: {selectedUniverse.title}</p>
         <h1>Who said it?</h1>
         <p>Identify the correct speaker.</p>
       </section>
@@ -27,13 +30,10 @@ export function QuoteGamePage({ onNavigate }: QuoteGamePageProps) {
         <p className="error-copy">That is incorrect. Try again.</p>
         <div className="quote-actions">
           <button className="secondary-button large-button" type="button">Hint</button>
-          <button className="primary-button large-button" type="button" onClick={() => onNavigate('stats')}>
-            Submit Correct Quote
+          <button className="primary-button large-button" type="button" onClick={() => onNavigate('launcher')}>
+            Complete Quote Round
           </button>
         </div>
-        <button className="test-victory-link" type="button" onClick={() => onNavigate('stats')}>
-          Test Victory Screen
-        </button>
       </section>
 
       <section className="previous-guesses" aria-label="Previous guesses">

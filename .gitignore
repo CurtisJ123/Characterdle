@@ -22,6 +22,16 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local agent / temp build outputs
+.codex-build/
+
+# Local portrait assets
+characterdle.client/public/images/GOTCharacterImages/*
+!characterdle.client/public/images/GOTCharacterImages/.gitkeep
+
+# Local download/import helpers
+tools/FandomPortraitImporter/
+
 # OS / editors
 .DS_Store
 .idea/

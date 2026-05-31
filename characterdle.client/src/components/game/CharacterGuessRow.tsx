@@ -1,22 +1,26 @@
-import type { CharacterGuess } from '../../types/game';
+import type { CSSProperties } from 'react';
+import { CharacterPortrait } from './CharacterPortrait';
+import type { CharacterGameRow } from '../../types/universeGame';
 import { AttributeChip } from './AttributeChip';
 
 interface CharacterGuessRowProps {
-  guess: CharacterGuess;
+  gridStyle: CSSProperties;
+  guess: CharacterGameRow;
 }
 
-export function CharacterGuessRow({ guess }: CharacterGuessRowProps) {
+export function CharacterGuessRow({ gridStyle, guess }: CharacterGuessRowProps) {
   return (
-    <div className="guess-row">
+    <div className="guess-row" style={gridStyle}>
       <div className="character-cell">
-        <span className="character-orb" aria-hidden="true" />
+        <CharacterPortrait
+          character={{ displayName: guess.name, portraitUrl: guess.portraitUrl ?? null }}
+          variant="guess"
+        />
         <strong>{guess.name}</strong>
       </div>
-      <AttributeChip {...guess.house} />
-      <AttributeChip {...guess.culture} />
-      <AttributeChip {...guess.region} />
-      <AttributeChip {...guess.allegiance} />
-      <AttributeChip {...guess.debut} />
+      {guess.cells.map((cell, index) => (
+        <AttributeChip key={`${guess.name}-${index}`} {...cell} />
+      ))}
     </div>
   );
 }

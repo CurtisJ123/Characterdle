@@ -1,18 +1,10 @@
-import type { CharacterGuess, GuessDistributionItem, LeaderboardRow, NavItem, Universe } from '../types/game';
+import type { GuessDistributionItem, LeaderboardRow, NavItem } from '../types/game';
 
 export const navItems: NavItem[] = [
   { id: 'launcher', label: 'Launcher' },
+  { id: 'history', label: 'Previous Games' },
   { id: 'leaderboard', label: 'Leaderboard' },
-  { id: 'stats', label: 'Stats' },
 ];
-
-export const asoiafUniverse: Universe = {
-  title: 'ASOIAF',
-  genre: 'Fantasy',
-  status: 'Available now',
-  accent: '#f0b429',
-  description: 'Character guessing mode for A Song of Ice and Fire.',
-};
 
 export const leaderboardRows: LeaderboardRow[] = [
   {
@@ -21,7 +13,7 @@ export const leaderboardRows: LeaderboardRow[] = [
     tier: 'Top player',
     wins: '1,284',
     guesses: '3.2',
-    mastery: ['House', 'Region'],
+    mastery: ['House', 'Occupation'],
   },
   {
     rank: 2,
@@ -29,7 +21,7 @@ export const leaderboardRows: LeaderboardRow[] = [
     tier: 'High accuracy',
     wins: '1,152',
     guesses: '3.8',
-    mastery: ['Culture'],
+    mastery: ['Species'],
   },
   {
     rank: 3,
@@ -37,7 +29,7 @@ export const leaderboardRows: LeaderboardRow[] = [
     tier: 'Consistent',
     wins: '942',
     guesses: '4.1',
-    mastery: ['Debut book'],
+    mastery: ['Debut season'],
   },
   {
     rank: 4,
@@ -45,7 +37,7 @@ export const leaderboardRows: LeaderboardRow[] = [
     tier: 'Fast solver',
     wins: '881',
     guesses: '4.3',
-    mastery: ['Allegiance'],
+    mastery: ['Last season'],
   },
   {
     rank: 5,
@@ -54,25 +46,6 @@ export const leaderboardRows: LeaderboardRow[] = [
     wins: '754',
     guesses: '4.5',
     mastery: ['Mixed clues'],
-  },
-];
-
-export const characterGuesses: CharacterGuess[] = [
-  {
-    name: 'Example Guess 1',
-    house: { label: 'House A', tone: 'partial' },
-    culture: { label: 'Culture A', tone: 'correct' },
-    region: { label: 'Region A', tone: 'correct' },
-    allegiance: { label: 'Group A', tone: 'correct' },
-    debut: { label: 'Book 1', tone: 'correct' },
-  },
-  {
-    name: 'Example Guess 2',
-    house: { label: 'House B', tone: 'neutral' },
-    culture: { label: 'Culture B', tone: 'neutral' },
-    region: { label: 'Region B', tone: 'partial' },
-    allegiance: { label: 'Group B', tone: 'neutral' },
-    debut: { label: 'Book 1', tone: 'correct' },
   },
 ];
 

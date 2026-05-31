@@ -1,0 +1,9 @@
+namespace Characterdle.Server.Features.UniverseGames;
+
+public sealed record UniverseDefinition(
+    string Id,
+    string DisplayName,
+    string ScheduleTimeZoneId,
+    string CharacterTableName,
+    string GameTableName,
+    IReadOnlyList<UniverseAttributeDefinition> AttributeDefinitions);

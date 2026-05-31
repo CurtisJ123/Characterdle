@@ -1,4 +1,4 @@
-export type Page = 'landing' | 'auth' | 'launcher' | 'game' | 'quote' | 'leaderboard' | 'stats';
+export type Page = 'landing' | 'auth' | 'launcher' | 'game' | 'quote' | 'history' | 'leaderboard';
 
 export type NavigateToPage = (page: Page) => void;
 

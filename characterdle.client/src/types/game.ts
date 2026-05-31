@@ -10,11 +10,17 @@ export interface NavItem {
 }
 
 export interface Universe {
+  id: string;
   title: string;
   genre: string;
   status: string;
   accent: string;
   description: string;
+  isPlayable: boolean;
+  buttonLabel: string;
+  ribbonLabel?: string;
+  launchState: 'live' | 'under-construction' | 'coming-soon';
+  isFeatured?: boolean;
 }
 
 export interface LeaderboardRow {
@@ -29,15 +35,6 @@ export interface LeaderboardRow {
 export interface CharacterAttribute {
   label: string;
   tone: AttributeTone;
-}
-
-export interface CharacterGuess {
-  name: string;
-  house: CharacterAttribute;
-  culture: CharacterAttribute;
-  region: CharacterAttribute;
-  allegiance: CharacterAttribute;
-  debut: CharacterAttribute;
 }
 
 export interface GuessDistributionItem {
