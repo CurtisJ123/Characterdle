@@ -18,6 +18,7 @@ export function AuthPage({ initialMode, onNavigate }: AuthPageProps) {
   const [message, setMessage] = useState<string>();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const isSignup = mode === 'signup';
+  const heroTitle = isAuthenticated || !isSignup ? 'Welcome back' : 'Create account';
 
   async function handleSubmit(values: AuthFormValues) {
     setErrorMessage(undefined);
@@ -57,14 +58,13 @@ export function AuthPage({ initialMode, onNavigate }: AuthPageProps) {
   return (
     <main className="page auth-page">
       <section className="auth-copy">
-        <p className="eyebrow">Account access</p>
-        <h1>{isSignup ? 'Create your account.' : 'Welcome back.'}</h1>
-        <p>
-          Save progress, keep your account synced, and use the same login every time.
-        </p>
+        <h1>{heroTitle}</h1>
       </section>
 
-      <section className="auth-card glass-card" aria-label={isSignup ? 'Sign up form' : 'Login form'}>
+      <section
+        className="auth-card glass-card"
+        aria-label={isAuthenticated ? 'Account actions' : isSignup ? 'Sign up form' : 'Login form'}
+      >
         {isAuthenticated && user ? (
           <AuthenticatedPanel
             isBusy={isBusy}
@@ -76,9 +76,7 @@ export function AuthPage({ initialMode, onNavigate }: AuthPageProps) {
           <>
             <AuthModeToggle mode={mode} onChange={setMode} />
             <div className="auth-card-heading">
-              <span className="pill">{isSignup ? 'New account' : 'Returning player'}</span>
-              <h2>{isSignup ? 'Start tracking your streak.' : 'Continue your run.'}</h2>
-              <p>{isSignup ? 'Create an account with your email and password.' : 'Log in to resume your saved progress.'}</p>
+              <h2>{isSignup ? 'Create account' : 'Log in'}</h2>
             </div>
             <AuthForm
               errorMessage={errorMessage}

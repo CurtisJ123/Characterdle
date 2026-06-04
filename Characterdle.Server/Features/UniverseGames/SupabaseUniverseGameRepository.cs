@@ -52,15 +52,33 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         Action<NpgsqlCommand>? configureCommand,
         CancellationToken cancellationToken)
     {
+        var quoteProjection = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? "null::bigint as quote_id,\n              null::bigint as quote_character_id,\n              null::text as quote_text,\n              null::integer as quote_season_number,\n              null::integer as quote_episode_number,"
+            : """
+              quotes.id as quote_id,
+              quotes.character_id as quote_character_id,
+              quotes.quote_text,
+              quotes.season_number,
+              quotes.episode_number,
+            """;
+        var quoteJoin = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? string.Empty
+            : $"""
+            left join {universe.QuoteTableName} as quotes
+              on quotes.id = games.quote_id
+            """;
+
         var gameSql =
             $"""
             select
               games.id,
               games.datetime,
+              {quoteProjection}
               {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 2)}
             from {universe.GameTableName} as games
             join {universe.CharacterTableName} as characters
               on characters.id = games.character_id
+            {quoteJoin}
             where {whereClause}
             order by games.datetime desc
             limit 1;
@@ -77,7 +95,8 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
 
         var resolvedGameId = gameReader.GetInt64(0);
         var playedAt = gameReader.GetDateTime(1);
-        var answerCharacter = ReadCharacter(gameReader, 2, universe.AttributeDefinitions);
+        var quotePrompt = ReadQuotePrompt(gameReader, 2);
+        var answerCharacter = ReadCharacter(gameReader, 7, universe.AttributeDefinitions);
 
         await gameReader.CloseAsync();
 
@@ -106,6 +125,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             universe.DisplayName,
             universe.AttributeDefinitions,
             answerCharacter,
+            quotePrompt,
             characters);
     }
 
@@ -157,6 +177,27 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         CancellationToken cancellationToken)
     {
         var scheduledAt = DateTime.SpecifyKind(scheduledAtUtc, DateTimeKind.Utc);
+        var quoteSelectionSql = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? "null::bigint as id where false"
+            : $"""
+              select
+                quotes.id
+              from {universe.QuoteTableName} as quotes
+              left join {universe.GameTableName} as games
+                on games.quote_id = quotes.id
+              group by quotes.id, quotes.quote_text
+              order by
+                count(games.id),
+                coalesce(max(games.datetime), '-infinity'::timestamptz),
+                md5(@selectionSeed || ':quote:' || quotes.id::text || ':' || quotes.quote_text)
+              limit 1
+            """;
+        var insertColumns = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? "(datetime, character_id)"
+            : "(datetime, character_id, quote_id)";
+        var insertValues = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? "@scheduledAtUtc, chosen_character.id"
+            : "@scheduledAtUtc, chosen_character.id, chosen_quote.id";
 
         var sql =
             $"""
@@ -178,10 +219,14 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
                 md5(@selectionSeed || ':' || characters.id::text || ':' || characters.display_name)
               limit 1
             ),
+            chosen_quote as (
+              {quoteSelectionSql}
+            ),
             inserted_game as (
-              insert into {universe.GameTableName} (datetime, character_id)
-              select @scheduledAtUtc, chosen_character.id
+              insert into {universe.GameTableName} {insertColumns}
+              select {insertValues}
               from chosen_character
+              {(!string.IsNullOrWhiteSpace(universe.QuoteTableName) ? "cross join chosen_quote" : string.Empty)}
               where not exists (select 1 from existing_game)
               returning id
             )
@@ -256,5 +301,22 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             reader.GetFieldValue<string[]>(offset + 2),
             reader.IsDBNull(offset + 3) ? null : reader.GetString(offset + 3),
             attributes);
+    }
+
+    private static UniverseQuotePromptRecord? ReadQuotePrompt(
+        NpgsqlDataReader reader,
+        int offset)
+    {
+        if (reader.IsDBNull(offset))
+        {
+            return null;
+        }
+
+        return new UniverseQuotePromptRecord(
+            reader.GetInt64(offset),
+            reader.GetInt64(offset + 1),
+            reader.GetString(offset + 2),
+            reader.GetInt32(offset + 3),
+            reader.GetInt32(offset + 4));
     }
 }

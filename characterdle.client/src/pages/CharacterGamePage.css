@@ -1,0 +1,319 @@
+.game-page {
+  position: relative;
+  padding-top: 40px;
+}
+
+.game-hero {
+  max-width: 780px;
+  text-align: center;
+}
+
+.game-hero h1 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: clamp(2.4rem, 6vw, 4.6rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  text-shadow: 0 0 18px rgba(224, 182, 255, 0.28);
+}
+
+.game-top-actions {
+  position: absolute;
+  top: 12px;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-action-button {
+  border: 1px solid rgba(224, 182, 255, 0.2);
+  border-radius: 999px;
+  color: var(--on-surface);
+  background: rgba(17, 12, 21, 0.82);
+}
+
+.game-action-button:hover {
+  border-color: rgba(224, 182, 255, 0.48);
+  background: rgba(224, 182, 255, 0.12);
+}
+
+.history-button {
+  width: 46px;
+  height: 46px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+}
+
+.history-button img {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+}
+
+.debug-reset-button {
+  padding: 10px 14px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.search-box {
+  position: relative;
+  z-index: 4;
+  width: min(720px, 100%);
+  display: grid;
+  gap: 8px;
+  margin: 54px 0 46px;
+  color: var(--outline);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.search-box > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.search-input-stack {
+  position: relative;
+}
+
+.search-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.search-box input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(153, 141, 158, 0.45);
+  border-radius: 18px;
+  padding: 28px 32px;
+  color: var(--on-surface);
+  background: rgba(35, 30, 38, 0.76);
+  font-size: 1.08rem;
+  outline: none;
+  box-shadow: 0 0 28px rgba(157, 78, 221, 0.12);
+}
+
+.search-box input:focus {
+  border-color: rgba(224, 182, 255, 0.82);
+  box-shadow: 0 0 0 4px rgba(224, 182, 255, 0.1), 0 0 32px rgba(157, 78, 221, 0.22);
+}
+
+.search-submit {
+  min-width: 132px;
+}
+
+.hint-trigger-button {
+  min-width: 118px;
+  padding-inline: 16px;
+  white-space: nowrap;
+}
+
+.hint-trigger-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.hint-trigger-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 8;
+  width: min(260px, 72vw);
+  padding: 12px 14px;
+  border: 1px solid rgba(224, 182, 255, 0.24);
+  border-radius: 14px;
+  color: var(--on-surface);
+  background:
+    linear-gradient(180deg, rgba(46, 39, 56, 0.98), rgba(24, 20, 30, 0.98));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.hint-trigger-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  right: 28px;
+  width: 14px;
+  height: 14px;
+  border-top: 1px solid rgba(224, 182, 255, 0.24);
+  border-left: 1px solid rgba(224, 182, 255, 0.24);
+  background: rgba(46, 39, 56, 0.98);
+  transform: rotate(45deg);
+}
+
+.hint-trigger-wrap:hover .hint-trigger-tooltip,
+.hint-trigger-wrap:focus-within .hint-trigger-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  left: 0;
+  z-index: 6;
+  display: grid;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid rgba(224, 182, 255, 0.18);
+  border-radius: 22px;
+  padding: 10px;
+  background: rgba(17, 12, 21, 0.94);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(14px);
+}
+
+.suggestion-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgba(224, 182, 255, 0.18);
+  border-radius: 18px;
+  padding: 10px 14px;
+  color: var(--on-surface);
+  background: rgba(57, 51, 60, 0.72);
+  text-align: left;
+}
+
+.suggestion-row:hover {
+  border-color: rgba(224, 182, 255, 0.48);
+  background: rgba(224, 182, 255, 0.12);
+}
+
+.suggestion-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.suggestion-copy strong {
+  color: var(--on-surface);
+  font-size: 0.98rem;
+}
+
+.suggestion-copy small {
+  color: var(--on-surface-variant);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.search-feedback {
+  margin: 4px 2px 0;
+  color: var(--on-surface-variant);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.game-board-shell {
+  width: min(1180px, 100%);
+}
+
+.quote-mode-layout {
+  width: min(860px, 100%);
+  display: grid;
+  gap: 14px;
+}
+
+.game-hero.is-quote {
+  width: 100%;
+  max-width: none;
+  text-align: left;
+}
+
+.quote-mode-layout .search-box {
+  width: 100%;
+  margin: 0;
+}
+
+.quote-mode-layout .quote-prompt-card + .search-box {
+  margin-top: 12px;
+}
+
+.quote-board-shell {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .search-input-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .search-input-row input {
+    grid-column: 1 / -1;
+  }
+
+  .hint-trigger-wrap {
+    width: 100%;
+  }
+
+  .hint-trigger-button {
+    width: 100%;
+  }
+
+  .hint-trigger-tooltip {
+    right: auto;
+    left: 50%;
+    width: min(260px, 86vw);
+    transform: translate(-50%, 6px);
+  }
+
+  .hint-trigger-tooltip::before {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .hint-trigger-wrap:hover .hint-trigger-tooltip,
+  .hint-trigger-wrap:focus-within .hint-trigger-tooltip {
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 520px) {
+  .search-box {
+    margin: 40px 0 32px;
+  }
+
+  .search-box input {
+    padding: 22px 24px;
+  }
+
+  .search-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .search-input-row input {
+    grid-column: auto;
+  }
+}

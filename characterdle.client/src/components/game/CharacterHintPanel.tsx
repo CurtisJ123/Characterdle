@@ -1,41 +1,32 @@
 import type { CharacterGameHint } from '../../types/universeGame';
 
 interface CharacterHintPanelProps {
-  actionLabel: string;
   hints: CharacterGameHint[];
-  isDisabled: boolean;
-  onAction: () => void;
+  slotCount?: number;
 }
 
 export function CharacterHintPanel({
-  actionLabel,
   hints,
-  isDisabled,
-  onAction,
+  slotCount = 3,
 }: CharacterHintPanelProps) {
+  const slots = Array.from({ length: slotCount }, (_, index) => hints[index] ?? null);
+
   return (
-    <section className="hint-panel glass-card" aria-label="Hints">
-      <div className="hint-panel-header">
-        <div>
-          <p className="card-kicker">Hints</p>
-          <h2>{hints.length === 0 ? 'No hints used' : `${hints.length} hint${hints.length === 1 ? '' : 's'} revealed`}</h2>
-        </div>
-
-        <button className="secondary-button hint-action-button" type="button" disabled={isDisabled} onClick={onAction}>
-          {actionLabel}
-        </button>
-      </div>
-
-      {hints.length > 0 && (
-        <div className="hint-list" aria-label="Revealed hints">
-          {hints.map((hint) => (
-            <article key={hint.id} className="hint-card">
+    <section className="hint-strip glass-card" aria-label="Revealed hints">
+      {slots.map((hint, index) => (
+        <article
+          key={hint?.id ?? `empty-hint-slot-${index + 1}`}
+          className={hint ? 'hint-slot is-filled' : 'hint-slot is-empty'}
+          aria-label={hint ? `${hint.label}: ${hint.value}` : undefined}
+        >
+          {hint && (
+            <>
               <span>{hint.label}</span>
               <strong>{hint.value}</strong>
-            </article>
-          ))}
-        </div>
-      )}
+            </>
+          )}
+        </article>
+      ))}
     </section>
   );
 }

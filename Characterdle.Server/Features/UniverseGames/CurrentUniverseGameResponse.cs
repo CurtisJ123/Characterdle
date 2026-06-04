@@ -7,4 +7,5 @@ public sealed record CurrentUniverseGameResponse(
     string UniverseName,
     IReadOnlyList<UniverseAttributeDefinition> AttributeDefinitions,
     UniverseCharacterRecord AnswerCharacter,
+    UniverseQuotePromptRecord? QuotePrompt,
     IReadOnlyList<UniverseCharacterRecord> Characters);

@@ -6,4 +6,5 @@ public sealed record UniverseDefinition(
     string ScheduleTimeZoneId,
     string CharacterTableName,
     string GameTableName,
+    string? QuoteTableName,
     IReadOnlyList<UniverseAttributeDefinition> AttributeDefinitions);

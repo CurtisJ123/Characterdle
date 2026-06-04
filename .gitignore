@@ -29,8 +29,9 @@ pnpm-debug.log*
 characterdle.client/public/images/GOTCharacterImages/*
 !characterdle.client/public/images/GOTCharacterImages/.gitkeep
 
-# Local download/import helpers
-tools/FandomPortraitImporter/
+# Local generated/design artifacts and helper tools
+design-forks/
+tools/
 
 # OS / editors
 .DS_Store

@@ -1,4 +1,4 @@
-import type { CharacterAttribute } from './game';
+import type { CharacterAttribute, GameMode } from './game';
 
 export type UniverseAttributeKind = 'string' | 'number' | 'boolean' | 'list';
 
@@ -10,6 +10,7 @@ export interface UniverseAttributeDefinition {
   kind: UniverseAttributeKind;
   emptyLabel?: string | null;
   falseLabel?: string | null;
+  helpText?: string | null;
   trueLabel?: string | null;
 }
 
@@ -28,6 +29,7 @@ export interface CurrentUniverseGame {
   universeName: string;
   attributeDefinitions: UniverseAttributeDefinition[];
   answerCharacter: UniverseCharacter;
+  quotePrompt: QuotePrompt | null;
   characters: UniverseCharacter[];
 }
 
@@ -61,6 +63,13 @@ export interface CharacterGameRow {
   cells: CharacterAttribute[];
 }
 
+export interface QuoteGameRow {
+  id: number;
+  isCorrect: boolean;
+  name: string;
+  portraitUrl?: string | null;
+}
+
 export interface CharacterGameHint {
   id: string;
   label: string;
@@ -68,3 +77,52 @@ export interface CharacterGameHint {
 }
 
 export type CharacterGameStatus = 'playing' | 'won' | 'lost';
+
+export interface QuotePrompt {
+  characterId: number;
+  episodeNumber: number;
+  id: string;
+  seasonNumber: number;
+  text: string;
+}
+
+export interface QuoteGameData {
+  answerCharacter: UniverseCharacter;
+  attributeDefinitions: UniverseAttributeDefinition[];
+  characters: UniverseCharacter[];
+  gameId: number;
+  prompt: QuotePrompt;
+  universeId: string;
+  universeName: string;
+}
+
+export interface CompletedGameStats {
+  averageGuesses: number | null;
+  playCount: number;
+}
+
+export interface GameRoundState<RowType> {
+  completedGameStats: CompletedGameStats;
+  guessCount: number;
+  guessedCharacterIds: number[];
+  handleHintAction: () => void;
+  hintActionLabel: string;
+  hintCount: number;
+  isSolved: boolean;
+  message: string | null;
+  revealedHints: CharacterGameHint[];
+  resetGame: () => void;
+  rows: RowType[];
+  status: CharacterGameStatus;
+  submitGuess: (query: string) => SubmitGuessResult;
+}
+
+export interface SubmitGuessResult {
+  accepted: boolean;
+  wasCorrect: boolean;
+}
+
+export interface ActiveGameStage {
+  mode: GameMode;
+  title: string;
+}

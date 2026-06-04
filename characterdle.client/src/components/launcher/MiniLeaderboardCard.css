@@ -1,0 +1,49 @@
+.mini-board {
+  border-radius: 24px;
+  padding: 24px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-heading h2 {
+  margin: 12px 0 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1.25rem;
+}
+
+.section-heading button {
+  border: 0;
+  border-radius: 14px;
+  padding: 8px 10px;
+  color: var(--primary);
+  background: rgba(224, 182, 255, 0.08);
+  font-weight: 900;
+  transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.mini-rank {
+  display: grid;
+  grid-template-columns: 24px 36px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding-block: 12px;
+  border-top: 1px solid rgba(77, 67, 83, 0.38);
+}
+
+.rank-number {
+  color: #f0b429;
+  font-weight: 900;
+}
+
+@media (max-width: 520px) {
+  .mini-board {
+    padding: 18px;
+  }
+}

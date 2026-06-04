@@ -1,0 +1,56 @@
+.hero-section {
+  max-width: 780px;
+  margin-bottom: 48px;
+}
+
+.hero-section h1 {
+  width: fit-content;
+  margin: 0;
+  color: transparent;
+  background: linear-gradient(110deg, var(--primary), #f6edff 38%, var(--secondary));
+  background-clip: text;
+  font-family: var(--heading-font);
+  font-size: clamp(2.65rem, 7vw, 5.6rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.launcher-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 32px;
+  align-items: start;
+}
+
+.universe-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.single-universe {
+  grid-template-columns: 1fr;
+}
+
+.dashboard-rail {
+  display: grid;
+  gap: 20px;
+}
+
+@media (max-width: 1020px) {
+  .launcher-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-rail {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .universe-grid,
+  .dashboard-rail {
+    grid-template-columns: 1fr;
+  }
+}

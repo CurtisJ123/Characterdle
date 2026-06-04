@@ -79,18 +79,27 @@ export function compareAttributeValue(
     if (typeof currentValue === 'number' && typeof answerValue === 'number') {
       if (currentValue === answerValue) {
         return {
+          displayVariant: 'numeric',
           label: String(currentValue),
           tone: 'correct',
         };
       }
 
       return {
-        label: `${currentValue} ${currentValue < answerValue ? 'later' : 'earlier'}`,
-        tone: Math.abs(currentValue - answerValue) === 1 ? 'partial' : 'neutral',
+        displayVariant: 'numeric',
+        label: currentValue < answerValue
+          ? `${currentValue}. Answer is later.`
+          : `${currentValue}. Answer is earlier.`,
+        indicator: {
+          direction: currentValue < answerValue ? 'up' : 'down',
+          value: String(currentValue),
+        },
+        tone: 'neutral',
       };
     }
 
     return {
+      displayVariant: 'numeric',
       label: definition.emptyLabel ?? 'ERROR',
       tone: 'neutral',
     };

@@ -1,0 +1,31 @@
+.brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  color: var(--primary);
+  background: transparent;
+  font-family: var(--heading-font);
+  font-size: clamp(1.35rem, 2.2vw, 1.95rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  text-shadow: 0 0 18px rgba(224, 182, 255, 0.38);
+}
+
+.brand-mark {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, transparent 45%, rgba(224, 182, 255, 0.9) 46% 55%, transparent 56%),
+    radial-gradient(circle at 65% 35%, rgba(224, 182, 255, 0.65), transparent 42%),
+    var(--surface-container);
+  box-shadow: 0 0 18px rgba(224, 182, 255, 0.3);
+}
+
+@media (max-width: 760px) {
+  .brand-button {
+    flex: 1 0 auto;
+  }
+}

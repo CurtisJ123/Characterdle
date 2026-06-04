@@ -1,18 +1,20 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { PropsWithChildren } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session, User, UserAttributes } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { AuthActionResult, AuthFormValues } from '../types/auth';
+import type { AccountSettingsValues, AuthActionResult, AuthFormValues } from '../types/auth';
 import type { UserProfile } from '../types/user';
 
 interface AuthContextValue {
   authError: Error | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  refreshUser: () => Promise<void>;
   session: Session | null;
   signIn: (values: AuthFormValues) => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
   signUp: (values: AuthFormValues) => Promise<AuthActionResult>;
+  updateAccount: (values: AccountSettingsValues) => Promise<AuthActionResult>;
   user: UserProfile | null;
 }
 
@@ -43,6 +45,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
 
+  function applySession(nextSession: Session | null) {
+    setSession(nextSession);
+    setUser(nextSession ? buildUserProfile(nextSession.user) : null);
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -57,8 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setAuthError(error);
       }
 
-      setSession(data.session);
-      setUser(data.session ? buildUserProfile(data.session.user) : null);
+      applySession(data.session);
       setIsLoading(false);
     }
 
@@ -72,8 +78,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       setAuthError(null);
-      setSession(nextSession);
-      setUser(nextSession ? buildUserProfile(nextSession.user) : null);
+      applySession(nextSession);
       setIsLoading(false);
     });
 
@@ -131,16 +136,102 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
+  async function refreshUser() {
+    const [{ data: sessionData, error: sessionError }, { data: userData, error: userError }] = await Promise.all([
+      supabase.auth.getSession(),
+      supabase.auth.getUser(),
+    ]);
+
+    if (sessionError) {
+      throw normalizeError(sessionError, 'Unable to refresh session.');
+    }
+
+    if (userError) {
+      throw normalizeError(userError, 'Unable to refresh user.');
+    }
+
+    const nextSession = sessionData.session;
+
+    if (nextSession && userData.user) {
+      applySession({
+        ...nextSession,
+        user: userData.user,
+      });
+      return;
+    }
+
+    applySession(nextSession);
+  }
+
+  async function updateAccount(values: AccountSettingsValues): Promise<AuthActionResult> {
+    if (!session) {
+      throw new Error('You must be signed in to update your profile.');
+    }
+
+    const normalizedDisplayName = values.displayName.trim();
+    const normalizedEmail = values.email.trim();
+    const normalizedAvatarUrl = values.avatarUrl.trim();
+    const currentAvatarUrl = user?.avatarUrl ?? '';
+    const updatePayload: UserAttributes = {};
+
+    if (!normalizedDisplayName) {
+      throw new Error('Display name is required.');
+    }
+
+    if (!normalizedEmail) {
+      throw new Error('Email is required.');
+    }
+
+    if (normalizedDisplayName !== user?.displayName || normalizedAvatarUrl !== currentAvatarUrl) {
+      updatePayload.data = {
+        avatar_url: normalizedAvatarUrl || null,
+        display_name: normalizedDisplayName,
+      };
+    }
+
+    if (normalizedEmail !== user?.email) {
+      updatePayload.email = normalizedEmail;
+    }
+
+    if (values.password.trim()) {
+      updatePayload.password = values.password;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return {
+        message: 'No changes to save.',
+        requiresEmailConfirmation: false,
+      };
+    }
+
+    const { error } = await supabase.auth.updateUser(updatePayload);
+
+    if (error) {
+      throw normalizeError(error, 'Unable to update your profile.');
+    }
+
+    await refreshUser();
+
+    return {
+      message: normalizedEmail !== user?.email
+        ? 'Profile updated. Check your email if you changed your address.'
+        : 'Profile updated.',
+      requiresEmailConfirmation: false,
+    };
+  }
+
   return (
     <AuthContext.Provider
       value={{
         authError,
         isAuthenticated: Boolean(session),
         isLoading,
+        refreshUser,
         session,
         signIn,
         signOut,
         signUp,
+        updateAccount,
         user,
       }}
     >

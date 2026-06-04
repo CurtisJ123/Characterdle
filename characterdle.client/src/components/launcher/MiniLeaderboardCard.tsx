@@ -1,23 +1,40 @@
-import type { LeaderboardRow } from '../../types/game';
+import type { LeaderboardEntry } from '../../types/leaderboard';
 
 interface MiniLeaderboardCardProps {
-  rows: LeaderboardRow[];
+  error: Error | null;
+  isLoading: boolean;
+  rows: LeaderboardEntry[];
   onViewAll: () => void;
 }
 
-export function MiniLeaderboardCard({ rows, onViewAll }: MiniLeaderboardCardProps) {
+function getInitials(displayName: string) {
+  return displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniLeaderboardCardProps) {
   return (
     <article className="glass-card mini-board">
       <div className="section-heading">
-        <h2>Global Rankings</h2>
+        <h2>Leaderboard</h2>
         <button type="button" onClick={onViewAll}>View all</button>
       </div>
-      {rows.slice(0, 3).map((row) => (
-        <div className="mini-rank" key={row.player}>
+      {error && <p className="muted-copy">Unable to load leaderboard.</p>}
+      {!error && isLoading && <p className="muted-copy">Loading leaderboard...</p>}
+      {!error && !isLoading && rows.length === 0 && (
+        <p className="muted-copy">No entries yet.</p>
+      )}
+      {!error && rows.slice(0, 3).map((row) => (
+        <div className="mini-rank" key={row.userId}>
           <span className="rank-number">{row.rank}</span>
-          <span className="avatar">{row.player.slice(0, 2).toUpperCase()}</span>
-          <strong>{row.player}</strong>
-          <span>{row.wins}</span>
+          <span className="avatar">{getInitials(row.displayName)}</span>
+          <strong>{row.displayName}</strong>
+          <span>{row.totalWins}</span>
         </div>
       ))}
     </article>

@@ -1,0 +1,20 @@
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: rgba(46, 40, 49, 0.86);
+}
+
+.metric-row span {
+  color: var(--on-surface-variant);
+}
+
+.metric-row strong {
+  color: var(--primary);
+}
+
+.metric-row .danger-text {
+  color: #ffb4ab;
+}

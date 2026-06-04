@@ -1,0 +1,96 @@
+using Characterdle.Server.Features.Leaderboard;
+using Characterdle.Server.Features.UniverseGames;
+
+namespace Characterdle.Server.Features.Profile;
+
+public static class ProfileEndpoints
+{
+    public static IEndpointRouteBuilder MapProfileEndpoints(this IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/profile/{universeId}", GetProfileAsync)
+            .WithTags("Profile")
+            .WithName("GetUniverseProfile")
+            .Produces<UserUniverseProfileResponse>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        return app;
+    }
+
+    private static async Task<IResult> GetProfileAsync(
+        string universeId,
+        HttpRequest httpRequest,
+        IHostEnvironment hostEnvironment,
+        UniverseCatalog universeCatalog,
+        SupabaseAuthClient authClient,
+        ILeaderboardRepository leaderboardRepository,
+        IProfileRepository profileRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        if (!universeCatalog.TryGet(universeId, out var universe))
+        {
+            return Results.NotFound(new { message = $"No universe named '{universeId}' is registered." });
+        }
+
+        try
+        {
+            var accessToken = ReadBearerToken(httpRequest);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            await leaderboardRepository.UpsertPlayerProfileAsync(user, cancellationToken);
+
+            var profile = await profileRepository.GetProfileAsync(universe, user.UserId, cancellationToken);
+
+            if (profile is null)
+            {
+                return Results.NotFound(new { message = "Profile not found." });
+            }
+
+            return Results.Ok(profile);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(ProfileEndpoints).FullName!);
+            logger.LogError(exception, "Unable to load profile data for {UniverseId}.", universeId);
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The database request failed while loading profile data.";
+
+            return Results.Problem(
+                title: "Unable to load profile data.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+
+    private static string? ReadBearerToken(HttpRequest request)
+    {
+        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
+        {
+            return null;
+        }
+
+        var authorizationHeader = authorizationHeaderValues.ToString();
+
+        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return authorizationHeader["Bearer ".Length..].Trim();
+    }
+}

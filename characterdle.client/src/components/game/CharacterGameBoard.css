@@ -1,0 +1,110 @@
+.character-board {
+  width: min(1180px, 100%);
+  display: grid;
+  gap: 0;
+}
+
+.guess-table {
+  width: 100%;
+  overflow-x: hidden;
+  border: 1px solid rgba(77, 67, 83, 0.75);
+  border-radius: 18px;
+  background: rgba(27, 26, 38, 0.72);
+}
+
+.guess-header {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  color: var(--on-surface-variant);
+  background: rgba(57, 51, 60, 0.72);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.guess-header-label {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.guess-header-label.has-tooltip {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.22em;
+  cursor: help;
+}
+
+.guess-header-label.has-tooltip:focus-visible {
+  outline: none;
+}
+
+.guess-header-label-text {
+  display: inline-block;
+}
+
+.guess-header-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  z-index: 12;
+  width: min(240px, 32vw);
+  padding: 12px 14px;
+  border: 1px solid rgba(224, 182, 255, 0.24);
+  border-radius: 14px;
+  color: var(--on-surface);
+  background:
+    linear-gradient(180deg, rgba(46, 39, 56, 0.98), rgba(24, 20, 30, 0.98));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 6px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-decoration: none;
+}
+
+.guess-header-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-top: 1px solid rgba(224, 182, 255, 0.24);
+  border-left: 1px solid rgba(224, 182, 255, 0.24);
+  background: rgba(46, 39, 56, 0.98);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.guess-header-label.has-tooltip:hover .guess-header-tooltip,
+.guess-header-label.has-tooltip:focus-visible .guess-header-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.empty-guess-state {
+  padding: 32px 24px;
+  color: var(--outline);
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 820px) {
+  .guess-header-tooltip {
+    width: min(220px, 52vw);
+  }
+}

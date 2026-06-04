@@ -4,9 +4,10 @@ import type { Universe } from '../../types/game';
 interface UniverseCardProps {
   universe: Universe;
   onPlay: () => void;
+  onPlayQuote?: () => void;
 }
 
-export function UniverseCard({ universe, onPlay }: UniverseCardProps) {
+export function UniverseCard({ universe, onPlay, onPlayQuote }: UniverseCardProps) {
   const accentStyle = { '--accent': universe.accent } as CSSProperties;
   const cardClassName = [
     'universe-card',
@@ -27,14 +28,23 @@ export function UniverseCard({ universe, onPlay }: UniverseCardProps) {
         </div>
       )}
       <div className="universe-content">
-        <span className="pill">{universe.genre}</span>
-        <h2>{universe.title}</h2>
-        <p>{universe.description}</p>
+        <div className="universe-copy">
+          <span className="pill">{universe.genre}</span>
+          <h2>{universe.title}</h2>
+          {universe.description && <p>{universe.description}</p>}
+        </div>
         <div className="card-footer">
           <span>{universe.status}</span>
-          <button type="button" onClick={onPlay} disabled={!universe.isPlayable}>
-            {universe.buttonLabel}
-          </button>
+          <div className="card-action-group">
+            <button type="button" onClick={onPlay} disabled={!universe.isPlayable}>
+              {universe.buttonLabel}
+            </button>
+            {onPlayQuote && (
+              <button className="universe-secondary-button" type="button" onClick={onPlayQuote}>
+                Quote
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </article>

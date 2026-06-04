@@ -1,34 +1,56 @@
-import type { LeaderboardRow } from '../../types/game';
+import type { GameMode } from '../../types/game';
+import type { ModeLeaderboardEntry } from '../../types/leaderboard';
 
 interface LeaderboardTableProps {
-  rows: LeaderboardRow[];
+  mode: GameMode;
+  rows: ModeLeaderboardEntry[];
 }
 
-export function LeaderboardTable({ rows }: LeaderboardTableProps) {
+function formatAverageGuesses(value: number | null) {
+  if (value === null) {
+    return '--';
+  }
+
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(1);
+}
+
+function getInitials(displayName: string) {
+  return displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
+  const winsLabel = mode === 'quote' ? 'Quote Wins' : 'Character Wins';
+
   return (
     <section className="leaderboard-table glass-card" aria-label="Global leaderboard">
       <div className="table-row table-head">
         <span>Rank</span>
         <span>Player</span>
-        <span>Wins</span>
+        <span>{winsLabel}</span>
         <span>Avg. Guesses</span>
-        <span>Mastery</span>
+        <span>Plays</span>
       </div>
       {rows.map((row) => (
-        <div className="table-row" key={row.player}>
+        <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} key={row.userId}>
           <span className={`rank-medal rank-${row.rank}`}>{row.rank}</span>
           <div className="player-cell">
-            <span className="avatar">{row.player.slice(0, 2).toUpperCase()}</span>
+            <span className="avatar">{getInitials(row.displayName)}</span>
             <div>
-              <strong>{row.player}</strong>
-              <small>{row.tier}</small>
+              <strong>{row.displayName}</strong>
+              <small>{row.isCurrentUser ? 'You' : 'Ranked player'}</small>
             </div>
           </div>
           <strong>{row.wins}</strong>
-          <strong>{row.guesses}</strong>
-          <div className="mastery-list">
-            {row.mastery.map((tag) => <span key={tag}>{tag}</span>)}
-          </div>
+          <strong>{formatAverageGuesses(row.averageGuesses)}</strong>
+          <strong>{row.plays}</strong>
         </div>
       ))}
     </section>

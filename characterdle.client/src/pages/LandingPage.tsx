@@ -23,12 +23,9 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
 
       <section className="landing-hero">
         <div className="landing-copy">
-          <p className="eyebrow">Daily character guessing</p>
-          <h1>Play the daily challenge.</h1>
-          <p>
-            Characterdle is a daily guessing game.
-            Start with the character board, then continue into the quote round.
-          </p>
+          <p className="eyebrow">Daily character game</p>
+          <h1>Guess the character.</h1>
+          <p>Play today&apos;s board.</p>
           <div className="landing-actions">
             <button className="primary-button large-button" type="button" onClick={() => onAuthNavigate('signup')}>
               Create free account
@@ -40,13 +37,12 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
         </div>
 
         <aside className="landing-preview glass-card" aria-label="Game preview">
-          <span className="pill">Daily mode</span>
-          <h2>How it works</h2>
+          <span className="pill">Play</span>
+          <h2>How to play</h2>
           <ol>
             <li>Guess the hidden character.</li>
-            <li>Use the attribute clues to narrow it down.</li>
-            <li>Beat the board to unlock the quote.</li>
-            <li>Finish the run and share your stats.</li>
+            <li>Use the clues.</li>
+            <li>Check the archive or leaderboard.</li>
           </ol>
         </aside>
       </section>

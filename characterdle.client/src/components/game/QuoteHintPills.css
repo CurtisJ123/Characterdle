@@ -1,0 +1,56 @@
+.quote-hint-pills {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quote-hint-pill {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(224, 182, 255, 0.12);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(35, 30, 38, 0.68);
+}
+
+.quote-hint-pill span {
+  color: var(--outline);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quote-hint-pill strong {
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.quote-hint-pill.is-hidden {
+  background: rgba(27, 24, 31, 0.54);
+}
+
+.quote-hint-pill.is-hidden strong {
+  color: var(--on-surface-variant);
+}
+
+.quote-hint-pill.is-revealed {
+  border-color: rgba(224, 182, 255, 0.24);
+  background: rgba(57, 51, 60, 0.74);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 760px) {
+  .quote-hint-pills {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .quote-hint-pills {
+    grid-template-columns: 1fr;
+  }
+}

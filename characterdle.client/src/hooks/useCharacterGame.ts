@@ -11,7 +11,10 @@ import type {
   CharacterGameHint,
   CharacterGameRow,
   CharacterGameStatus,
+  CompletedGameStats,
   CurrentUniverseGame,
+  GameRoundState,
+  SubmitGuessResult,
   UniverseAttributeDefinition,
   UniverseCharacter,
 } from '../types/universeGame';
@@ -24,31 +27,19 @@ interface StoredCharacterGameState {
   revealedHintKeys: string[];
 }
 
-interface SubmitGuessResult {
-  accepted: boolean;
-  wasCorrect: boolean;
-}
+const hintPriorityOrder = [
+  'gender',
+  'species',
+  'alive',
+  'occupation',
+  'debutSeason',
+  'lastSeason',
+  'house',
+] as const;
 
-interface CompletedGameStats {
-  averageGuesses: number | null;
-  playCount: number;
-}
-
-interface CharacterGameState {
-  handleHintAction: () => void;
-  hintActionLabel: string;
-  hintCount: number;
-  completedGameStats: CompletedGameStats;
-  guessCount: number;
-  guessedCharacterIds: number[];
-  isSolved: boolean;
-  message: string | null;
-  revealedHints: CharacterGameHint[];
-  resetGame: () => void;
-  rows: CharacterGameRow[];
-  status: CharacterGameStatus;
-  submitGuess: (query: string) => SubmitGuessResult;
-}
+const hintPriorityLookup = new Map<string, number>(
+  hintPriorityOrder.map((key, index) => [key, index]),
+);
 
 function buildRow(character: UniverseCharacter, answer: UniverseCharacter, game: CurrentUniverseGame): CharacterGameRow {
   return {
@@ -92,6 +83,19 @@ function buildHint(
     label: definition.label,
     value: formatAttributeValue(definition, answer.attributes[definition.key]),
   };
+}
+
+function sortHintDefinitions(definitions: readonly UniverseAttributeDefinition[]): UniverseAttributeDefinition[] {
+  return [...definitions].sort((left, right) => {
+    const leftPriority = hintPriorityLookup.get(left.key) ?? Number.MAX_SAFE_INTEGER;
+    const rightPriority = hintPriorityLookup.get(right.key) ?? Number.MAX_SAFE_INTEGER;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    return left.label.localeCompare(right.label);
+  });
 }
 
 function getSessionStorageKey(universeId: string, gameId: number): string {
@@ -206,7 +210,7 @@ function buildCompletedGameStats(guessCounts: number[]): CompletedGameStats {
   };
 }
 
-export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGameState {
+export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundState<CharacterGameRow> {
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [completionRecorded, setCompletionRecorded] = useState(false);
@@ -272,7 +276,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
     ? getCorrectAttributeKeys(game, guessedCharacters)
     : new Set<string>();
   const unrevealedHintDefinitions = game
-    ? game.attributeDefinitions.filter((definition) => (
+    ? sortHintDefinitions(game.attributeDefinitions).filter((definition) => (
       !correctAttributeKeys.has(definition.key) && !revealedHintKeys.includes(definition.key)
     ))
     : [];
@@ -294,21 +298,27 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
   const hintCount = revealedHintKeys.length + (firstLetterRevealed ? 1 : 0);
   const isSolved = !!game && guessedCharacterIds.includes(game.answerCharacter.id);
   const status: CharacterGameStatus = isSolved ? 'won' : gaveUp ? 'lost' : 'playing';
-  const hintActionLabel = firstLetterRevealed ? 'Give Up' : 'Use Hint';
+  const hintActionLabel = firstLetterRevealed ? 'Give Up' : 'Hint';
+  const isStatsEligible = hintCount === 0;
 
   useEffect(() => {
     if (!game || !isSolved || completionRecorded || typeof window === 'undefined') {
       return;
     }
 
-    const storageKey = getPlayStatsStorageKey(game.universeId, game.id);
-    const existingGuessCounts = readStoredGuessCounts(game);
-    const nextGuessCounts = [...existingGuessCounts, guessedCharacterIds.length];
+    if (isStatsEligible) {
+      const storageKey = getPlayStatsStorageKey(game.universeId, game.id);
+      const existingGuessCounts = readStoredGuessCounts(game);
+      const nextGuessCounts = [...existingGuessCounts, guessedCharacterIds.length];
 
-    window.localStorage.setItem(storageKey, JSON.stringify({ guessCounts: nextGuessCounts }));
-    setCompletedGameStats(buildCompletedGameStats(nextGuessCounts));
+      window.localStorage.setItem(storageKey, JSON.stringify({ guessCounts: nextGuessCounts }));
+      setCompletedGameStats(buildCompletedGameStats(nextGuessCounts));
+    } else {
+      setCompletedGameStats(readStoredGameStats(game));
+    }
+
     setCompletionRecorded(true);
-  }, [completionRecorded, game, guessedCharacterIds.length, isSolved]);
+  }, [completionRecorded, game, guessedCharacterIds.length, isSolved, isStatsEligible]);
 
   function submitGuess(query: string): SubmitGuessResult {
     if (!game) {
@@ -320,8 +330,8 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
 
     if (status !== 'playing') {
       setMessage(status === 'won'
-        ? 'You already solved today\'s character game.'
-        : 'This game is over. Reset it to play again.');
+        ? 'Already solved.'
+        : 'Game over.');
 
       return {
         accepted: false,
@@ -333,8 +343,8 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
 
     if (!match.character) {
       setMessage(match.reason === 'ambiguous'
-        ? 'That matches more than one character. Type a more specific name.'
-        : 'No character matched that guess.');
+        ? 'More than one match.'
+        : 'No match.');
 
       return {
         accepted: false,
@@ -343,7 +353,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
     }
 
     if (guessedCharacterIds.includes(match.character.id)) {
-      setMessage(`You already guessed ${match.character.displayName}.`);
+      setMessage(`Already guessed ${match.character.displayName}.`);
 
       return {
         accepted: false,
@@ -357,8 +367,8 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
     setGuessedCharacterIds(nextGuessedCharacterIds);
     setMessage(
       wasCorrect
-        ? `Correct. ${match.character.displayName} is the answer.`
-        : `${match.character.displayName} added to the board.`,
+        ? 'Correct.'
+        : `${match.character.displayName} added.`,
     );
 
     return {
@@ -373,30 +383,25 @@ export function useCharacterGame(game: CurrentUniverseGame | null): CharacterGam
     }
 
     if (status === 'won') {
-      setMessage('You already solved today\'s character game.');
       return;
     }
 
     if (status === 'lost') {
-      setMessage(`You already gave up. ${game.answerCharacter.displayName} was the answer.`);
       return;
     }
 
     if (firstLetterRevealed) {
       setGaveUp(true);
-      setMessage(`You gave up. ${game.answerCharacter.displayName} was the answer.`);
       return;
     }
 
     if (revealedHintKeys.length >= 2 || unrevealedHintDefinitions.length === 0) {
       setFirstLetterRevealed(true);
-      setMessage(`Hint: the answer starts with ${game.answerCharacter.displayName.charAt(0).toUpperCase() || 'ERROR'}.`);
       return;
     }
 
     const nextDefinition = unrevealedHintDefinitions[0];
     setRevealedHintKeys((currentKeys) => [...currentKeys, nextDefinition.key]);
-    setMessage(`Hint: ${nextDefinition.label} is ${formatAttributeValue(nextDefinition, game.answerCharacter.attributes[nextDefinition.key])}.`);
   }
 
   function resetGame() {

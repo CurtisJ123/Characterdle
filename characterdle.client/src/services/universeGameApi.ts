@@ -23,6 +23,7 @@ interface UniverseAttributeDefinitionPayload {
   kind: UniverseAttributeDefinition['kind'];
   emptyLabel?: string | null;
   falseLabel?: string | null;
+  helpText?: string | null;
   trueLabel?: string | null;
 }
 
@@ -88,14 +89,33 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
     universeName: string;
     attributeDefinitions: UniverseAttributeDefinitionPayload[];
     answerCharacter: UniverseCharacterPayload;
+    quotePrompt: {
+      characterId: number;
+      episodeNumber: number;
+      id: number | string;
+      seasonNumber: number;
+      text: string;
+    } | null;
     characters: UniverseCharacterPayload[];
   };
 
   return {
-    ...payload,
     attributeDefinitions: payload.attributeDefinitions.map(mapAttributeDefinition),
     answerCharacter: mapCharacter(payload.answerCharacter),
+    dateTime: payload.dateTime,
     characters: payload.characters.map(mapCharacter),
+    id: payload.id,
+    quotePrompt: payload.quotePrompt
+      ? {
+        characterId: payload.quotePrompt.characterId,
+        episodeNumber: payload.quotePrompt.episodeNumber,
+        id: String(payload.quotePrompt.id),
+        seasonNumber: payload.quotePrompt.seasonNumber,
+        text: payload.quotePrompt.text,
+      }
+      : null,
+    universeId: payload.universeId,
+    universeName: payload.universeName,
   };
 }
 
@@ -132,6 +152,7 @@ function mapAttributeDefinition(payload: UniverseAttributeDefinitionPayload): Un
   return {
     emptyLabel: payload.emptyLabel ?? null,
     falseLabel: payload.falseLabel ?? null,
+    helpText: payload.helpText ?? null,
     key: payload.key,
     kind: payload.kind,
     label: payload.label,

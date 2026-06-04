@@ -21,14 +21,12 @@ function getInitials(displayName: string | undefined) {
 }
 
 export function UserProfileCard({ error, isLoading, user }: UserProfileCardProps) {
-  const displayName = user?.displayName ?? (isLoading ? 'Loading user...' : 'Guest mode');
-  const supportingText = error
-    ? error.message
-    : user?.email ?? 'Sign in to save progress and attach future game data to a real account.';
+  const displayName = user?.displayName ?? (isLoading ? 'Loading user...' : 'Guest');
+  const supportingText = error ? error.message : user?.email ?? 'Not signed in';
 
   return (
     <article className="glass-card user-profile-card">
-      <p className="card-kicker">{user ? 'Supabase account' : 'Guest session'}</p>
+      <p className="card-kicker">{user ? 'Account' : 'Guest'}</p>
       <div className="profile-card-main">
         <span className="profile-avatar" aria-hidden="true">{getInitials(user?.displayName)}</span>
         <div>
@@ -36,11 +34,6 @@ export function UserProfileCard({ error, isLoading, user }: UserProfileCardProps
           <p>{supportingText}</p>
         </div>
       </div>
-      <p className="muted-copy">
-        {user
-          ? 'This card is using live Supabase Auth user data. Missing fields intentionally show as ERROR.'
-          : 'You can keep exploring as a guest, or sign in to replace this card with live account data.'}
-      </p>
     </article>
   );
 }

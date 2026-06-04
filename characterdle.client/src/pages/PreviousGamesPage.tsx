@@ -1,16 +1,25 @@
 import { PreviousGamesGrid } from '../components/history/PreviousGamesGrid';
 import { usePreviousUniverseGames } from '../hooks/usePreviousUniverseGames';
 import { useUniverse } from '../hooks/useUniverse';
+import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 
 interface PreviousGamesPageProps {
   onNavigate: NavigateToPage;
-  onOpenGame: (gameId: number | null) => void;
+  onOpenGame: (gameMode: GameMode, gameId: number | null) => void;
+  onOpenHistory: (gameMode: GameMode) => void;
+  selectedGameMode: GameMode;
 }
 
-export function PreviousGamesPage({ onNavigate, onOpenGame }: PreviousGamesPageProps) {
+export function PreviousGamesPage({
+  onNavigate,
+  onOpenGame,
+  onOpenHistory,
+  selectedGameMode,
+}: PreviousGamesPageProps) {
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id);
+  const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
 
   return (
     <main className="page archive-page">
@@ -21,29 +30,46 @@ export function PreviousGamesPage({ onNavigate, onOpenGame }: PreviousGamesPageP
           </button>
           <div className="archive-title-block">
             <p className="eyebrow">{selectedUniverse.title}</p>
-            <h1>Archive</h1>
+            <h1>{modeLabel} Archive</h1>
           </div>
-          <button className="primary-button archive-nav-button" type="button" onClick={() => onOpenGame(null)}>
+          <button
+            className="primary-button archive-nav-button"
+            type="button"
+            onClick={() => onOpenGame(selectedGameMode, null)}
+          >
             Current Game
           </button>
         </div>
 
         <div className="archive-status-bar glass-card" aria-label="Archive status">
-          <div>
-            <p className="card-kicker">Archive</p>
-            <h2>{isLoading ? 'Loading games...' : `${data?.games.length ?? 0} archived boards`}</h2>
-            <p className="muted-copy">
-              {error
-                ? error.message
-                : 'Pick any tile to replay a past board. Completed boards turn green after you solve them.'}
-            </p>
+          <div className="archive-status-copy">
+            <p className="card-kicker">{modeLabel} archive</p>
+            <h2>{isLoading ? 'Loading games...' : `${data?.games.length ?? 0} archived ${modeLabel.toLowerCase()} boards`}</h2>
+            {error && <p className="muted-copy">Unable to load archive.</p>}
+          </div>
+          <div className="archive-mode-toggle" aria-label="Archive mode">
+            <button
+              className={selectedGameMode === 'character' ? 'is-active' : ''}
+              type="button"
+              onClick={() => onOpenHistory('character')}
+            >
+              Character
+            </button>
+            <button
+              className={selectedGameMode === 'quote' ? 'is-active' : ''}
+              type="button"
+              onClick={() => onOpenHistory('quote')}
+            >
+              Quote
+            </button>
           </div>
         </div>
 
         {!isLoading && !error && data && data.games.length > 0 && (
           <PreviousGamesGrid
             games={data.games}
-            onOpenGame={onOpenGame}
+            gameMode={selectedGameMode}
+            onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}
             universeId={selectedUniverse.id}
             universeTitle={selectedUniverse.title}
           />
@@ -51,8 +77,7 @@ export function PreviousGamesPage({ onNavigate, onOpenGame }: PreviousGamesPageP
 
         {!isLoading && !error && data && data.games.length === 0 && (
           <section className="empty-state glass-card" aria-label="No previous games">
-            <h2>No previous games found.</h2>
-            <p className="muted-copy">Add more seeded dates to the selected universe game table and the archive grid will fill in automatically.</p>
+            <h2>No games yet.</h2>
           </section>
         )}
       </section>

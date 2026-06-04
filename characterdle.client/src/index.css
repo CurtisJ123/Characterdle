@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap');
+
 :root {
   --surface: #16111a;
   --surface-container-lowest: #110c15;
@@ -56,6 +58,15 @@ body,
 button,
 input {
   font-family: var(--body-font);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
 }
 
 #root {

@@ -1,0 +1,31 @@
+.quote-prompt-card {
+  width: 100%;
+  border-radius: 24px;
+  padding: 24px 26px;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(224, 182, 255, 0.08), transparent 28%),
+    linear-gradient(145deg, rgba(35, 30, 38, 0.8), rgba(24, 21, 29, 0.68));
+}
+
+.quote-prompt-card .card-kicker {
+  margin-bottom: 14px;
+}
+
+.quote-prompt-card-text {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+@media (max-width: 520px) {
+  .quote-prompt-card {
+    padding: 20px;
+  }
+
+  .quote-prompt-card-text {
+    font-size: 1.6rem;
+  }
+}

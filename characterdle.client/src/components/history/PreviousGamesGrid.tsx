@@ -1,8 +1,10 @@
-import { hasCompletedCharacterGame } from '../../lib/characterGameProgress';
+import { hasCompletedCharacterGame, hasCompletedQuoteGame } from '../../lib/characterGameProgress';
+import type { GameMode } from '../../types/game';
 import type { PreviousUniverseGame } from '../../types/universeGame';
 
 interface PreviousGamesGridProps {
   games: PreviousUniverseGame[];
+  gameMode: GameMode;
   onOpenGame: (gameId: number) => void;
   universeId: string;
   universeTitle: string;
@@ -16,22 +18,36 @@ function formatGameDate(value: string): string {
   }).format(new Date(value));
 }
 
-export function PreviousGamesGrid({ games, onOpenGame, universeId, universeTitle }: PreviousGamesGridProps) {
+export function PreviousGamesGrid({
+  games,
+  gameMode,
+  onOpenGame,
+  universeId,
+  universeTitle,
+}: PreviousGamesGridProps) {
+  const modeLabel = gameMode === 'quote' ? 'quote' : 'character';
+
   return (
-    <section className="archive-grid-shell glass-card" aria-label={`Previous ${universeTitle} games`}>
+    <section className="archive-grid-shell glass-card" aria-label={`Previous ${universeTitle} ${modeLabel} games`}>
       <div className="archive-grid">
-      {games.map((game) => (
+      {games.map((game) => {
+        const isCompleted = gameMode === 'quote'
+          ? hasCompletedQuoteGame(universeId, game.id)
+          : hasCompletedCharacterGame(universeId, game.id);
+
+        return (
         <button
           key={game.id}
-          className={`archive-tile ${hasCompletedCharacterGame(universeId, game.id) ? 'is-completed' : 'is-pending'}`}
+          className={`archive-tile ${isCompleted ? 'is-completed' : 'is-pending'}`}
           type="button"
-          aria-label={`Play archived game ${game.id} from ${formatGameDate(game.dateTime)}`}
+          aria-label={`Play archived ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`}
           title={formatGameDate(game.dateTime)}
           onClick={() => onOpenGame(game.id)}
         >
           <span className="archive-tile-number">{game.id}</span>
         </button>
-      ))}
+        );
+      })}
       </div>
     </section>
   );

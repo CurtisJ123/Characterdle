@@ -1,10 +1,10 @@
-import { leaderboardRows } from '../data/prototypeData';
 import { universes } from '../data/universeCatalog';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 import { MiniLeaderboardCard } from '../components/launcher/MiniLeaderboardCard';
-import { PrototypePathCard } from '../components/launcher/PrototypePathCard';
 import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
 import { useUniverse } from '../hooks/useUniverse';
+import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 import type { UserProfile } from '../types/user';
 
@@ -12,13 +12,18 @@ interface LauncherPageProps {
   authError: Error | null;
   isUserLoading: boolean;
   onNavigate: NavigateToPage;
+  onOpenGame: (gameMode: GameMode, gameId: number | null) => void;
   user: UserProfile | null;
 }
 
-export function LauncherPage({ authError, isUserLoading, onNavigate, user }: LauncherPageProps) {
-  const { setSelectedUniverseId } = useUniverse();
+export function LauncherPage({ authError, isUserLoading, onNavigate, onOpenGame, user }: LauncherPageProps) {
+  const { selectedUniverse, setSelectedUniverseId } = useUniverse();
+  const { data: leaderboardData, error: leaderboardError, isLoading: isLeaderboardLoading } = useLeaderboard(
+    selectedUniverse.id,
+    user?.id ?? null,
+  );
 
-  function handlePlayUniverse(universeId: string) {
+  function handleOpenUniverseGame(universeId: string, gameMode: GameMode) {
     const selectedUniverse = universes.find((universe) => universe.id === universeId);
 
     if (!selectedUniverse?.isPlayable) {
@@ -26,35 +31,35 @@ export function LauncherPage({ authError, isUserLoading, onNavigate, user }: Lau
     }
 
     setSelectedUniverseId(universeId);
-    onNavigate('game');
+    onOpenGame(gameMode, null);
   }
 
   return (
     <main className="page page-launcher">
       <section className="hero-section">
-        <p className="eyebrow">
-          {user ? `Welcome, ${user.displayName}` : 'Daily character game'}
-        </p>
+        <p className="eyebrow">{user ? 'Welcome back' : 'Choose a universe'}</p>
         <h1>Choose Your Universe</h1>
-        <p>
-          The character game flow is shared across universes.
-          Complete the character round to unlock the quote round.
-        </p>
       </section>
 
       <section className="launcher-grid" aria-label="Launcher dashboard">
         <div className={`universe-grid ${universes.length === 1 ? 'single-universe' : ''}`}>
           {universes.map((universe) => (
-            <UniverseCard key={universe.id} universe={universe} onPlay={() => handlePlayUniverse(universe.id)} />
+            <UniverseCard
+              key={universe.id}
+              universe={universe}
+              onPlay={() => handleOpenUniverseGame(universe.id, 'character')}
+              onPlayQuote={universe.isPlayable ? () => handleOpenUniverseGame(universe.id, 'quote') : undefined}
+            />
           ))}
         </div>
 
         <aside className="dashboard-rail" aria-label="Player snapshot">
           <UserProfileCard error={authError} isLoading={isUserLoading} user={user} />
-          <MiniLeaderboardCard rows={leaderboardRows} onViewAll={() => onNavigate('leaderboard')} />
-          <PrototypePathCard
-            onPlay={() => onNavigate('game')}
-            onViewPreviousGames={() => onNavigate('history')}
+          <MiniLeaderboardCard
+            error={leaderboardError}
+            isLoading={isLeaderboardLoading}
+            rows={leaderboardData?.rows ?? []}
+            onViewAll={() => onNavigate('leaderboard')}
           />
         </aside>
       </section>

@@ -8,3 +8,10 @@ export interface AuthFormValues {
   email: string;
   password: string;
 }
+
+export interface AccountSettingsValues {
+  avatarUrl: string;
+  displayName: string;
+  email: string;
+  password: string;
+}

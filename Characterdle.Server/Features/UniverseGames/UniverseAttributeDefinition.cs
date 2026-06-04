@@ -10,4 +10,5 @@ public sealed record UniverseAttributeDefinition(
     string Kind,
     string? EmptyLabel = null,
     string? TrueLabel = null,
-    string? FalseLabel = null);
+    string? FalseLabel = null,
+    string? HelpText = null);

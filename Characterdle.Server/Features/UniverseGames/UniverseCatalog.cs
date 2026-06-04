@@ -26,15 +26,16 @@ public sealed class UniverseCatalog
                 ScheduleTimeZoneId: "America/New_York",
                 CharacterTableName: "public.\"GOTCharacters\"",
                 GameTableName: "public.\"GOTGames\"",
+                QuoteTableName: "public.\"GOTQuotes\"",
                 AttributeDefinitions:
                 [
                     new UniverseAttributeDefinition("gender", "Gender", "gender", "string", "ERROR"),
                     new UniverseAttributeDefinition("species", "Species", "species", "string", "ERROR"),
                     new UniverseAttributeDefinition("house", "Houses", "house", "list", "Lowborn"),
                     new UniverseAttributeDefinition("occupation", "Roles", "occupation", "list", "ERROR"),
-                    new UniverseAttributeDefinition("debutSeason", "Debut", "debut_season", "number", "ERROR"),
-                    new UniverseAttributeDefinition("lastSeason", "Last", "last_season", "number", "ERROR"),
-                    new UniverseAttributeDefinition("alive", "Status", "alive", "boolean", "ERROR", "Alive", "Dead"),
+                    new UniverseAttributeDefinition("debutSeason", "Debut Season", "debut_season", "number", "ERROR"),
+                    new UniverseAttributeDefinition("lastSeason", "Last Season", "last_season", "number", "ERROR"),
+                    new UniverseAttributeDefinition("alive", "Status", "alive", "boolean", "ERROR", "Alive", "Dead", "Last known status of the character."),
                 ])
         ]);
     }

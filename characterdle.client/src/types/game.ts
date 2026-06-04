@@ -1,8 +1,7 @@
 import type { Page } from './routes';
 
 export type AttributeTone = 'correct' | 'partial' | 'neutral';
-
-export type DistributionTone = 'muted' | 'primary' | 'danger';
+export type GameMode = 'character' | 'quote';
 
 export interface NavItem {
   id: Page;
@@ -23,23 +22,12 @@ export interface Universe {
   isFeatured?: boolean;
 }
 
-export interface LeaderboardRow {
-  rank: number;
-  player: string;
-  tier: string;
-  wins: string;
-  guesses: string;
-  mastery: string[];
-}
-
 export interface CharacterAttribute {
+  displayVariant?: 'default' | 'numeric';
   label: string;
   tone: AttributeTone;
-}
-
-export interface GuessDistributionItem {
-  guess: number;
-  count: number;
-  width: number;
-  tone: DistributionTone;
+  indicator?: {
+    direction: 'up' | 'down';
+    value: string;
+  };
 }

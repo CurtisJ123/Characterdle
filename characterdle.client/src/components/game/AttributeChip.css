@@ -1,0 +1,151 @@
+.attribute-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 88px;
+  height: auto;
+  border-radius: 11px;
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 1.28rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.attribute-chip-label {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.attribute-chip.is-small {
+  font-size: 1.12rem;
+  line-height: 1.1;
+}
+
+.attribute-chip.is-xsmall {
+  font-size: 0.98rem;
+  line-height: 1.05;
+}
+
+.attribute-chip.is-xxsmall {
+  font-size: 0.86rem;
+  line-height: 1.02;
+}
+
+.attribute-chip.is-numeric {
+  font-size: 2rem;
+  letter-spacing: 0;
+}
+
+.attribute-chip.is-numeric .attribute-chip-label {
+  font-family: var(--heading-font);
+  font-size: inherit;
+  line-height: 1;
+}
+
+.attribute-chip.is-directional {
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(153, 141, 158, 0.22);
+  background: #30303d;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 18px rgba(0, 0, 0, 0.22);
+}
+
+.attribute-chip-arrow {
+  position: absolute;
+  inset: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.78;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
+}
+
+.attribute-chip-arrow.is-up,
+.attribute-chip-arrow.is-down {
+  flex-direction: column;
+}
+
+.attribute-chip-arrow-head,
+.attribute-chip-arrow-shaft {
+  flex: 0 0 auto;
+  background: rgba(18, 12, 23, 0.72);
+}
+
+.attribute-chip-arrow-head {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.attribute-chip-arrow-shaft {
+  width: 34px;
+  height: 42px;
+  border-radius: 6px;
+}
+
+.attribute-chip-arrow.is-up .attribute-chip-arrow-head {
+  border-right: 28px solid transparent;
+  border-bottom: 30px solid rgba(18, 12, 23, 0.72);
+  border-left: 28px solid transparent;
+}
+
+.attribute-chip-arrow.is-up .attribute-chip-arrow-shaft {
+  margin-top: -2px;
+}
+
+.attribute-chip-arrow.is-down .attribute-chip-arrow-head {
+  order: 2;
+  border-top: 30px solid rgba(18, 12, 23, 0.72);
+  border-right: 28px solid transparent;
+  border-left: 28px solid transparent;
+}
+
+.attribute-chip-arrow.is-down .attribute-chip-arrow-shaft {
+  order: 1;
+  margin-bottom: -2px;
+}
+
+.attribute-chip-direction-value {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  min-height: 100%;
+  padding-inline: 8px;
+  color: white;
+  font-family: var(--heading-font);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.42);
+}
+
+.attribute-chip.correct:not(.is-directional) {
+  color: white;
+  background: #20c763;
+  box-shadow: 0 0 24px rgba(32, 199, 99, 0.25);
+}
+
+.attribute-chip.partial:not(.is-directional) {
+  color: white;
+  background: #f2b705;
+  box-shadow: 0 0 24px rgba(242, 183, 5, 0.25);
+}
+
+.attribute-chip.neutral:not(.is-directional) {
+  color: var(--on-surface-variant);
+  background: #30303d;
+}

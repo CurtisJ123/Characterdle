@@ -1,4 +1,4 @@
-import { navItems } from '../../data/prototypeData';
+import { navItems } from '../../data/navigation';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 import { BrandButton } from './BrandButton';
 
@@ -21,7 +21,7 @@ export function SiteHeader({
   onSignOut,
   userDisplayName,
 }: SiteHeaderProps) {
-  const activeNav = currentPage === 'game' || currentPage === 'quote' ? 'launcher' : currentPage;
+  const activeNav = currentPage === 'game' ? 'launcher' : currentPage;
   const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
 
   return (
@@ -47,7 +47,7 @@ export function SiteHeader({
           <button
             className="profile-button"
             type="button"
-            onClick={() => (isAuthenticated ? onNavigate('auth') : onAuthNavigate('login'))}
+            onClick={() => (isAuthenticated ? onNavigate('profile') : onAuthNavigate('login'))}
           >
             <span>{profileLabel}</span>
           </button>

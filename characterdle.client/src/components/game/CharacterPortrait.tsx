@@ -1,30 +1,38 @@
-import { useEffect, useState } from 'react';
-import { getCharacterPortraitUrl } from '../../lib/characterPortraits';
+import { useEffect, useMemo, useState } from 'react';
+import { getCharacterPortraitCandidates } from '../../lib/characterPortraits';
 import type { UniverseCharacter } from '../../types/universeGame';
 
 interface CharacterPortraitProps {
   character: Pick<UniverseCharacter, 'displayName' | 'portraitUrl'>;
-  variant: 'guess' | 'suggestion';
+  variant: 'guess' | 'history' | 'suggestion';
 }
 
 export function CharacterPortrait({ character, variant }: CharacterPortraitProps) {
-  const portraitUrl = getCharacterPortraitUrl(character);
-  const [hasImageError, setHasImageError] = useState(false);
+  const portraitCandidates = useMemo(
+    () => getCharacterPortraitCandidates(character),
+    [character.displayName, character.portraitUrl],
+  );
+  const [candidateIndex, setCandidateIndex] = useState(0);
 
   useEffect(() => {
-    setHasImageError(false);
-  }, [portraitUrl]);
+    setCandidateIndex(0);
+  }, [portraitCandidates]);
 
-  const className = variant === 'suggestion' ? 'suggestion-avatar' : 'character-orb';
+  const className = variant === 'suggestion'
+    ? 'suggestion-avatar'
+    : variant === 'history'
+      ? 'history-avatar'
+      : 'character-orb';
+  const portraitUrl = portraitCandidates[candidateIndex] ?? null;
 
-  if (portraitUrl && !hasImageError) {
+  if (portraitUrl) {
     return (
       <img
         className={className}
         src={portraitUrl}
         alt=""
         aria-hidden="true"
-        onError={() => setHasImageError(true)}
+        onError={() => setCandidateIndex((currentIndex) => currentIndex + 1)}
       />
     );
   }

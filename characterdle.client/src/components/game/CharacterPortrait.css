@@ -1,0 +1,61 @@
+.suggestion-avatar {
+  width: 56px;
+  height: 72px;
+  display: block;
+  flex: 0 0 auto;
+  border: 1px solid rgba(224, 182, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(17, 12, 21, 0.88);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24);
+  object-fit: cover;
+}
+
+.history-avatar {
+  width: 62px;
+  height: 78px;
+  display: block;
+  flex: 0 0 auto;
+  border: 1px solid rgba(224, 182, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(17, 12, 21, 0.88);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+  object-fit: cover;
+}
+
+.character-orb {
+  width: 95px;
+  height: 120px;
+  display: block;
+  flex: 0 0 auto;
+  border: 1px solid rgba(224, 182, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(17, 12, 21, 0.88);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+  object-fit: cover;
+}
+
+.suggestion-avatar.is-placeholder,
+.history-avatar.is-placeholder,
+.character-orb.is-placeholder {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 34%),
+    radial-gradient(circle at 50% 28%, #fff, #dadde5 30%, #787383 100%);
+}
+
+.suggestion-avatar.is-placeholder {
+  box-shadow:
+    inset -10px -12px 16px rgba(0, 0, 0, 0.2),
+    0 10px 22px rgba(0, 0, 0, 0.24);
+}
+
+.history-avatar.is-placeholder {
+  box-shadow:
+    inset -10px -12px 16px rgba(0, 0, 0, 0.2),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+.character-orb.is-placeholder {
+  box-shadow:
+    inset -10px -12px 16px rgba(0, 0, 0, 0.2),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}

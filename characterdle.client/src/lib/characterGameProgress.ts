@@ -5,6 +5,8 @@ interface StoredGameStats {
 const PLAY_STATS_STORAGE_KEY_PREFIX = 'character-game-stats';
 const GAME_STATE_STORAGE_KEY_PREFIX = 'character-game-state';
 const LEGACY_SESSION_STORAGE_KEY_PREFIX = 'character-game';
+const QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX = 'quote-game-stats';
+const QUOTE_GAME_STATE_STORAGE_KEY_PREFIX = 'quote-game-state';
 
 export function getCharacterGameStorageKey(universeId: string, gameId: number): string {
   return `${GAME_STATE_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
@@ -18,13 +20,21 @@ export function getCharacterGameStatsStorageKey(universeId: string, gameId: numb
   return `${PLAY_STATS_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
 }
 
-export function readCharacterGameGuessCounts(universeId: string, gameId: number): number[] {
+export function getQuoteGameStorageKey(universeId: string, gameId: number): string {
+  return `${QUOTE_GAME_STATE_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
+}
+
+export function getQuoteGameStatsStorageKey(universeId: string, gameId: number): string {
+  return `${QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
+}
+
+function readGuessCounts(storageKey: string): number[] {
   if (typeof window === 'undefined') {
     return [];
   }
 
   try {
-    const rawValue = window.localStorage.getItem(getCharacterGameStatsStorageKey(universeId, gameId));
+    const rawValue = window.localStorage.getItem(storageKey);
 
     if (!rawValue) {
       return [];
@@ -39,6 +49,18 @@ export function readCharacterGameGuessCounts(universeId: string, gameId: number)
   }
 }
 
+export function readCharacterGameGuessCounts(universeId: string, gameId: number): number[] {
+  return readGuessCounts(getCharacterGameStatsStorageKey(universeId, gameId));
+}
+
+export function readQuoteGameGuessCounts(universeId: string, gameId: number): number[] {
+  return readGuessCounts(getQuoteGameStatsStorageKey(universeId, gameId));
+}
+
 export function hasCompletedCharacterGame(universeId: string, gameId: number): boolean {
   return readCharacterGameGuessCounts(universeId, gameId).length > 0;
+}
+
+export function hasCompletedQuoteGame(universeId: string, gameId: number): boolean {
+  return readQuoteGameGuessCounts(universeId, gameId).length > 0;
 }

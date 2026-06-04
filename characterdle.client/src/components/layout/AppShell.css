@@ -1,0 +1,30 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell::before,
+.app-shell::after {
+  position: fixed;
+  inset: auto;
+  z-index: -1;
+  width: 36rem;
+  height: 36rem;
+  content: '';
+  pointer-events: none;
+  filter: blur(24px);
+  opacity: 0.65;
+}
+
+.app-shell::before {
+  top: -12rem;
+  left: 12%;
+  background: radial-gradient(circle, rgba(157, 78, 221, 0.32), transparent 68%);
+}
+
+.app-shell::after {
+  right: -10rem;
+  bottom: 18rem;
+  background: radial-gradient(circle, rgba(61, 220, 151, 0.16), transparent 68%);
+}
