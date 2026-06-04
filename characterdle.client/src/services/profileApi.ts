@@ -1,10 +1,11 @@
 import type { UniverseProfile } from '../types/profile';
+import { buildApiUrl } from '../lib/runtimeConfig';
 
 export async function getProfile(
   accessToken: string,
   universeId: string,
 ): Promise<UniverseProfile> {
-  const response = await fetch(`/api/profile/${encodeURIComponent(universeId)}`, {
+  const response = await fetch(buildApiUrl(`/api/profile/${encodeURIComponent(universeId)}`), {
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${accessToken}`,

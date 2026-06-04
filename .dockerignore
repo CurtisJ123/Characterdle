@@ -1,0 +1,11 @@
+.git
+.vs
+**/bin
+**/obj
+.codex-build
+.codex-review
+design-forks
+tools
+characterdle.client/node_modules
+characterdle.client/dist
+characterdle.client/public/images/GOTCharacterImages

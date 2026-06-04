@@ -5,6 +5,7 @@ import type {
   UniverseAttributeValue,
   UniverseCharacter,
 } from '../types/universeGame';
+import { buildApiUrl } from '../lib/runtimeConfig';
 
 const universeGameRequests = new Map<string, Promise<CurrentUniverseGame>>();
 const previousUniverseGamesRequests = new Map<string, Promise<PreviousUniverseGames>>();
@@ -72,7 +73,7 @@ export function getPreviousUniverseGames(universeId: string): Promise<PreviousUn
 
 async function fetchUniverseGame(universeId: string, gameId: number | null): Promise<CurrentUniverseGame> {
   const gamePath = gameId === null ? 'current' : String(gameId);
-  const response = await fetch(`/api/universes/${encodeURIComponent(universeId)}/games/${gamePath}`, {
+  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/${gamePath}`), {
     headers: {
       Accept: 'application/json',
     },
@@ -120,7 +121,7 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
 }
 
 async function fetchPreviousUniverseGames(universeId: string): Promise<PreviousUniverseGames> {
-  const response = await fetch(`/api/universes/${encodeURIComponent(universeId)}/games/previous`, {
+  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/previous`), {
     headers: {
       Accept: 'application/json',
     },

@@ -14,14 +14,46 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
+var renderPort = Environment.GetEnvironmentVariable("PORT");
+
+if (int.TryParse(renderPort, out var parsedRenderPort)
+    && parsedRenderPort > 0
+    && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{parsedRenderPort}");
+}
+
 // Add services to the container.
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+builder.Services.Configure<ClientAppOptions>(builder.Configuration.GetSection(ClientAppOptions.SectionName));
 builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.SectionName));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection(SchedulingOptions.SectionName));
 builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection(SupabaseOptions.SectionName));
+
+var clientAppOptions = builder.Configuration.GetSection(ClientAppOptions.SectionName).Get<ClientAppOptions>() ?? new();
+var allowedOrigins = clientAppOptions.AllowedOrigins
+    .Where(static origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(static origin => origin.Trim().TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ClientApp", policy =>
+    {
+        if (allowedOrigins.Length == 0)
+        {
+            return;
+        }
+
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var supabaseConnectionString = builder.Configuration.GetConnectionString("Supabase");
 var supabaseOptions = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new();
@@ -124,6 +156,7 @@ app.UseDefaultFiles();
 app.MapStaticAssets();
 app.UseExceptionHandler();
 app.UseMiddleware<ApiRequestLoggingMiddleware>();
+app.UseCors("ClientApp");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -144,6 +177,7 @@ app.MapGet("/api/client-config", (HttpContext httpContext, IOptions<SupabaseOpti
 
     return Results.Json(new
     {
+        apiBaseUrl = clientAppOptions.ApiBaseUrl,
         supabasePublishableKey = options.Value.PublishableKey,
         supabaseUrl = options.Value.Url,
     });

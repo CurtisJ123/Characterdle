@@ -1,16 +1,7 @@
 import { createClient, processLock } from '@supabase/supabase-js';
+import { readPublicConfig } from './runtimeConfig';
 
-function readRuntimeConfig() {
-  const runtimeConfig = window.__CHARACTERDLE_PUBLIC_CONFIG__;
-
-  if (!runtimeConfig?.supabaseUrl || !runtimeConfig.supabasePublishableKey) {
-    throw new Error('Characterdle runtime config is missing Supabase settings.');
-  }
-
-  return runtimeConfig;
-}
-
-const runtimeConfig = readRuntimeConfig();
+const runtimeConfig = readPublicConfig();
 
 export const supabase = createClient(runtimeConfig.supabaseUrl, runtimeConfig.supabasePublishableKey, {
   auth: {

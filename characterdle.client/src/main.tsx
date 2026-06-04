@@ -1,13 +1,19 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import { getBuildTimePublicConfig, type CharacterdlePublicConfig } from './lib/runtimeConfig';
 
-interface RuntimeConfigResponse {
-  supabasePublishableKey: string;
-  supabaseUrl: string;
-}
+async function resolveRuntimeConfig(): Promise<CharacterdlePublicConfig> {
+  if (window.__CHARACTERDLE_PUBLIC_CONFIG__) {
+    return window.__CHARACTERDLE_PUBLIC_CONFIG__;
+  }
 
-async function bootstrap() {
+  const buildTimePublicConfig = getBuildTimePublicConfig();
+
+  if (buildTimePublicConfig) {
+    return buildTimePublicConfig;
+  }
+
   const runtimeConfigResponse = await fetch('/api/client-config', {
     cache: 'no-store',
   });
@@ -16,7 +22,11 @@ async function bootstrap() {
     throw new Error(`Failed to load runtime config (${runtimeConfigResponse.status}).`);
   }
 
-  window.__CHARACTERDLE_PUBLIC_CONFIG__ = await runtimeConfigResponse.json() as RuntimeConfigResponse;
+  return await runtimeConfigResponse.json() as CharacterdlePublicConfig;
+}
+
+async function bootstrap() {
+  window.__CHARACTERDLE_PUBLIC_CONFIG__ = await resolveRuntimeConfig();
 
   const [{ default: App }, { AuthProvider }, { UniverseProvider }] = await Promise.all([
     import('./App.tsx'),

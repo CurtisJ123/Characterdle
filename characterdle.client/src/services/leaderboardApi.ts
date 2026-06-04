@@ -2,6 +2,7 @@ import type {
   SubmitUniverseGameResultPayload,
   UniverseLeaderboard,
 } from '../types/leaderboard';
+import { buildApiUrl } from '../lib/runtimeConfig';
 
 const leaderboardRequests = new Map<string, Promise<UniverseLeaderboard>>();
 
@@ -43,7 +44,7 @@ export async function submitUniverseGameResult(
   accessToken: string,
   payload: SubmitUniverseGameResultPayload,
 ): Promise<void> {
-  const response = await fetch(`/api/universes/${encodeURIComponent(payload.universeId)}/leaderboard/results`, {
+  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(payload.universeId)}/leaderboard/results`), {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -70,7 +71,7 @@ async function fetchLeaderboard(universeId: string, currentUserId: string | null
   const query = currentUserId
     ? `?currentUserId=${encodeURIComponent(currentUserId)}`
     : '';
-  const response = await fetch(`/api/universes/${encodeURIComponent(universeId)}/leaderboard/${query}`, {
+  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/leaderboard/${query}`), {
     headers: {
       Accept: 'application/json',
     },

@@ -1,0 +1,30 @@
+services:
+  - type: web
+    runtime: docker
+    name: characterdle-api
+    plan: free
+    region: oregon
+    dockerfilePath: ./Characterdle.Server/Dockerfile
+    healthCheckPath: /api/status
+    buildFilter:
+      paths:
+        - Characterdle.Server/**
+        - render.yaml
+        - .dockerignore
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__RunMigrationsOnStartup
+        value: "true"
+      - key: Scheduling__EnableHostedService
+        value: "false"
+      - key: ClientApp__AllowedOrigins__0
+        value: https://characterdle.com
+      - key: ClientApp__AllowedOrigins__1
+        value: https://www.characterdle.com
+      - key: ConnectionStrings__Supabase
+        sync: false
+      - key: Supabase__Url
+        sync: false
+      - key: Supabase__PublishableKey
+        sync: false
