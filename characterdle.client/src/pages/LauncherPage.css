@@ -1,6 +1,6 @@
 .hero-section {
   max-width: 780px;
-  margin-bottom: 48px;
+  margin-bottom: 40px;
 }
 
 .hero-section h1 {
@@ -18,8 +18,8 @@
 
 .launcher-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 24px;
   align-items: start;
 }
 
@@ -35,7 +35,7 @@
 
 .dashboard-rail {
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
 @media (max-width: 1020px) {

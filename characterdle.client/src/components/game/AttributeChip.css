@@ -5,15 +5,15 @@
   justify-content: center;
   width: 100%;
   aspect-ratio: 1 / 1;
-  min-height: 88px;
+  min-height: 86px;
   height: auto;
   border-radius: 11px;
-  padding: 10px 8px;
+  padding: 8px 7px;
   text-align: center;
-  font-size: 1.28rem;
+  font-size: 1.16rem;
   font-weight: 900;
   letter-spacing: 0.02em;
-  line-height: 1.15;
+  line-height: 1.08;
   white-space: pre-line;
   word-break: break-word;
 }
@@ -23,20 +23,21 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
+  overflow-wrap: anywhere;
 }
 
 .attribute-chip.is-small {
-  font-size: 1.12rem;
-  line-height: 1.1;
+  font-size: 0.98rem;
+  line-height: 1.04;
 }
 
 .attribute-chip.is-xsmall {
-  font-size: 0.98rem;
-  line-height: 1.05;
+  font-size: 0.84rem;
+  line-height: 1.02;
 }
 
 .attribute-chip.is-xxsmall {
-  font-size: 0.86rem;
+  font-size: 0.74rem;
   line-height: 1.02;
 }
 

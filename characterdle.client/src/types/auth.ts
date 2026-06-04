@@ -10,8 +10,13 @@ export interface AuthFormValues {
 }
 
 export interface AccountSettingsValues {
-  avatarUrl: string;
   displayName: string;
+}
+
+export interface PasswordResetRequestValues {
   email: string;
+}
+
+export interface PasswordUpdateValues {
   password: string;
 }

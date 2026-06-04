@@ -2,14 +2,23 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type { Session, User, UserAttributes } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { AccountSettingsValues, AuthActionResult, AuthFormValues } from '../types/auth';
+import type {
+  AccountSettingsValues,
+  AuthActionResult,
+  AuthFormValues,
+  PasswordResetRequestValues,
+  PasswordUpdateValues,
+} from '../types/auth';
 import type { UserProfile } from '../types/user';
 
 interface AuthContextValue {
   authError: Error | null;
+  completePasswordReset: (values: PasswordUpdateValues) => Promise<AuthActionResult>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isPasswordRecovery: boolean;
   refreshUser: () => Promise<void>;
+  requestPasswordReset: (values: PasswordResetRequestValues) => Promise<AuthActionResult>;
   session: Session | null;
   signIn: (values: AuthFormValues) => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
@@ -20,6 +29,27 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function readAdminFlag(user: User): boolean {
+  const appRole = typeof user.app_metadata?.role === 'string'
+    ? user.app_metadata.role.trim().toLowerCase()
+    : null;
+  const appRoles = Array.isArray(user.app_metadata?.roles)
+    ? user.app_metadata.roles
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim().toLowerCase())
+    : [];
+  const metadataRole = typeof user.user_metadata?.role === 'string'
+    ? user.user_metadata.role.trim().toLowerCase()
+    : null;
+
+  return appRole === 'admin'
+    || metadataRole === 'admin'
+    || appRoles.includes('admin')
+    || user.app_metadata?.is_admin === true
+    || user.user_metadata?.is_admin === true
+    || user.user_metadata?.admin === true;
+}
+
 function buildUserProfile(user: User): UserProfile {
   const displayName = typeof user.user_metadata.display_name === 'string' && user.user_metadata.display_name.trim()
     ? user.user_metadata.display_name.trim()
@@ -29,9 +59,13 @@ function buildUserProfile(user: User): UserProfile {
     avatarUrl: typeof user.user_metadata.avatar_url === 'string' && user.user_metadata.avatar_url.trim()
       ? user.user_metadata.avatar_url.trim()
       : null,
+    createdAt: typeof user.created_at === 'string' && user.created_at.trim()
+      ? user.created_at
+      : null,
     displayName,
     email: user.email?.trim() || 'ERROR',
     id: user.id,
+    isAdmin: readAdminFlag(user),
   };
 }
 
@@ -42,6 +76,7 @@ function normalizeError(error: unknown, fallbackMessage: string) {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [authError, setAuthError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
 
@@ -64,6 +99,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setAuthError(error);
       }
 
+      if (window.location.pathname === '/reset-password' && data.session) {
+        setIsPasswordRecovery(true);
+      }
+
       applySession(data.session);
       setIsLoading(false);
     }
@@ -72,9 +111,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) {
         return;
+      }
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      } else if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+      } else if (event === 'SIGNED_IN' && window.location.pathname !== '/reset-password') {
+        setIsPasswordRecovery(false);
       }
 
       setAuthError(null);
@@ -136,6 +183,49 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
+  async function requestPasswordReset({ email }: PasswordResetRequestValues): Promise<AuthActionResult> {
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail) {
+      throw new Error('Email is required.');
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      throw normalizeError(error, 'Unable to send a password reset email.');
+    }
+
+    return {
+      message: 'If an account exists for that email, a password reset link has been sent.',
+      requiresEmailConfirmation: false,
+    };
+  }
+
+  async function completePasswordReset({ password }: PasswordUpdateValues): Promise<AuthActionResult> {
+    if (!password) {
+      throw new Error('A new password is required.');
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (error) {
+      throw normalizeError(error, 'Unable to update your password.');
+    }
+
+    setIsPasswordRecovery(false);
+    await refreshUser();
+
+    return {
+      message: 'Password updated successfully.',
+      requiresEmailConfirmation: false,
+    };
+  }
+
   async function refreshUser() {
     const [{ data: sessionData, error: sessionError }, { data: userData, error: userError }] = await Promise.all([
       supabase.auth.getSession(),
@@ -169,32 +259,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const normalizedDisplayName = values.displayName.trim();
-    const normalizedEmail = values.email.trim();
-    const normalizedAvatarUrl = values.avatarUrl.trim();
-    const currentAvatarUrl = user?.avatarUrl ?? '';
     const updatePayload: UserAttributes = {};
 
     if (!normalizedDisplayName) {
       throw new Error('Display name is required.');
     }
 
-    if (!normalizedEmail) {
-      throw new Error('Email is required.');
-    }
-
-    if (normalizedDisplayName !== user?.displayName || normalizedAvatarUrl !== currentAvatarUrl) {
+    if (normalizedDisplayName !== user?.displayName) {
       updatePayload.data = {
-        avatar_url: normalizedAvatarUrl || null,
         display_name: normalizedDisplayName,
       };
-    }
-
-    if (normalizedEmail !== user?.email) {
-      updatePayload.email = normalizedEmail;
-    }
-
-    if (values.password.trim()) {
-      updatePayload.password = values.password;
     }
 
     if (Object.keys(updatePayload).length === 0) {
@@ -213,9 +287,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await refreshUser();
 
     return {
-      message: normalizedEmail !== user?.email
-        ? 'Profile updated. Check your email if you changed your address.'
-        : 'Profile updated.',
+      message: 'Profile updated.',
       requiresEmailConfirmation: false,
     };
   }
@@ -224,9 +296,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     <AuthContext.Provider
       value={{
         authError,
+        completePasswordReset,
         isAuthenticated: Boolean(session),
         isLoading,
+        isPasswordRecovery,
         refreshUser,
+        requestPasswordReset,
         session,
         signIn,
         signOut,

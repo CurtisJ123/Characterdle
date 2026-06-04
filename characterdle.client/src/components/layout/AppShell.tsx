@@ -53,7 +53,13 @@ export function AppShell({
         onSignOut={handleSignOut}
         userDisplayName={user?.displayName}
       />
-      {currentPage === 'auth' && <AuthPage initialMode={authMode} onNavigate={onNavigate} />}
+      {currentPage === 'auth' && (
+        <AuthPage
+          initialMode={authMode}
+          onAuthModeChange={onAuthNavigate}
+          onNavigate={onNavigate}
+        />
+      )}
       {currentPage === 'launcher' && (
         <LauncherPage
           authError={authError}

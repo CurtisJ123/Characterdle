@@ -7,11 +7,11 @@ function getSizeClass(label: string): string {
     return 'is-xxsmall';
   }
 
-  if (normalizedLength >= 22) {
+  if (normalizedLength >= 24) {
     return 'is-xsmall';
   }
 
-  if (normalizedLength >= 15) {
+  if (normalizedLength >= 16) {
     return 'is-small';
   }
 

@@ -1,9 +1,18 @@
 import { createClient, processLock } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://lvdybelcnbrrkwwktbys.supabase.co';
-const supabasePublishableKey = 'sb_publishable_Chmzjcup3wZDhMxcMa1SLQ_uszYc8rB';
+function readRuntimeConfig() {
+  const runtimeConfig = window.__CHARACTERDLE_PUBLIC_CONFIG__;
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+  if (!runtimeConfig?.supabaseUrl || !runtimeConfig.supabasePublishableKey) {
+    throw new Error('Characterdle runtime config is missing Supabase settings.');
+  }
+
+  return runtimeConfig;
+}
+
+const runtimeConfig = readRuntimeConfig();
+
+export const supabase = createClient(runtimeConfig.supabaseUrl, runtimeConfig.supabasePublishableKey, {
   auth: {
     lock: processLock,
     storageKey: 'characterdle-auth',

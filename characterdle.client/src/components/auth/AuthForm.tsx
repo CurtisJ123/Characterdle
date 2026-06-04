@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AuthFormValues } from '../../types/auth';
-import type { AuthMode } from '../../types/routes';
+import type { PrimaryAuthMode } from '../../types/routes';
 
 interface AuthFormProps {
   errorMessage?: string;
   isBusy: boolean;
   message?: string;
-  mode: AuthMode;
+  mode: PrimaryAuthMode;
   onContinueAsGuest: () => void;
+  onForgotPassword?: () => void;
   onSubmit: (values: AuthFormValues) => Promise<void> | void;
 }
 
@@ -18,6 +19,7 @@ export function AuthForm({
   message,
   mode,
   onContinueAsGuest,
+  onForgotPassword,
   onSubmit,
 }: AuthFormProps) {
   const isSignup = mode === 'signup';
@@ -83,6 +85,12 @@ export function AuthForm({
       <button className="primary-button large-button" disabled={isSubmitDisabled} type="submit">
         {isBusy ? 'Working...' : submitLabel}
       </button>
+
+      {!isSignup && onForgotPassword && (
+        <button className="auth-inline-button" disabled={isBusy} type="button" onClick={onForgotPassword}>
+          Forgot password?
+        </button>
+      )}
 
       <button className="secondary-button large-button" disabled={isBusy} type="button" onClick={onContinueAsGuest}>
         Continue as guest

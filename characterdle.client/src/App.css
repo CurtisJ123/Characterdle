@@ -7,6 +7,8 @@
 @import './pages/AuthPage.css';
 @import './components/auth/AuthModeToggle.css';
 @import './components/auth/AuthForm.css';
+@import './components/auth/ForgotPasswordForm.css';
+@import './components/auth/ResetPasswordForm.css';
 @import './components/auth/AuthenticatedPanel.css';
 @import './pages/LauncherPage.css';
 @import './components/launcher/UniverseCard.css';

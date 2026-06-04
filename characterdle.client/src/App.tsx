@@ -37,9 +37,30 @@ function parseGameId(value: string | undefined): number | null {
     : null;
 }
 
-function readRouteFromHash(): AppRoute {
+function parseAuthMode(value: string | undefined): AuthMode {
+  return value === 'signup'
+    ? 'signup'
+    : value === 'forgot-password'
+      ? 'forgotPassword'
+      : value === 'reset-password'
+        ? 'resetPassword'
+        : 'login';
+}
+
+function readRouteFromLocation(): AppRoute {
   if (typeof window === 'undefined') {
     return defaultRoute;
+  }
+
+  const normalizedPathname = window.location.pathname.replace(/\/+$/, '') || '/';
+
+  if (normalizedPathname === '/reset-password') {
+    return {
+      authMode: 'resetPassword',
+      gameId: null,
+      gameMode: 'character',
+      page: 'auth',
+    };
   }
 
   const normalizedHash = window.location.hash.replace(/^#\/?/, '').trim();
@@ -52,7 +73,7 @@ function readRouteFromHash(): AppRoute {
 
   if (pageSegment === 'auth') {
     return {
-      authMode: modeSegment === 'signup' ? 'signup' : 'login',
+      authMode: parseAuthMode(modeSegment),
       gameId: null,
       gameMode: 'character',
       page: 'auth',
@@ -90,34 +111,46 @@ function readRouteFromHash(): AppRoute {
 
 function buildHash(route: AppRoute): string {
   return route.page === 'auth'
-    ? `#/auth/${route.authMode}`
+    ? route.authMode === 'forgotPassword'
+      ? '#/auth/forgot-password'
+      : route.authMode === 'resetPassword'
+        ? '#/auth/reset-password'
+        : `#/auth/${route.authMode}`
     : route.page === 'game' && route.gameId !== null
       ? `#/game/${route.gameMode}/${route.gameId}`
       : route.page === 'game'
         ? `#/game/${route.gameMode}`
         : route.page === 'history'
           ? `#/history/${route.gameMode}`
-      : `#/${route.page}`;
+          : `#/${route.page}`;
+}
+
+function buildBrowserUrl(route: AppRoute): string {
+  return route.page === 'auth' && route.authMode === 'resetPassword'
+    ? '/reset-password'
+    : `/${buildHash(route)}`;
 }
 
 function App() {
-  const [route, setRoute] = useState<AppRoute>(() => readRouteFromHash());
+  const [route, setRoute] = useState<AppRoute>(() => readRouteFromLocation());
 
   useEffect(() => {
-    function syncRouteFromHash() {
-      setRoute(readRouteFromHash());
+    function syncRouteFromLocation() {
+      setRoute(readRouteFromLocation());
     }
 
-    if (!window.location.hash) {
-      window.history.replaceState(null, '', buildHash(defaultRoute));
+    if (!window.location.hash && window.location.pathname === '/') {
+      window.history.replaceState(null, '', buildBrowserUrl(defaultRoute));
     } else {
-      syncRouteFromHash();
+      syncRouteFromLocation();
     }
 
-    window.addEventListener('hashchange', syncRouteFromHash);
+    window.addEventListener('hashchange', syncRouteFromLocation);
+    window.addEventListener('popstate', syncRouteFromLocation);
 
     return () => {
-      window.removeEventListener('hashchange', syncRouteFromHash);
+      window.removeEventListener('hashchange', syncRouteFromLocation);
+      window.removeEventListener('popstate', syncRouteFromLocation);
     };
   }, []);
 
@@ -125,6 +158,17 @@ function App() {
     setRoute(nextRoute);
 
     const nextHash = buildHash(nextRoute);
+    const nextUrl = buildBrowserUrl(nextRoute);
+    const currentUrl = `${window.location.pathname}${window.location.hash}`;
+
+    if (currentUrl === nextUrl) {
+      return;
+    }
+
+    if (window.location.pathname !== '/' || nextRoute.authMode === 'resetPassword') {
+      window.history.pushState(null, '', nextUrl);
+      return;
+    }
 
     if (window.location.hash !== nextHash) {
       window.location.hash = nextHash;

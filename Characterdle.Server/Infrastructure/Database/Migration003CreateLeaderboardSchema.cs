@@ -1,12 +1,12 @@
-using Npgsql;
+namespace Characterdle.Server.Infrastructure.Database;
 
-namespace Characterdle.Server.Features.Leaderboard;
-
-public sealed class LeaderboardSchemaInitializer(
-    NpgsqlDataSource dataSource,
-    ILogger<LeaderboardSchemaInitializer> logger)
+public sealed class Migration003CreateLeaderboardSchema : IDatabaseMigration
 {
-    private const string SchemaSql =
+    public string Description => "Create player profile and universe game result tables for profile and leaderboard data.";
+
+    public string Id => "003_create_leaderboard_schema";
+
+    public string Sql =>
         """
         create table if not exists public."PlayerProfiles" (
           user_id uuid primary key references auth.users(id) on delete cascade,
@@ -30,8 +30,7 @@ public sealed class LeaderboardSchemaInitializer(
           constraint universe_game_results_mode_check check (mode in ('character', 'quote')),
           constraint universe_game_results_status_check check (status in ('won', 'lost')),
           constraint universe_game_results_guess_count_check check (guess_count >= 0),
-          constraint universe_game_results_hint_count_check check (hint_count >= 0),
-          constraint universe_game_results_unique unique (user_id, universe_id, game_id, mode)
+          constraint universe_game_results_hint_count_check check (hint_count >= 0)
         );
 
         alter table public."UniverseGameResults"
@@ -67,11 +66,4 @@ public sealed class LeaderboardSchemaInitializer(
         create index if not exists idx_universe_game_results_user
           on public."UniverseGameResults" (user_id, universe_id, mode);
         """;
-
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        await using var command = dataSource.CreateCommand(SchemaSql);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-        logger.LogInformation("Leaderboard schema is ready.");
-    }
 }

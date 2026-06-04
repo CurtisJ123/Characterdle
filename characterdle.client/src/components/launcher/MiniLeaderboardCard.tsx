@@ -29,7 +29,7 @@ export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniL
       {!error && !isLoading && rows.length === 0 && (
         <p className="muted-copy">No entries yet.</p>
       )}
-      {!error && rows.slice(0, 3).map((row) => (
+      {!error && rows.slice(0, 2).map((row) => (
         <div className="mini-rank" key={row.userId}>
           <span className="rank-number">{row.rank}</span>
           <span className="avatar">{getInitials(row.displayName)}</span>

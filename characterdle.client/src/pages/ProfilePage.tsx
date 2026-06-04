@@ -24,7 +24,11 @@ function getInitials(displayName: string | undefined) {
 }
 
 function formatAverage(value: number | null) {
-  return value === null ? '--' : value.toFixed(1);
+  return value === null ? '0.0' : value.toFixed(1);
+}
+
+function formatRank(value: number | null) {
+  return value === null ? 'Unranked' : `#${value}`;
 }
 
 function formatMode(mode: string) {
@@ -40,26 +44,26 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading, reload } = useProfile(session?.access_token ?? null, selectedUniverse.id);
   const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState<string>();
   const [formMessage, setFormMessage] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
+  const hasProfileData = Boolean(data);
+  const isInitialLoad = isLoading && !hasProfileData;
   const memberSince = useMemo(() => (
-    data
+    data?.memberSince
       ? new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
       }).format(new Date(data.memberSince))
-      : '--'
-  ), [data]);
+      : user?.createdAt
+        ? new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+        }).format(new Date(user.createdAt))
+      : 'Recently joined'
+  ), [data?.memberSince, user?.createdAt]);
 
   useEffect(() => {
     setDisplayName(user?.displayName ?? '');
-    setEmail(user?.email ?? '');
-    setAvatarUrl(user?.avatarUrl ?? '');
-  }, [user?.avatarUrl, user?.displayName, user?.email, user?.id]);
+  }, [user?.displayName, user?.id]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,29 +75,14 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
       return;
     }
 
-    if (!email.trim()) {
-      setFormError('Email is required.');
-      return;
-    }
-
-    if (password && password !== confirmPassword) {
-      setFormError('Passwords do not match.');
-      return;
-    }
-
     setIsSaving(true);
 
     try {
       const result = await updateAccount({
-        avatarUrl,
         displayName,
-        email,
-        password,
       });
 
       await reload();
-      setPassword('');
-      setConfirmPassword('');
       setFormMessage(result.message);
     } catch (saveError) {
       setFormError(saveError instanceof Error ? saveError.message : 'Unable to update your profile.');
@@ -132,7 +121,7 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
 
   return (
     <main className="page profile-page">
-      <section className="profile-hero glass-card">
+      <section className={`profile-hero glass-card${isInitialLoad ? ' is-loading' : ''}`}>
         <div className="profile-hero-main">
           {data?.avatarUrl ? (
             <img className="profile-hero-avatar" src={data.avatarUrl} alt="" />
@@ -148,7 +137,7 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
             <p className="profile-subtitle">{data?.email ?? user?.email ?? 'ERROR'}</p>
             <div className="profile-meta-row">
               <span className="pill">Member since {memberSince}</span>
-              <span className="pill">Overall rank {data?.overallRank ? `#${data.overallRank}` : '--'}</span>
+              <span className="pill">Overall rank {formatRank(data?.overallRank ?? null)}</span>
             </div>
           </div>
         </div>
@@ -164,21 +153,20 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
           </article>
           <article className="glass-card profile-stat-card">
             <span>Win Rate</span>
-            <strong>{data ? `${data.winRate.toFixed(1)}%` : '--'}</strong>
+            <strong>{data ? `${data.winRate.toFixed(1)}%` : '0.0%'}</strong>
           </article>
           <article className="glass-card profile-stat-card">
             <span>Avg Guess</span>
-            <strong>{data ? formatAverage(data.averageGuesses) : '--'}</strong>
+            <strong>{data ? formatAverage(data.averageGuesses) : '0.0'}</strong>
           </article>
         </div>
       </section>
 
       {error && <p className="error-copy">Unable to load profile.</p>}
-      {isLoading && !error && <p className="muted-copy">Loading profile...</p>}
 
       <section className="profile-layout">
         <div className="profile-column">
-          <section className="glass-card profile-panel">
+          <section className={`glass-card profile-panel${isInitialLoad ? ' is-loading' : ''}`}>
             <div className="profile-panel-header">
               <div>
                 <p className="card-kicker">Stats</p>
@@ -190,34 +178,34 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
               <article className="glass-card profile-mode-card">
                 <div className="profile-mode-header">
                   <h3>Character</h3>
-                  <span className="pill">{data?.character.rank ? `#${data.character.rank}` : '--'}</span>
+                  <span className="pill">{formatRank(data?.character.rank ?? null)}</span>
                 </div>
                 <dl className="profile-mode-stats">
                   <div><dt>Wins</dt><dd>{data?.character.wins ?? 0}</dd></div>
                   <div><dt>Plays</dt><dd>{data?.character.plays ?? 0}</dd></div>
                   <div><dt>Losses</dt><dd>{data?.character.losses ?? 0}</dd></div>
-                  <div><dt>Avg Guess</dt><dd>{data ? formatAverage(data.character.averageGuesses) : '--'}</dd></div>
-                  <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.character.averageHints) : '--'}</dd></div>
+                  <div><dt>Avg Guess</dt><dd>{data ? formatAverage(data.character.averageGuesses) : '0.0'}</dd></div>
+                  <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.character.averageHints) : '0.0'}</dd></div>
                 </dl>
               </article>
 
               <article className="glass-card profile-mode-card">
                 <div className="profile-mode-header">
                   <h3>Quote</h3>
-                  <span className="pill">{data?.quote.rank ? `#${data.quote.rank}` : '--'}</span>
+                  <span className="pill">{formatRank(data?.quote.rank ?? null)}</span>
                 </div>
                 <dl className="profile-mode-stats">
                   <div><dt>Wins</dt><dd>{data?.quote.wins ?? 0}</dd></div>
                   <div><dt>Plays</dt><dd>{data?.quote.plays ?? 0}</dd></div>
                   <div><dt>Losses</dt><dd>{data?.quote.losses ?? 0}</dd></div>
-                  <div><dt>Avg Guess</dt><dd>{data ? formatAverage(data.quote.averageGuesses) : '--'}</dd></div>
-                  <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.quote.averageHints) : '--'}</dd></div>
+                  <div><dt>Avg Guess</dt><dd>{data ? formatAverage(data.quote.averageGuesses) : '0.0'}</dd></div>
+                  <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.quote.averageHints) : '0.0'}</dd></div>
                 </dl>
               </article>
             </div>
           </section>
 
-          <section className="glass-card profile-panel">
+          <section className={`glass-card profile-panel${isInitialLoad ? ' is-loading' : ''}`}>
             <div className="profile-panel-header">
               <div>
                 <p className="card-kicker">Recent</p>
@@ -246,8 +234,14 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
                   </article>
                 ))}
               </div>
+            ) : isInitialLoad ? (
+              <div className="profile-results-placeholder" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
             ) : (
-              <p className="muted-copy">No finished games yet.</p>
+              <p className="muted-copy profile-empty-copy">No games yet.</p>
             )}
           </section>
         </div>
@@ -270,53 +264,6 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
                   type="text"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
-                />
-              </label>
-
-              <label>
-                Email
-                <input
-                  autoComplete="email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </label>
-
-              <label>
-                Avatar URL
-                <input
-                  autoComplete="url"
-                  name="avatarUrl"
-                  placeholder="https://..."
-                  type="url"
-                  value={avatarUrl}
-                  onChange={(event) => setAvatarUrl(event.target.value)}
-                />
-              </label>
-
-              <label>
-                New password
-                <input
-                  autoComplete="new-password"
-                  name="password"
-                  placeholder="Leave blank to keep current password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </label>
-
-              <label>
-                Confirm password
-                <input
-                  autoComplete="new-password"
-                  name="confirmPassword"
-                  placeholder="Repeat new password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
                 />
               </label>
 

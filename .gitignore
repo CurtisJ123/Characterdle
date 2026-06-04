@@ -24,6 +24,7 @@ pnpm-debug.log*
 
 # Local agent / temp build outputs
 .codex-build/
+.codex-review/
 
 # Local portrait assets
 characterdle.client/public/images/GOTCharacterImages/*
@@ -38,3 +39,4 @@ tools/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+/PRODUCTION.md

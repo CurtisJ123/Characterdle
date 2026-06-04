@@ -1,8 +1,8 @@
 .guess-row {
   display: grid;
   align-items: stretch;
-  gap: 12px;
-  padding: 18px 16px;
+  gap: 10px;
+  padding: 14px;
 }
 
 .guess-row + .guess-row {
@@ -12,13 +12,16 @@
 .character-cell {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
 
 .character-cell strong {
   display: block;
   min-width: 0;
+  color: var(--on-surface);
+  font-size: 1.22rem;
+  font-weight: 900;
   overflow-wrap: anywhere;
-  line-height: 1.25;
+  line-height: 1.16;
 }

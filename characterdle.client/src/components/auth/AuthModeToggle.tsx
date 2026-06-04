@@ -1,8 +1,8 @@
-import type { AuthMode } from '../../types/routes';
+import type { PrimaryAuthMode } from '../../types/routes';
 
 interface AuthModeToggleProps {
-  mode: AuthMode;
-  onChange: (mode: AuthMode) => void;
+  mode: PrimaryAuthMode;
+  onChange: (mode: PrimaryAuthMode) => void;
 }
 
 export function AuthModeToggle({ mode, onChange }: AuthModeToggleProps) {

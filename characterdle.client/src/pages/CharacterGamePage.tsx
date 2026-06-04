@@ -69,7 +69,7 @@ export function CharacterGamePage({
 
   const attributeCount = data?.attributeDefinitions.length ?? 0;
   const tableGridStyle = useMemo<CSSProperties>(() => ({
-    gridTemplateColumns: `minmax(210px, 1.28fr) repeat(${Math.max(attributeCount, 1)}, minmax(88px, 1fr))`,
+    gridTemplateColumns: `minmax(212px, 1.24fr) repeat(${Math.max(attributeCount, 1)}, minmax(92px, 1fr))`,
   }), [attributeCount]);
   const isComplete = currentRound.status !== 'playing';
 
@@ -318,9 +318,11 @@ export function CharacterGamePage({
         >
           <img src={calendarDaysIcon} alt="" aria-hidden="true" />
         </button>
-        <button className="game-action-button debug-reset-button" type="button" onClick={handleResetGame}>
-          Debug Reset
-        </button>
+        {user?.isAdmin && (
+          <button className="game-action-button debug-reset-button" type="button" onClick={handleResetGame}>
+            Debug Reset
+          </button>
+        )}
       </div>
 
       {isQuoteMode && quoteGameData ? (

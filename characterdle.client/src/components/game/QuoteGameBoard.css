@@ -1,13 +1,13 @@
 .quote-board {
   width: 100%;
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .quote-history-card,
 .quote-summary-card {
   border-radius: 22px;
-  padding: 18px;
+  padding: 16px 18px;
 }
 
 .quote-history-header {
@@ -15,7 +15,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .quote-history-header .card-kicker {
@@ -90,10 +90,11 @@
 
 .quote-history-empty {
   border-radius: 18px;
-  padding: 18px;
+  padding: 14px 16px;
   color: var(--outline);
   background: rgba(38, 33, 41, 0.54);
   text-align: center;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
