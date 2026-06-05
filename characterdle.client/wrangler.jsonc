@@ -1,0 +1,9 @@
+{
+  "name": "characterdle",
+  "compatibility_date": "2026-06-04",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": true
+}
