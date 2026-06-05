@@ -6,6 +6,7 @@ interface GameResultPanelProps {
   guessCount: number;
   hintCount: number;
   playCount: number;
+  showHintCount?: boolean;
   primaryActionLabel?: string;
   primaryTitle?: string;
   onPrimaryAction?: () => void;
@@ -30,6 +31,7 @@ export function GameResultPanel({
   guessCount,
   hintCount,
   playCount,
+  showHintCount = false,
   primaryActionLabel,
   primaryTitle = 'Correct',
   onPrimaryAction,
@@ -88,14 +90,23 @@ export function GameResultPanel({
             <span>Guesses</span>
             <strong>{guessCount}</strong>
           </article>
-          <article className="result-stat-card">
-            <span>Avg guess</span>
-            <strong>{formatAverageGuesses(averageGuesses)}</strong>
-          </article>
-          <article className="result-stat-card">
-            <span>Plays</span>
-            <strong>{playCount}</strong>
-          </article>
+          {showHintCount ? (
+            <article className="result-stat-card">
+              <span>Hints</span>
+              <strong>{hintCount}</strong>
+            </article>
+          ) : (
+            <>
+              <article className="result-stat-card">
+                <span>Avg guess</span>
+                <strong>{formatAverageGuesses(averageGuesses)}</strong>
+              </article>
+              <article className="result-stat-card">
+                <span>Plays</span>
+                <strong>{playCount}</strong>
+              </article>
+            </>
+          )}
         </div>
       </div>
 

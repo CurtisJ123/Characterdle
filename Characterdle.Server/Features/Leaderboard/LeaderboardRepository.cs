@@ -153,7 +153,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               count(*) filter (where results.mode = 'quote')::int as quote_total_plays,
               round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses
             from public."UniverseGameResults" as results
-            where results.universe_id = @universeId;
+            where results.universe_id = @universeId
+              and results.hint_count = 0;
             """;
 
         await using var command = dataSource.CreateCommand(sql);
@@ -215,6 +216,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.hint_count = 0
               group by profiles.user_id, profiles.display_name, profiles.avatar_url
             ),
             ranked as (
@@ -311,6 +313,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.hint_count = 0
               group by profiles.user_id, profiles.display_name, profiles.avatar_url
             ),
             ranked as (

@@ -19,6 +19,12 @@ export interface ProfileRecentResult {
   completedAt: string;
 }
 
+export interface ProfileGameResultsState {
+  data: ProfileRecentResult[];
+  error: Error | null;
+  isLoading: boolean;
+}
+
 export interface UniverseProfile {
   universeId: string;
   universeName: string;

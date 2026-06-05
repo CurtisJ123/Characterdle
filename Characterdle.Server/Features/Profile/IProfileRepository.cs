@@ -8,4 +8,9 @@ public interface IProfileRepository
         UniverseDefinition universe,
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ProfileRecentResultResponse>> GetGameResultsAsync(
+        string universeId,
+        Guid userId,
+        CancellationToken cancellationToken);
 }

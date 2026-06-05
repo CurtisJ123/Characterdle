@@ -24,6 +24,7 @@ interface CharacterGameBoardProps {
   onContinueToQuote: () => void;
   onViewLeaderboard: () => void;
   rows: CharacterGameRow[];
+  showHintCount?: boolean;
   status: CharacterGameStatus;
 }
 
@@ -38,6 +39,7 @@ export function CharacterGameBoard({
   onContinueToQuote,
   onViewLeaderboard,
   rows,
+  showHintCount = false,
   status,
 }: CharacterGameBoardProps) {
   return (
@@ -82,6 +84,7 @@ export function CharacterGameBoard({
           guessCount={guessCount}
           hintCount={hintCount}
           playCount={completedGameStats.playCount}
+          showHintCount={showHintCount}
           primaryActionLabel={status === 'won' && canContinueToQuote ? 'Play Quote' : 'View Leaderboard'}
           primaryTitle="Correct"
           onPrimaryAction={status === 'won' && canContinueToQuote ? onContinueToQuote : onViewLeaderboard}

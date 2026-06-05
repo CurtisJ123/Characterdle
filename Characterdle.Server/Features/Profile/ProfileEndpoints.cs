@@ -15,6 +15,14 @@ public static class ProfileEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        app.MapGet("/api/profile/{universeId}/results", GetGameResultsAsync)
+            .WithTags("Profile")
+            .WithName("GetUniverseGameResults")
+            .Produces<IReadOnlyList<ProfileRecentResultResponse>>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return app;
     }
 
@@ -72,6 +80,56 @@ public static class ProfileEndpoints
 
             return Results.Problem(
                 title: "Unable to load profile data.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+
+    private static async Task<IResult> GetGameResultsAsync(
+        string universeId,
+        HttpRequest httpRequest,
+        IHostEnvironment hostEnvironment,
+        UniverseCatalog universeCatalog,
+        SupabaseAuthClient authClient,
+        IProfileRepository profileRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        if (!universeCatalog.TryGet(universeId, out var universe))
+        {
+            return Results.NotFound(new { message = $"No universe named '{universeId}' is registered." });
+        }
+
+        try
+        {
+            var accessToken = ReadBearerToken(httpRequest);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var results = await profileRepository.GetGameResultsAsync(universe.Id, user.UserId, cancellationToken);
+            return Results.Ok(results);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(ProfileEndpoints).FullName!);
+            logger.LogError(exception, "Unable to load game results for {UniverseId}.", universeId);
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The database request failed while loading game results.";
+
+            return Results.Problem(
+                title: "Unable to load game results.",
                 detail: detail,
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }

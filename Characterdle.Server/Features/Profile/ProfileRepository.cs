@@ -54,6 +54,12 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             recentResults);
     }
 
+    public Task<IReadOnlyList<ProfileRecentResultResponse>> GetGameResultsAsync(
+        string universeId,
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        LoadResultsAsync(universeId, userId, limit: null, cancellationToken);
+
     private async Task<AccountRecord?> LoadAccountAsync(
         Guid userId,
         CancellationToken cancellationToken)
@@ -118,6 +124,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               round(avg(results.hint_count) filter (where results.mode = 'quote')::numeric, 2) as quote_average_hints
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
+              and results.hint_count = 0
               and results.user_id = @userId;
             """;
 
@@ -170,6 +177,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.hint_count = 0
               group by profiles.user_id, profiles.display_name
             ),
             ranked as (
@@ -229,12 +237,19 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             reader.IsDBNull(2) ? null : reader.GetInt32(2));
     }
 
-    private async Task<IReadOnlyList<ProfileRecentResultResponse>> LoadRecentResultsAsync(
+    private Task<IReadOnlyList<ProfileRecentResultResponse>> LoadRecentResultsAsync(
         string universeId,
         Guid userId,
+        CancellationToken cancellationToken) =>
+        LoadResultsAsync(universeId, userId, limit: 10, cancellationToken);
+
+    private async Task<IReadOnlyList<ProfileRecentResultResponse>> LoadResultsAsync(
+        string universeId,
+        Guid userId,
+        int? limit,
         CancellationToken cancellationToken)
     {
-        const string sql =
+        var sql =
             """
             select
               game_id,
@@ -247,12 +262,26 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             where universe_id = @universeId
               and user_id = @userId
             order by completed_at desc
-            limit 10;
             """;
+
+        if (limit.HasValue)
+        {
+            sql += "\nlimit @limit;";
+        }
+        else
+        {
+            sql += ";";
+        }
 
         await using var command = dataSource.CreateCommand(sql);
         command.Parameters.AddWithValue("universeId", universeId);
         command.Parameters.AddWithValue("userId", userId);
+
+        if (limit.HasValue)
+        {
+            command.Parameters.AddWithValue("limit", limit.Value);
+        }
+
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         var results = new List<ProfileRecentResultResponse>();

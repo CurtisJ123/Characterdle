@@ -1,5 +1,7 @@
 import { PreviousGamesGrid } from '../components/history/PreviousGamesGrid';
+import { useAuth } from '../hooks/useAuth';
 import { usePreviousUniverseGames } from '../hooks/usePreviousUniverseGames';
+import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverse } from '../hooks/useUniverse';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
@@ -18,8 +20,15 @@ export function PreviousGamesPage({
   selectedGameMode,
 }: PreviousGamesPageProps) {
   const { selectedUniverse } = useUniverse();
+  const { session } = useAuth();
   const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id);
+  const { data: gameResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
   const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
+  const completedGameIds = new Set(
+    gameResults
+      .filter((result) => result.mode === selectedGameMode)
+      .map((result) => result.gameId),
+  );
 
   return (
     <main className="page archive-page">
@@ -67,6 +76,7 @@ export function PreviousGamesPage({
 
         {!isLoading && !error && data && data.games.length > 0 && (
           <PreviousGamesGrid
+            completedGameIds={completedGameIds}
             games={data.games}
             gameMode={selectedGameMode}
             onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}

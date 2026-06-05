@@ -2,6 +2,11 @@ interface StoredGameStats {
   guessCounts: number[];
 }
 
+interface StoredCompletionState {
+  completionRecorded?: boolean;
+  gaveUp?: boolean;
+}
+
 const PLAY_STATS_STORAGE_KEY_PREFIX = 'character-game-stats';
 const GAME_STATE_STORAGE_KEY_PREFIX = 'character-game-state';
 const LEGACY_SESSION_STORAGE_KEY_PREFIX = 'character-game';
@@ -49,6 +54,31 @@ function readGuessCounts(storageKey: string): number[] {
   }
 }
 
+function readCompletionState(storageKey: string, fallbackStorageKey?: string): StoredCompletionState | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  function parse(rawValue: string | null): StoredCompletionState | null {
+    if (!rawValue) {
+      return null;
+    }
+
+    try {
+      const parsedValue = JSON.parse(rawValue) as StoredCompletionState;
+      return {
+        completionRecorded: parsedValue.completionRecorded === true,
+        gaveUp: parsedValue.gaveUp === true,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  return parse(window.localStorage.getItem(storageKey))
+    ?? (fallbackStorageKey ? parse(window.sessionStorage.getItem(fallbackStorageKey)) : null);
+}
+
 export function readCharacterGameGuessCounts(universeId: string, gameId: number): number[] {
   return readGuessCounts(getCharacterGameStatsStorageKey(universeId, gameId));
 }
@@ -58,9 +88,15 @@ export function readQuoteGameGuessCounts(universeId: string, gameId: number): nu
 }
 
 export function hasCompletedCharacterGame(universeId: string, gameId: number): boolean {
-  return readCharacterGameGuessCounts(universeId, gameId).length > 0;
+  const storedState = readCompletionState(
+    getCharacterGameStorageKey(universeId, gameId),
+    getLegacyCharacterGameSessionStorageKey(universeId, gameId),
+  );
+
+  return storedState?.completionRecorded === true || storedState?.gaveUp === true;
 }
 
 export function hasCompletedQuoteGame(universeId: string, gameId: number): boolean {
-  return readQuoteGameGuessCounts(universeId, gameId).length > 0;
+  const storedState = readCompletionState(getQuoteGameStorageKey(universeId, gameId));
+  return storedState?.completionRecorded === true || storedState?.gaveUp === true;
 }

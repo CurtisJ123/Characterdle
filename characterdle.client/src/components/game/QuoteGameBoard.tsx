@@ -9,8 +9,10 @@ interface QuoteGameBoardProps {
   answerName: string;
   completedGameStats: CompletedGameStats;
   guessCount: number;
+  hintCount: number;
   onViewLeaderboard: () => void;
   rows: QuoteGameRow[];
+  showHintCount?: boolean;
   status: CharacterGameStatus;
 }
 
@@ -28,8 +30,10 @@ export function QuoteGameBoard({
   answerName,
   completedGameStats,
   guessCount,
+  hintCount,
   onViewLeaderboard,
   rows,
+  showHintCount = false,
   status,
 }: QuoteGameBoardProps) {
   return (
@@ -37,7 +41,7 @@ export function QuoteGameBoard({
       <section className="quote-history-card glass-card" aria-label="Guess history">
         <div className="quote-history-header">
           <p className="card-kicker">Guess History</p>
-          <span>{rows.length} {rows.length === 1 ? 'guess' : 'guesses'}</span>
+          <span>{guessCount} {guessCount === 1 ? 'guess' : 'guesses'}</span>
         </div>
 
         {rows.length > 0 ? (
@@ -79,14 +83,23 @@ export function QuoteGameBoard({
               <span>Guesses</span>
               <strong>{guessCount}</strong>
             </article>
-            <article className="quote-summary-stat">
-              <span>Avg Guess</span>
-              <strong>{formatAverageGuesses(completedGameStats.averageGuesses)}</strong>
-            </article>
-            <article className="quote-summary-stat">
-              <span>Plays</span>
-              <strong>{completedGameStats.playCount}</strong>
-            </article>
+            {showHintCount ? (
+              <article className="quote-summary-stat">
+                <span>Hints</span>
+                <strong>{hintCount}</strong>
+              </article>
+            ) : (
+              <>
+                <article className="quote-summary-stat">
+                  <span>Avg Guess</span>
+                  <strong>{formatAverageGuesses(completedGameStats.averageGuesses)}</strong>
+                </article>
+                <article className="quote-summary-stat">
+                  <span>Plays</span>
+                  <strong>{completedGameStats.playCount}</strong>
+                </article>
+              </>
+            )}
           </div>
 
           <button className="primary-button quote-summary-button" type="button" onClick={onViewLeaderboard}>

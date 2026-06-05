@@ -9,13 +9,16 @@ import { QuotePromptCard } from '../components/game/QuotePromptCard';
 import { useAuth } from '../hooks/useAuth';
 import { useCharacterGame } from '../hooks/useCharacterGame';
 import { useQuoteGame } from '../hooks/useQuoteGame';
+import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverseGame } from '../hooks/useUniverseGame';
 import { useUniverse } from '../hooks/useUniverse';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { buildQuoteGameData } from '../lib/quoteGameData';
+import { compareAttributeValue } from '../lib/universeAttributes';
 import { submitUniverseGameResult } from '../services/leaderboardApi';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
+import type { CharacterGameRow, CurrentUniverseGame, QuoteGameRow } from '../types/universeGame';
 
 interface CharacterGamePageProps {
   onNavigate: NavigateToPage;
@@ -41,6 +44,7 @@ export function CharacterGamePage({
   const { session, user } = useAuth();
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = useUniverseGame(selectedUniverse.id, selectedGameId);
+  const { data: persistedResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
   const characterGame = useCharacterGame(data);
   const quoteGameData = useMemo(() => buildQuoteGameData(data), [data]);
   const quoteGame = useQuoteGame(quoteGameData);
@@ -71,7 +75,47 @@ export function CharacterGamePage({
   const tableGridStyle = useMemo<CSSProperties>(() => ({
     gridTemplateColumns: `minmax(212px, 1.24fr) repeat(${Math.max(attributeCount, 1)}, minmax(92px, 1fr))`,
   }), [attributeCount]);
-  const isComplete = currentRound.status !== 'playing';
+  const characterResult = useMemo(
+    () => data
+      ? persistedResults.find((result) => result.mode === 'character' && result.gameId === data.id) ?? null
+      : null,
+    [data, persistedResults],
+  );
+  const quoteResult = useMemo(
+    () => quoteGameData
+      ? persistedResults.find((result) => result.mode === 'quote' && result.gameId === quoteGameData.gameId) ?? null
+      : null,
+    [persistedResults, quoteGameData],
+  );
+  const usesRemoteCharacterResult = !isQuoteMode && !!data && characterGame.status === 'playing' && !!characterResult;
+  const usesRemoteQuoteResult = isQuoteMode && !!quoteGameData && quoteGame.status === 'playing' && !!quoteResult;
+  const displayedCharacterRows = usesRemoteCharacterResult && data
+    ? [buildSolvedCharacterRow(data)]
+    : characterGame.rows;
+  const displayedQuoteRows = usesRemoteQuoteResult && quoteGameData
+    ? [buildSolvedQuoteRow(quoteGameData)]
+    : quoteGame.rows;
+  const displayedCharacterStatus = usesRemoteCharacterResult && characterResult
+    ? characterResult.status
+    : characterGame.status;
+  const displayedQuoteStatus = usesRemoteQuoteResult && quoteResult
+    ? quoteResult.status
+    : quoteGame.status;
+  const displayedCharacterGuessCount = usesRemoteCharacterResult && characterResult
+    ? characterResult.guessCount
+    : characterGame.guessCount;
+  const displayedQuoteGuessCount = usesRemoteQuoteResult && quoteResult
+    ? quoteResult.guessCount
+    : quoteGame.guessCount;
+  const displayedCharacterHintCount = usesRemoteCharacterResult && characterResult
+    ? characterResult.hintCount
+    : characterGame.hintCount;
+  const displayedQuoteHintCount = usesRemoteQuoteResult && quoteResult
+    ? quoteResult.hintCount
+    : quoteGame.hintCount;
+  const isComplete = isQuoteMode
+    ? displayedQuoteStatus !== 'playing'
+    : displayedCharacterStatus !== 'playing';
 
   useEffect(() => {
     if (isComplete && !wasCompleteRef.current) {
@@ -90,7 +134,6 @@ export function CharacterGamePage({
       || !session?.access_token
       || !user
       || characterGame.status === 'playing'
-      || characterGame.hintCount > 0
     ) {
       return;
     }
@@ -151,7 +194,6 @@ export function CharacterGamePage({
       || !session?.access_token
       || !user
       || quoteGame.status === 'playing'
-      || quoteGame.hintCount > 0
     ) {
       return;
     }
@@ -298,7 +340,7 @@ export function CharacterGamePage({
         )}
       </div>
 
-      {currentRound.message && currentRound.status === 'playing' && (
+      {currentRound.message && !isComplete && (
         <p className="search-feedback" aria-live="polite">
           {currentRound.message}
         </p>
@@ -345,10 +387,12 @@ export function CharacterGamePage({
             <QuoteGameBoard
               answerName={quoteGameData.answerCharacter.displayName}
               completedGameStats={quoteGame.completedGameStats}
-              guessCount={quoteGame.guessCount}
+              guessCount={displayedQuoteGuessCount}
+              hintCount={displayedQuoteHintCount}
               onViewLeaderboard={() => onNavigate('leaderboard')}
-              rows={quoteGame.rows}
-              status={quoteGame.status}
+              rows={displayedQuoteRows}
+              showHintCount={usesRemoteQuoteResult}
+              status={displayedQuoteStatus}
             />
           </div>
         </section>
@@ -387,16 +431,38 @@ export function CharacterGamePage({
               canContinueToQuote={!!quoteGameData}
               completedGameStats={characterGame.completedGameStats}
               gridStyle={tableGridStyle}
-              guessCount={characterGame.guessCount}
-              hintCount={characterGame.hintCount}
+              guessCount={displayedCharacterGuessCount}
+              hintCount={displayedCharacterHintCount}
               onContinueToQuote={() => onOpenGame('quote', selectedGameId)}
               onViewLeaderboard={() => onNavigate('leaderboard')}
-              rows={characterGame.rows}
-              status={characterGame.status}
+              rows={displayedCharacterRows}
+              showHintCount={usesRemoteCharacterResult}
+              status={displayedCharacterStatus}
             />
           </div>
         </>
       )}
     </main>
   );
+}
+
+function buildSolvedCharacterRow(game: NonNullable<CurrentUniverseGame>): CharacterGameRow {
+  return {
+    name: game.answerCharacter.displayName || 'ERROR',
+    portraitUrl: game.answerCharacter.portraitUrl ?? null,
+    cells: game.attributeDefinitions.map((definition) => compareAttributeValue(
+      definition,
+      game.answerCharacter.attributes[definition.key],
+      game.answerCharacter.attributes[definition.key],
+    )),
+  };
+}
+
+function buildSolvedQuoteRow(game: NonNullable<ReturnType<typeof buildQuoteGameData>>): QuoteGameRow {
+  return {
+    id: game.answerCharacter.id,
+    isCorrect: true,
+    name: game.answerCharacter.displayName || 'ERROR',
+    portraitUrl: game.answerCharacter.portraitUrl ?? null,
+  };
 }

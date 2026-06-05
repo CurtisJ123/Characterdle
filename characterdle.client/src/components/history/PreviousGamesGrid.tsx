@@ -3,6 +3,7 @@ import type { GameMode } from '../../types/game';
 import type { PreviousUniverseGame } from '../../types/universeGame';
 
 interface PreviousGamesGridProps {
+  completedGameIds: ReadonlySet<number>;
   games: PreviousUniverseGame[];
   gameMode: GameMode;
   onOpenGame: (gameId: number) => void;
@@ -19,6 +20,7 @@ function formatGameDate(value: string): string {
 }
 
 export function PreviousGamesGrid({
+  completedGameIds,
   games,
   gameMode,
   onOpenGame,
@@ -31,9 +33,9 @@ export function PreviousGamesGrid({
     <section className="archive-grid-shell glass-card" aria-label={`Previous ${universeTitle} ${modeLabel} games`}>
       <div className="archive-grid">
       {games.map((game) => {
-        const isCompleted = gameMode === 'quote'
+        const isCompleted = completedGameIds.has(game.id) || (gameMode === 'quote'
           ? hasCompletedQuoteGame(universeId, game.id)
-          : hasCompletedCharacterGame(universeId, game.id);
+          : hasCompletedCharacterGame(universeId, game.id));
 
         return (
         <button
