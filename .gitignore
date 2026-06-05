@@ -26,10 +26,6 @@ pnpm-debug.log*
 .codex-build/
 .codex-review/
 
-# Local portrait assets
-characterdle.client/public/images/GOTCharacterImages/*
-!characterdle.client/public/images/GOTCharacterImages/.gitkeep
-
 # Local generated/design artifacts and helper tools
 design-forks/
 tools/
