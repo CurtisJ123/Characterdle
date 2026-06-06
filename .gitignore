@@ -23,8 +23,10 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Local agent / temp build outputs
+.agents/
 .codex-build/
 .codex-review/
+skills-lock.json
 
 # Local generated/design artifacts and helper tools
 design-forks/
