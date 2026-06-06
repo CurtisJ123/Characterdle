@@ -37,3 +37,24 @@ export async function getGameResults(
 
   return await response.json() as ProfileRecentResult[];
 }
+
+export async function updateProfileDisplayName(
+  accessToken: string,
+  displayName: string,
+): Promise<void> {
+  const response = await fetch(buildApiUrl('/api/profile'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      displayName,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Profile update request failed with ${response.status}.`);
+  }
+}

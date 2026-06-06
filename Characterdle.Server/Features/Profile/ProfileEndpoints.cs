@@ -23,6 +23,14 @@ public static class ProfileEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        app.MapPatch("/api/profile", UpdateProfileAsync)
+            .WithTags("Profile")
+            .WithName("UpdateProfile")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return app;
     }
 
@@ -58,7 +66,7 @@ public static class ProfileEndpoints
                 return Results.Unauthorized();
             }
 
-            await leaderboardRepository.UpsertPlayerProfileAsync(user, cancellationToken);
+            await leaderboardRepository.EnsurePlayerProfileAsync(user, cancellationToken);
 
             var profile = await profileRepository.GetProfileAsync(universe, user.UserId, cancellationToken);
 
@@ -80,6 +88,62 @@ public static class ProfileEndpoints
 
             return Results.Problem(
                 title: "Unable to load profile data.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+
+    private static async Task<IResult> UpdateProfileAsync(
+        UpdateProfileRequest request,
+        HttpRequest httpRequest,
+        IHostEnvironment hostEnvironment,
+        SupabaseAuthClient authClient,
+        IProfileRepository profileRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var validationErrors = ValidateUpdate(request);
+
+            if (validationErrors.Count > 0)
+            {
+                return Results.ValidationProblem(validationErrors);
+            }
+
+            var accessToken = ReadBearerToken(httpRequest);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            await profileRepository.UpdateDisplayNameAsync(
+                user.UserId,
+                user.Email,
+                request.DisplayName.Trim(),
+                cancellationToken);
+
+            return Results.NoContent();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(ProfileEndpoints).FullName!);
+            logger.LogError(exception, "Unable to update profile data.");
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The database request failed while updating profile data.";
+
+            return Results.Problem(
+                title: "Unable to update profile data.",
                 detail: detail,
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }
@@ -150,5 +214,17 @@ public static class ProfileEndpoints
         }
 
         return authorizationHeader["Bearer ".Length..].Trim();
+    }
+
+    private static Dictionary<string, string[]> ValidateUpdate(UpdateProfileRequest request)
+    {
+        var errors = new Dictionary<string, string[]>();
+
+        if (string.IsNullOrWhiteSpace(request.DisplayName))
+        {
+            errors["displayName"] = ["Display name is required."];
+        }
+
+        return errors;
     }
 }

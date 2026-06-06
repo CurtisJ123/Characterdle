@@ -22,7 +22,7 @@ function getInitials(displayName: string | undefined) {
 
 export function UserProfileCard({ error, isLoading, user }: UserProfileCardProps) {
   const displayName = user?.displayName ?? (isLoading ? 'Loading user...' : 'Guest');
-  const supportingText = error ? error.message : user?.email ?? 'Not signed in';
+  const supportingText = error ? error.message : user ? null : 'Not signed in';
 
   return (
     <article className="glass-card user-profile-card">
@@ -31,7 +31,7 @@ export function UserProfileCard({ error, isLoading, user }: UserProfileCardProps
         <span className="profile-avatar" aria-hidden="true">{getInitials(user?.displayName)}</span>
         <div>
           <h2>{displayName}</h2>
-          <p>{supportingText}</p>
+          {supportingText && <p>{supportingText}</p>}
         </div>
       </div>
     </article>

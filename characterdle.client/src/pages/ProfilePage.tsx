@@ -134,7 +134,6 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
           <div className="profile-hero-copy">
             <p className="eyebrow">{selectedUniverse.title}</p>
             <h1>{data?.displayName ?? user?.displayName ?? 'Profile'}</h1>
-            <p className="profile-subtitle">{data?.email ?? user?.email ?? 'ERROR'}</p>
             <div className="profile-meta-row">
               <span className="pill">Member since {memberSince}</span>
               <span className="pill">Overall rank {formatRank(data?.overallRank ?? null)}</span>
@@ -152,8 +151,8 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
             <strong>{data?.totalPlays ?? 0}</strong>
           </article>
           <article className="glass-card profile-stat-card">
-            <span>Win Rate</span>
-            <strong>{data ? `${data.winRate.toFixed(1)}%` : '0.0%'}</strong>
+            <span>Total Completion</span>
+            <strong>{data ? `${data.totalCompletionRate.toFixed(1)}%` : '0.0%'}</strong>
           </article>
           <article className="glass-card profile-stat-card">
             <span>Avg Guess</span>
@@ -184,6 +183,7 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
                   <div><dt>Wins</dt><dd>{data?.character.wins ?? 0}</dd></div>
                   <div><dt>Plays</dt><dd>{data?.character.plays ?? 0}</dd></div>
                   <div><dt>Losses</dt><dd>{data?.character.losses ?? 0}</dd></div>
+                  <div><dt>Completion</dt><dd>{data ? `${data.character.completionRate.toFixed(1)}%` : '0.0%'}</dd></div>
                   <div><dt>Avg Guess</dt><dd>{data ? formatAverage(data.character.averageGuesses) : '0.0'}</dd></div>
                   <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.character.averageHints) : '0.0'}</dd></div>
                 </dl>
@@ -198,6 +198,7 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
                   <div><dt>Wins</dt><dd>{data?.quote.wins ?? 0}</dd></div>
                   <div><dt>Plays</dt><dd>{data?.quote.plays ?? 0}</dd></div>
                   <div><dt>Losses</dt><dd>{data?.quote.losses ?? 0}</dd></div>
+                  <div><dt>Completion</dt><dd>{data ? `${data.quote.completionRate.toFixed(1)}%` : '0.0%'}</dd></div>
                   <div><dt>Avg Guess</dt><dd>{data ? formatAverage(data.quote.averageGuesses) : '0.0'}</dd></div>
                   <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.quote.averageHints) : '0.0'}</dd></div>
                 </dl>
@@ -250,8 +251,8 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
           <section className="glass-card profile-panel">
             <div className="profile-panel-header">
               <div>
-                <p className="card-kicker">Settings</p>
-                <h2>Account</h2>
+                <p className="card-kicker">Profile</p>
+                <h2>Username</h2>
               </div>
             </div>
 
@@ -272,7 +273,7 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
 
               <div className="profile-settings-actions">
                 <button className="primary-button" disabled={isSaving} type="submit">
-                  {isSaving ? 'Saving...' : 'Save changes'}
+                  {isSaving ? 'Saving...' : 'Save username'}
                 </button>
                 <button className="secondary-button" disabled={isSaving} type="button" onClick={handleSignOut}>
                   Log out

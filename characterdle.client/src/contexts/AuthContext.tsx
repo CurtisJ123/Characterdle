@@ -10,6 +10,7 @@ import type {
   PasswordUpdateValues,
 } from '../types/auth';
 import type { UserProfile } from '../types/user';
+import { updateProfileDisplayName } from '../services/profileApi';
 
 interface AuthContextValue {
   authError: Error | null;
@@ -283,6 +284,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (error) {
       throw normalizeError(error, 'Unable to update your profile.');
     }
+
+    await updateProfileDisplayName(session.access_token, normalizedDisplayName);
 
     await refreshUser();
 

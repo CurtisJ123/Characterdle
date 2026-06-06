@@ -1,11 +1,11 @@
-import { hasCompletedCharacterGame, hasCompletedQuoteGame } from '../../lib/characterGameProgress';
+import type { StoredGameOutcome } from '../../lib/characterGameProgress';
 import type { GameMode } from '../../types/game';
 import type { PreviousUniverseGame } from '../../types/universeGame';
 
 interface PreviousGamesGridProps {
-  completedGameIds: ReadonlySet<number>;
   games: PreviousUniverseGame[];
   gameMode: GameMode;
+  gameOutcomes: ReadonlyMap<number, StoredGameOutcome>;
   onOpenGame: (gameId: number) => void;
   universeId: string;
   universeTitle: string;
@@ -20,11 +20,10 @@ function formatGameDate(value: string): string {
 }
 
 export function PreviousGamesGrid({
-  completedGameIds,
   games,
   gameMode,
+  gameOutcomes,
   onOpenGame,
-  universeId,
   universeTitle,
 }: PreviousGamesGridProps) {
   const modeLabel = gameMode === 'quote' ? 'quote' : 'character';
@@ -33,14 +32,17 @@ export function PreviousGamesGrid({
     <section className="archive-grid-shell glass-card" aria-label={`Previous ${universeTitle} ${modeLabel} games`}>
       <div className="archive-grid">
       {games.map((game) => {
-        const isCompleted = completedGameIds.has(game.id) || (gameMode === 'quote'
-          ? hasCompletedQuoteGame(universeId, game.id)
-          : hasCompletedCharacterGame(universeId, game.id));
+        const outcome = gameOutcomes.get(game.id) ?? 'pending';
+        const tileClassName = outcome === 'won'
+          ? 'archive-tile is-completed'
+          : outcome === 'lost'
+            ? 'archive-tile is-given-up'
+            : 'archive-tile is-pending';
 
         return (
         <button
           key={game.id}
-          className={`archive-tile ${isCompleted ? 'is-completed' : 'is-pending'}`}
+          className={tileClassName}
           type="button"
           aria-label={`Play archived ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`}
           title={formatGameDate(game.dateTime)}

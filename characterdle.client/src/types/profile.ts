@@ -7,6 +7,7 @@ export interface ProfileModeStats {
   losses: number;
   averageGuesses: number | null;
   averageHints: number | null;
+  completionRate: number;
   rank: number | null;
 }
 
@@ -36,8 +37,8 @@ export interface UniverseProfile {
   totalWins: number;
   totalPlays: number;
   totalLosses: number;
+  totalCompletionRate: number;
   averageGuesses: number | null;
-  winRate: number;
   overallRank: number | null;
   character: ProfileModeStats;
   quote: ProfileModeStats;

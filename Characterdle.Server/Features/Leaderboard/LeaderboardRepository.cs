@@ -25,7 +25,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         return await command.ExecuteScalarAsync(cancellationToken) is true;
     }
 
-    public async Task UpsertPlayerProfileAsync(
+    public async Task EnsurePlayerProfileAsync(
         VerifiedSupabaseUser user,
         CancellationToken cancellationToken)
     {
@@ -43,12 +43,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               @email,
               @avatarUrl
             )
-            on conflict (user_id) do update
-            set
-              display_name = excluded.display_name,
-              email = excluded.email,
-              avatar_url = excluded.avatar_url,
-              updated_at = timezone('utc', now());
+            on conflict (user_id) do nothing;
             """;
 
         await using var command = dataSource.CreateCommand(sql);

@@ -135,34 +135,36 @@ export function LeaderboardPage() {
 
       <section className="leaderboard-hero">
         <article className="champion-card glass-card">
-          <div className="champion-avatar" aria-hidden="true">
-            {topPlayer
-              ? topPlayer.displayName
-                .split(' ')
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((part) => part[0])
-                .join('')
-                .toUpperCase()
-              : '--'}
+          <div className="champion-avatar-shell">
+            <div className="champion-avatar" aria-hidden="true">
+              {topPlayer
+                ? topPlayer.displayName
+                  .split(' ')
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join('')
+                  .toUpperCase()
+                : '--'}
+            </div>
           </div>
-          <div>
+          <div className="champion-copy">
             <span className="pill">{selectedUniverse.title} {modeLabel}</span>
             <h1>{topPlayer?.displayName ?? 'No ranked players yet'}</h1>
             <dl className="champion-stats">
-              <div>
+              <div className="champion-stat-card">
                 <dt>{modeLabel} Wins</dt>
                 <dd>{topPlayer?.wins ?? 0}</dd>
               </div>
-              <div>
+              <div className="champion-stat-card">
                 <dt>Plays</dt>
                 <dd>{topPlayer?.plays ?? 0}</dd>
               </div>
-              <div>
+              <div className="champion-stat-card">
                 <dt>Avg. Guesses</dt>
                 <dd>{topPlayer?.averageGuesses?.toFixed(1) ?? '--'}</dd>
               </div>
-              <div>
+              <div className="champion-stat-card">
                 <dt>Total Wins</dt>
                 <dd>{topPlayer?.totalWins ?? 0}</dd>
               </div>

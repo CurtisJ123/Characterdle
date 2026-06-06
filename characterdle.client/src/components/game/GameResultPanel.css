@@ -17,6 +17,22 @@
   font-size: 1.55rem;
 }
 
+.result-panel-main {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.result-answer-copy {
+  min-width: 0;
+}
+
+.result-answer-copy .card-kicker {
+  margin-bottom: 10px;
+}
+
 .result-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -50,6 +66,10 @@
 @media (max-width: 760px) {
   .result-panel,
   .result-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .result-panel-main {
     grid-template-columns: 1fr;
   }
 }

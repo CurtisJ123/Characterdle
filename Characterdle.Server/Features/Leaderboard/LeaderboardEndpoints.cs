@@ -116,7 +116,7 @@ public static class LeaderboardEndpoints
                 return Results.NotFound(new { message = $"No game '{request.GameId}' exists for universe '{universe.DisplayName}'." });
             }
 
-            await repository.UpsertPlayerProfileAsync(user, cancellationToken);
+            await repository.EnsurePlayerProfileAsync(user, cancellationToken);
             await repository.UpsertUniverseGameResultAsync(
                 user.UserId,
                 universe.Id,

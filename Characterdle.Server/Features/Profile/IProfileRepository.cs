@@ -13,4 +13,10 @@ public interface IProfileRepository
         string universeId,
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task UpdateDisplayNameAsync(
+        Guid userId,
+        string email,
+        string displayName,
+        CancellationToken cancellationToken);
 }

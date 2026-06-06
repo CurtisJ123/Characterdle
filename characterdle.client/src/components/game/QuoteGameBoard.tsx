@@ -7,11 +7,16 @@ import type {
 
 interface QuoteGameBoardProps {
   answerName: string;
+  answerPortraitUrl?: string | null;
   completedGameStats: CompletedGameStats;
   guessCount: number;
   hintCount: number;
+  onPrimaryAction?: () => void;
+  onSecondaryAction?: () => void;
   onViewLeaderboard: () => void;
+  primaryActionLabel?: string;
   rows: QuoteGameRow[];
+  secondaryActionLabel?: string;
   showHintCount?: boolean;
   status: CharacterGameStatus;
 }
@@ -28,14 +33,22 @@ function formatAverageGuesses(value: number | null): string {
 
 export function QuoteGameBoard({
   answerName,
+  answerPortraitUrl = null,
   completedGameStats,
   guessCount,
   hintCount,
+  onPrimaryAction,
+  onSecondaryAction,
   onViewLeaderboard,
+  primaryActionLabel,
   rows,
+  secondaryActionLabel,
   showHintCount = false,
   status,
 }: QuoteGameBoardProps) {
+  const showPrimaryAction = !!primaryActionLabel;
+  const showSecondaryAction = !!secondaryActionLabel && !!onSecondaryAction;
+
   return (
     <section className="quote-board" aria-label="Quote game board">
       <section className="quote-history-card glass-card" aria-label="Guess history">
@@ -72,10 +85,16 @@ export function QuoteGameBoard({
       </section>
 
       {status !== 'playing' && (
-        <section className="quote-summary-card glass-card" aria-label="Quote game summary">
-          <div className="quote-summary-copy">
-            <p className="card-kicker">{status === 'won' ? 'Speaker Found' : 'Answer Revealed'}</p>
-            <h2>{answerName}</h2>
+        <section className="quote-summary-card glass-card" aria-label="Quote game summary" data-result-panel="true">
+          <div className="quote-summary-main">
+            <CharacterPortrait
+              character={{ displayName: answerName, portraitUrl: answerPortraitUrl }}
+              variant="guess"
+            />
+            <div className="quote-summary-copy">
+              <p className="card-kicker">{status === 'won' ? 'Speaker Found' : 'Answer Revealed'}</p>
+              <h2>{answerName}</h2>
+            </div>
           </div>
 
           <div className="quote-summary-stats" aria-label="Quote game statistics">
@@ -102,9 +121,24 @@ export function QuoteGameBoard({
             )}
           </div>
 
-          <button className="primary-button quote-summary-button" type="button" onClick={onViewLeaderboard}>
-            View Leaderboard
-          </button>
+          {(showPrimaryAction || showSecondaryAction) && (
+            <div className="button-stack quote-summary-actions">
+              {showPrimaryAction && (
+                <button
+                  className="primary-button quote-summary-button"
+                  type="button"
+                  onClick={onPrimaryAction ?? onViewLeaderboard}
+                >
+                  {primaryActionLabel}
+                </button>
+              )}
+              {showSecondaryAction && (
+                <button className="secondary-button quote-summary-button" type="button" onClick={onSecondaryAction}>
+                  {secondaryActionLabel}
+                </button>
+              )}
+            </div>
+          )}
         </section>
       )}
     </section>

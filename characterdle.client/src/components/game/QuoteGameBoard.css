@@ -107,6 +107,14 @@
   align-items: center;
 }
 
+.quote-summary-main {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
 .quote-summary-copy h2 {
   margin: 0;
   color: var(--on-surface);
@@ -151,11 +159,20 @@
   white-space: nowrap;
 }
 
+.quote-summary-actions {
+  margin-top: 0;
+}
+
 @media (max-width: 900px) {
   .quote-summary-card {
     grid-template-columns: 1fr;
   }
 
+  .quote-summary-main {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-summary-actions,
   .quote-summary-button {
     width: 100%;
   }

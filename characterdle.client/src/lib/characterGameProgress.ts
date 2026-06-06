@@ -5,13 +5,17 @@ interface StoredGameStats {
 interface StoredCompletionState {
   completionRecorded?: boolean;
   gaveUp?: boolean;
+  resolvedAt?: string | null;
 }
+
+export type StoredGameOutcome = 'pending' | 'won' | 'lost';
 
 const PLAY_STATS_STORAGE_KEY_PREFIX = 'character-game-stats';
 const GAME_STATE_STORAGE_KEY_PREFIX = 'character-game-state';
 const LEGACY_SESSION_STORAGE_KEY_PREFIX = 'character-game';
 const QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX = 'quote-game-stats';
 const QUOTE_GAME_STATE_STORAGE_KEY_PREFIX = 'quote-game-state';
+const GIVE_UP_RESET_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function getCharacterGameStorageKey(universeId: string, gameId: number): string {
   return `${GAME_STATE_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
@@ -66,9 +70,18 @@ function readCompletionState(storageKey: string, fallbackStorageKey?: string): S
 
     try {
       const parsedValue = JSON.parse(rawValue) as StoredCompletionState;
+      const resolvedAt = typeof parsedValue.resolvedAt === 'string' && !Number.isNaN(Date.parse(parsedValue.resolvedAt))
+        ? parsedValue.resolvedAt
+        : null;
+
+      if (parsedValue.gaveUp === true && hasExpiredGiveUp(resolvedAt)) {
+        return null;
+      }
+
       return {
         completionRecorded: parsedValue.completionRecorded === true,
         gaveUp: parsedValue.gaveUp === true,
+        resolvedAt,
       };
     } catch {
       return null;
@@ -87,16 +100,56 @@ export function readQuoteGameGuessCounts(universeId: string, gameId: number): nu
   return readGuessCounts(getQuoteGameStatsStorageKey(universeId, gameId));
 }
 
-export function hasCompletedCharacterGame(universeId: string, gameId: number): boolean {
+export function hasExpiredGiveUp(resolvedAt: string | null | undefined): boolean {
+  if (!resolvedAt) {
+    return false;
+  }
+
+  const resolvedAtMs = Date.parse(resolvedAt);
+
+  if (Number.isNaN(resolvedAtMs)) {
+    return false;
+  }
+
+  return Date.now() - resolvedAtMs >= GIVE_UP_RESET_WINDOW_MS;
+}
+
+export function getRemoteGameOutcome(
+  status: 'lost' | 'won',
+  completedAt: string,
+): StoredGameOutcome {
+  return status === 'lost' && hasExpiredGiveUp(completedAt)
+    ? 'pending'
+    : status;
+}
+
+export function getCharacterGameOutcome(universeId: string, gameId: number): StoredGameOutcome {
   const storedState = readCompletionState(
     getCharacterGameStorageKey(universeId, gameId),
     getLegacyCharacterGameSessionStorageKey(universeId, gameId),
   );
 
-  return storedState?.completionRecorded === true || storedState?.gaveUp === true;
+  if (storedState?.completionRecorded === true) {
+    return 'won';
+  }
+
+  if (storedState?.gaveUp === true) {
+    return 'lost';
+  }
+
+  return 'pending';
 }
 
-export function hasCompletedQuoteGame(universeId: string, gameId: number): boolean {
+export function getQuoteGameOutcome(universeId: string, gameId: number): StoredGameOutcome {
   const storedState = readCompletionState(getQuoteGameStorageKey(universeId, gameId));
-  return storedState?.completionRecorded === true || storedState?.gaveUp === true;
+
+  if (storedState?.completionRecorded === true) {
+    return 'won';
+  }
+
+  if (storedState?.gaveUp === true) {
+    return 'lost';
+  }
+
+  return 'pending';
 }

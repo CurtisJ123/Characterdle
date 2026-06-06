@@ -7,4 +7,5 @@ public sealed record ProfileModeStatsResponse(
     int Losses,
     double? AverageGuesses,
     double? AverageHints,
+    double CompletionRate,
     int? Rank);

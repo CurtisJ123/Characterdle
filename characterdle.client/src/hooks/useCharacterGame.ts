@@ -3,6 +3,7 @@ import {
   getCharacterGameStorageKey,
   getCharacterGameStatsStorageKey,
   getLegacyCharacterGameSessionStorageKey,
+  hasExpiredGiveUp,
   readCharacterGameGuessCounts,
 } from '../lib/characterGameProgress';
 import { resolveCharacterSearch } from '../lib/characterSearch';
@@ -25,6 +26,7 @@ interface StoredCharacterGameState {
   gaveUp: boolean;
   guessedCharacterIds: number[];
   revealedHintKeys: string[];
+  resolvedAt?: string | null;
 }
 
 const hintPriorityOrder = [
@@ -139,6 +141,13 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
 
     try {
       const parsedValue = JSON.parse(rawValue) as Partial<StoredCharacterGameState>;
+      const resolvedAt = typeof parsedValue.resolvedAt === 'string' && !Number.isNaN(Date.parse(parsedValue.resolvedAt))
+        ? parsedValue.resolvedAt
+        : null;
+
+      if (parsedValue.gaveUp === true && hasExpiredGiveUp(resolvedAt)) {
+        return null;
+      }
 
       return {
         completionRecorded: parsedValue.completionRecorded === true,
@@ -152,6 +161,7 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
           ? parsedValue.revealedHintKeys
             .filter((key) => typeof key === 'string' && allowedHintKeys.has(key))
           : [],
+        resolvedAt,
       };
     } catch {
       return null;
@@ -258,6 +268,25 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
       gaveUp,
       guessedCharacterIds,
       revealedHintKeys,
+      resolvedAt: completionRecorded || gaveUp
+        ? (() => {
+          const existingRawValue = window.localStorage.getItem(getSessionStorageKey(game.universeId, game.id));
+
+          if (existingRawValue) {
+            try {
+              const existingState = JSON.parse(existingRawValue) as Partial<StoredCharacterGameState>;
+
+              if (typeof existingState.resolvedAt === 'string' && !Number.isNaN(Date.parse(existingState.resolvedAt))) {
+                return existingState.resolvedAt;
+              }
+            } catch {
+              // Ignore malformed existing state and write a fresh timestamp.
+            }
+          }
+
+          return new Date().toISOString();
+        })()
+        : null,
     };
 
     window.localStorage.setItem(

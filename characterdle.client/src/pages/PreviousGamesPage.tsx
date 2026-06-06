@@ -3,6 +3,11 @@ import { useAuth } from '../hooks/useAuth';
 import { usePreviousUniverseGames } from '../hooks/usePreviousUniverseGames';
 import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverse } from '../hooks/useUniverse';
+import {
+  getCharacterGameOutcome,
+  getQuoteGameOutcome,
+  getRemoteGameOutcome,
+} from '../lib/characterGameProgress';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 
@@ -24,10 +29,18 @@ export function PreviousGamesPage({
   const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id);
   const { data: gameResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
   const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
-  const completedGameIds = new Set(
-    gameResults
-      .filter((result) => result.mode === selectedGameMode)
-      .map((result) => result.gameId),
+  const gameOutcomes = new Map(
+    (data?.games ?? []).map((game) => {
+      const localOutcome = selectedGameMode === 'quote'
+        ? getQuoteGameOutcome(selectedUniverse.id, game.id)
+        : getCharacterGameOutcome(selectedUniverse.id, game.id);
+      const remoteResult = gameResults.find((result) => result.mode === selectedGameMode && result.gameId === game.id);
+      const remoteOutcome = remoteResult
+        ? getRemoteGameOutcome(remoteResult.status, remoteResult.completedAt)
+        : 'pending';
+
+      return [game.id, remoteOutcome !== 'pending' ? remoteOutcome : localOutcome];
+    }),
   );
 
   return (
@@ -76,9 +89,9 @@ export function PreviousGamesPage({
 
         {!isLoading && !error && data && data.games.length > 0 && (
           <PreviousGamesGrid
-            completedGameIds={completedGameIds}
             games={data.games}
             gameMode={selectedGameMode}
+            gameOutcomes={gameOutcomes}
             onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}
             universeId={selectedUniverse.id}
             universeTitle={selectedUniverse.title}

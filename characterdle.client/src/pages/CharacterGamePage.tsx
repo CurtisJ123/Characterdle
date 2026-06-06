@@ -12,6 +12,7 @@ import { useQuoteGame } from '../hooks/useQuoteGame';
 import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverseGame } from '../hooks/useUniverseGame';
 import { useUniverse } from '../hooks/useUniverse';
+import { getRemoteGameOutcome } from '../lib/characterGameProgress';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { compareAttributeValue } from '../lib/universeAttributes';
@@ -87,8 +88,14 @@ export function CharacterGamePage({
       : null,
     [persistedResults, quoteGameData],
   );
-  const usesRemoteCharacterResult = !isQuoteMode && !!data && characterGame.status === 'playing' && !!characterResult;
-  const usesRemoteQuoteResult = isQuoteMode && !!quoteGameData && quoteGame.status === 'playing' && !!quoteResult;
+  const remoteCharacterOutcome = characterResult
+    ? getRemoteGameOutcome(characterResult.status, characterResult.completedAt)
+    : 'pending';
+  const remoteQuoteOutcome = quoteResult
+    ? getRemoteGameOutcome(quoteResult.status, quoteResult.completedAt)
+    : 'pending';
+  const usesRemoteCharacterResult = !isQuoteMode && !!data && characterGame.status === 'playing' && remoteCharacterOutcome !== 'pending';
+  const usesRemoteQuoteResult = isQuoteMode && !!quoteGameData && quoteGame.status === 'playing' && remoteQuoteOutcome !== 'pending';
   const displayedCharacterRows = usesRemoteCharacterResult && data
     ? [buildSolvedCharacterRow(data)]
     : characterGame.rows;
@@ -96,10 +103,10 @@ export function CharacterGamePage({
     ? [buildSolvedQuoteRow(quoteGameData)]
     : quoteGame.rows;
   const displayedCharacterStatus = usesRemoteCharacterResult && characterResult
-    ? characterResult.status
+    ? remoteCharacterOutcome
     : characterGame.status;
   const displayedQuoteStatus = usesRemoteQuoteResult && quoteResult
-    ? quoteResult.status
+    ? remoteQuoteOutcome
     : quoteGame.status;
   const displayedCharacterGuessCount = usesRemoteCharacterResult && characterResult
     ? characterResult.guessCount
@@ -113,19 +120,56 @@ export function CharacterGamePage({
   const displayedQuoteHintCount = usesRemoteQuoteResult && quoteResult
     ? quoteResult.hintCount
     : quoteGame.hintCount;
+  const hasPlayedQuoteGame = quoteGame.status !== 'playing' || remoteQuoteOutcome !== 'pending';
+  const hasWonCharacterGame = characterGame.status === 'won' || remoteCharacterOutcome === 'won';
   const isComplete = isQuoteMode
     ? displayedQuoteStatus !== 'playing'
     : displayedCharacterStatus !== 'playing';
+  const shouldOfferQuoteFollowUp = displayedCharacterStatus === 'won' && !!quoteGameData && !hasPlayedQuoteGame;
+  const shouldOfferCharacterFollowUp = displayedQuoteStatus === 'won' && !!data && !hasWonCharacterGame;
 
   useEffect(() => {
-    if (isComplete && !wasCompleteRef.current) {
-      resultPanelRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
+    if (!isComplete) {
+      wasCompleteRef.current = false;
+      return;
     }
 
-    wasCompleteRef.current = isComplete;
+    if (wasCompleteRef.current) {
+      return;
+    }
+
+    wasCompleteRef.current = true;
+
+    const scrollTimer = window.setTimeout(() => {
+      const footer = document.querySelector<HTMLElement>('footer.site-footer');
+
+      if (footer) {
+        footer.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+        return;
+      }
+
+      const resultPanel = resultPanelRef.current?.querySelector<HTMLElement>('[data-result-panel="true"]');
+
+      if (resultPanel) {
+        resultPanel.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        });
+        return;
+      }
+
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 120);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+    };
   }, [isComplete]);
 
   useEffect(() => {
@@ -273,16 +317,40 @@ export function CharacterGamePage({
     characterGame.resetGame();
   }
 
+  const resolvedGameId = selectedGameId
+    ?? (isQuoteMode
+      ? quoteGameData?.gameId ?? data?.id ?? null
+      : data?.id ?? quoteGameData?.gameId ?? null);
   const heroTitle = selectedGameId === null
     ? isQuoteMode
-      ? 'Daily Quote Game'
-      : 'Daily Character Game'
+      ? resolvedGameId !== null
+        ? `Daily Quote Game #${resolvedGameId}`
+        : 'Daily Quote Game'
+      : resolvedGameId !== null
+        ? `Daily Character Game #${resolvedGameId}`
+        : 'Daily Character Game'
     : isQuoteMode
       ? `Archive Quote Game #${selectedGameId}`
       : `Archive Character Game #${selectedGameId}`;
   const searchPlaceholder = isQuoteMode
     ? 'Guess the speaker'
     : 'Type a name';
+  const characterPrimaryActionLabel = shouldOfferQuoteFollowUp ? 'Play Quote' : 'View Leaderboard';
+  const characterPrimaryAction = shouldOfferQuoteFollowUp
+    ? () => onOpenGame('quote', selectedGameId)
+    : () => onNavigate('leaderboard');
+  const characterSecondaryActionLabel = shouldOfferQuoteFollowUp ? 'Leaderboard' : undefined;
+  const characterSecondaryAction = shouldOfferQuoteFollowUp
+    ? () => onNavigate('leaderboard')
+    : undefined;
+  const quotePrimaryActionLabel = shouldOfferCharacterFollowUp ? 'Play Character Game' : 'View Leaderboard';
+  const quotePrimaryAction = shouldOfferCharacterFollowUp
+    ? () => onOpenGame('character', selectedGameId)
+    : () => onNavigate('leaderboard');
+  const quoteSecondaryActionLabel = shouldOfferCharacterFollowUp ? 'Leaderboard' : undefined;
+  const quoteSecondaryAction = shouldOfferCharacterFollowUp
+    ? () => onNavigate('leaderboard')
+    : undefined;
 
   const searchForm = (
     <form className="search-box" aria-label="Submit a guess" onSubmit={handleSubmit}>
@@ -315,7 +383,7 @@ export function CharacterGamePage({
               {currentRound.hintActionLabel}
             </button>
             <span id="hint-stats-tooltip" className="hint-trigger-tooltip" role="tooltip">
-              Using hints makes this round unranked. It will not count toward your stats.
+              Using hints makes this round unranked. Giving up still counts as a loss.
             </span>
           </div>
         </div>
@@ -386,11 +454,16 @@ export function CharacterGamePage({
           <div ref={resultPanelRef} className="game-board-shell quote-board-shell">
             <QuoteGameBoard
               answerName={quoteGameData.answerCharacter.displayName}
+              answerPortraitUrl={quoteGameData.answerCharacter.portraitUrl ?? null}
               completedGameStats={quoteGame.completedGameStats}
               guessCount={displayedQuoteGuessCount}
               hintCount={displayedQuoteHintCount}
+              onPrimaryAction={quotePrimaryAction}
+              onSecondaryAction={quoteSecondaryAction}
               onViewLeaderboard={() => onNavigate('leaderboard')}
+              primaryActionLabel={quotePrimaryActionLabel}
               rows={displayedQuoteRows}
+              secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={usesRemoteQuoteResult}
               status={displayedQuoteStatus}
             />
@@ -427,15 +500,18 @@ export function CharacterGamePage({
           <div ref={resultPanelRef} className="game-board-shell">
             <CharacterGameBoard
               answerName={data?.answerCharacter.displayName ?? 'ERROR'}
+              answerPortraitUrl={data?.answerCharacter.portraitUrl ?? null}
               attributeDefinitions={data?.attributeDefinitions ?? []}
-              canContinueToQuote={!!quoteGameData}
               completedGameStats={characterGame.completedGameStats}
               gridStyle={tableGridStyle}
               guessCount={displayedCharacterGuessCount}
               hintCount={displayedCharacterHintCount}
-              onContinueToQuote={() => onOpenGame('quote', selectedGameId)}
+              onPrimaryAction={characterPrimaryAction}
+              onSecondaryAction={characterSecondaryAction}
               onViewLeaderboard={() => onNavigate('leaderboard')}
+              primaryActionLabel={characterPrimaryActionLabel}
               rows={displayedCharacterRows}
+              secondaryActionLabel={characterSecondaryActionLabel}
               showHintCount={usesRemoteCharacterResult}
               status={displayedCharacterStatus}
             />

@@ -15,30 +15,36 @@ const attributeHelpTextOverrides: Partial<Record<string, string>> = {
 
 interface CharacterGameBoardProps {
   answerName: string;
+  answerPortraitUrl?: string | null;
   attributeDefinitions: UniverseAttributeDefinition[];
-  canContinueToQuote: boolean;
   completedGameStats: CompletedGameStats;
   gridStyle: CSSProperties;
   guessCount: number;
   hintCount: number;
-  onContinueToQuote: () => void;
+  onPrimaryAction?: () => void;
+  onSecondaryAction?: () => void;
   onViewLeaderboard: () => void;
+  primaryActionLabel?: string;
   rows: CharacterGameRow[];
+  secondaryActionLabel?: string;
   showHintCount?: boolean;
   status: CharacterGameStatus;
 }
 
 export function CharacterGameBoard({
   answerName,
+  answerPortraitUrl = null,
   attributeDefinitions,
-  canContinueToQuote,
   completedGameStats,
   gridStyle,
   guessCount,
   hintCount,
-  onContinueToQuote,
+  onPrimaryAction,
+  onSecondaryAction,
   onViewLeaderboard,
+  primaryActionLabel,
   rows,
+  secondaryActionLabel,
   showHintCount = false,
   status,
 }: CharacterGameBoardProps) {
@@ -80,16 +86,17 @@ export function CharacterGameBoard({
       {status !== 'playing' && (
         <GameResultPanel
           answerName={answerName}
+          answerPortraitUrl={answerPortraitUrl}
           averageGuesses={completedGameStats.averageGuesses}
           guessCount={guessCount}
           hintCount={hintCount}
           playCount={completedGameStats.playCount}
           showHintCount={showHintCount}
-          primaryActionLabel={status === 'won' && canContinueToQuote ? 'Play Quote' : 'View Leaderboard'}
+          primaryActionLabel={primaryActionLabel}
           primaryTitle="Correct"
-          onPrimaryAction={status === 'won' && canContinueToQuote ? onContinueToQuote : onViewLeaderboard}
-          onSecondaryAction={status === 'won' && canContinueToQuote ? onViewLeaderboard : undefined}
-          secondaryActionLabel={status === 'won' && canContinueToQuote ? 'Leaderboard' : undefined}
+          onPrimaryAction={onPrimaryAction ?? onViewLeaderboard}
+          onSecondaryAction={onSecondaryAction}
+          secondaryActionLabel={secondaryActionLabel}
           status={status}
         />
       )}

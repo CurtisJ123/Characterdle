@@ -15,7 +15,7 @@ public interface ILeaderboardRepository
         int limit,
         CancellationToken cancellationToken);
 
-    Task UpsertPlayerProfileAsync(
+    Task EnsurePlayerProfileAsync(
         VerifiedSupabaseUser user,
         CancellationToken cancellationToken);
 

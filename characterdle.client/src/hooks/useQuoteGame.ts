@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   getQuoteGameStatsStorageKey,
   getQuoteGameStorageKey,
+  hasExpiredGiveUp,
   readQuoteGameGuessCounts,
 } from '../lib/characterGameProgress';
 import { resolveCharacterSearch } from '../lib/characterSearch';
@@ -24,6 +25,7 @@ interface StoredQuoteGameState {
   gaveUp: boolean;
   guessedCharacterIds: number[];
   revealedHintKeys: string[];
+  resolvedAt?: string | null;
 }
 
 const QUOTE_SOURCE_HINT_ID = 'quote-source';
@@ -134,6 +136,19 @@ function readStoredState(game: QuoteGameData): StoredQuoteGameState {
     }
 
     const parsedValue = JSON.parse(rawValue) as Partial<StoredQuoteGameState>;
+    const resolvedAt = typeof parsedValue.resolvedAt === 'string' && !Number.isNaN(Date.parse(parsedValue.resolvedAt))
+      ? parsedValue.resolvedAt
+      : null;
+
+    if (parsedValue.gaveUp === true && hasExpiredGiveUp(resolvedAt)) {
+      return {
+        completionRecorded: false,
+        firstLetterRevealed: false,
+        gaveUp: false,
+        guessedCharacterIds: [],
+        revealedHintKeys: [],
+      };
+    }
 
     return {
       completionRecorded: parsedValue.completionRecorded === true,
@@ -147,6 +162,7 @@ function readStoredState(game: QuoteGameData): StoredQuoteGameState {
         ? parsedValue.revealedHintKeys
           .filter((key) => typeof key === 'string' && allowedHintKeys.has(key))
         : [],
+      resolvedAt,
     };
   } catch {
     return {
@@ -207,6 +223,25 @@ export function useQuoteGame(game: QuoteGameData | null): GameRoundState<QuoteGa
       gaveUp,
       guessedCharacterIds,
       revealedHintKeys,
+      resolvedAt: completionRecorded || gaveUp
+        ? (() => {
+          const existingRawValue = window.localStorage.getItem(getQuoteGameStorageKey(game.universeId, game.gameId));
+
+          if (existingRawValue) {
+            try {
+              const existingState = JSON.parse(existingRawValue) as Partial<StoredQuoteGameState>;
+
+              if (typeof existingState.resolvedAt === 'string' && !Number.isNaN(Date.parse(existingState.resolvedAt))) {
+                return existingState.resolvedAt;
+              }
+            } catch {
+              // Ignore malformed existing state and write a fresh timestamp.
+            }
+          }
+
+          return new Date().toISOString();
+        })()
+        : null,
     };
 
     window.localStorage.setItem(

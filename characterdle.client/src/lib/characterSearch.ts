@@ -13,6 +13,24 @@ function displayNameStartsWith(character: UniverseCharacter, normalizedQuery: st
   return normalizeSearchValue(character.displayName).startsWith(normalizedQuery);
 }
 
+function getLastName(character: UniverseCharacter): string | null {
+  const nameParts = normalizeSearchValue(character.displayName)
+    .split(' ')
+    .filter(Boolean);
+
+  if (nameParts.length < 2) {
+    return null;
+  }
+
+  return nameParts[nameParts.length - 1];
+}
+
+function lastNameStartsWith(character: UniverseCharacter, normalizedQuery: string): boolean {
+  const lastName = getLastName(character);
+
+  return lastName !== null && lastName.startsWith(normalizedQuery);
+}
+
 function aliasStartsWith(character: UniverseCharacter, normalizedQuery: string): boolean {
   return character.aliases.some((alias) => normalizeSearchValue(alias).startsWith(normalizedQuery));
 }
@@ -29,6 +47,7 @@ export function getOrderedCharacterPrefixMatches(
 
   const nameMatches: UniverseCharacter[] = [];
   const aliasMatches: UniverseCharacter[] = [];
+  const lastNameMatches: UniverseCharacter[] = [];
 
   for (const character of characters) {
     if (displayNameStartsWith(character, normalizedQuery)) {
@@ -38,10 +57,15 @@ export function getOrderedCharacterPrefixMatches(
 
     if (aliasStartsWith(character, normalizedQuery)) {
       aliasMatches.push(character);
+      continue;
+    }
+
+    if (lastNameStartsWith(character, normalizedQuery)) {
+      lastNameMatches.push(character);
     }
   }
 
-  return [...nameMatches, ...aliasMatches];
+  return [...nameMatches, ...aliasMatches, ...lastNameMatches];
 }
 
 export function resolveCharacterSearch(
@@ -101,8 +125,24 @@ export function resolveCharacterSearch(
     };
   }
 
+  if (aliasPrefixMatches.length > 1) {
+    return {
+      character: null,
+      reason: 'ambiguous',
+    };
+  }
+
+  const lastNamePrefixMatches = characters.filter((character) => lastNameStartsWith(character, normalizedQuery));
+
+  if (lastNamePrefixMatches.length === 1) {
+    return {
+      character: lastNamePrefixMatches[0],
+      reason: 'match',
+    };
+  }
+
   return {
     character: null,
-    reason: aliasPrefixMatches.length > 1 ? 'ambiguous' : 'not_found',
+    reason: lastNamePrefixMatches.length > 1 ? 'ambiguous' : 'not_found',
   };
 }

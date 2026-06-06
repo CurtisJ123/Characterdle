@@ -17,7 +17,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             return null;
         }
 
-        var stats = await LoadStatsAsync(universe.Id, userId, cancellationToken);
+        var stats = await LoadStatsAsync(universe, userId, cancellationToken);
         var ranks = await LoadRanksAsync(universe.Id, userId, cancellationToken);
         var recentResults = await LoadRecentResultsAsync(universe.Id, userId, cancellationToken);
 
@@ -32,8 +32,8 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             stats.TotalWins,
             stats.TotalPlays,
             stats.TotalLosses,
+            stats.TotalCompletionRate,
             stats.AverageGuesses,
-            stats.WinRate,
             ranks.OverallRank,
             new ProfileModeStatsResponse(
                 "character",
@@ -42,6 +42,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
                 stats.CharacterLosses,
                 stats.CharacterAverageGuesses,
                 stats.CharacterAverageHints,
+                stats.CharacterCompletionRate,
                 ranks.CharacterRank),
             new ProfileModeStatsResponse(
                 "quote",
@@ -50,6 +51,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
                 stats.QuoteLosses,
                 stats.QuoteAverageGuesses,
                 stats.QuoteAverageHints,
+                stats.QuoteCompletionRate,
                 ranks.QuoteRank),
             recentResults);
     }
@@ -59,6 +61,39 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         Guid userId,
         CancellationToken cancellationToken) =>
         LoadResultsAsync(universeId, userId, limit: null, cancellationToken);
+
+    public async Task UpdateDisplayNameAsync(
+        Guid userId,
+        string email,
+        string displayName,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            insert into public."PlayerProfiles" (
+              user_id,
+              display_name,
+              email,
+              avatar_url
+            )
+            values (
+              @userId,
+              @displayName,
+              @email,
+              null
+            )
+            on conflict (user_id) do update
+            set
+              display_name = excluded.display_name,
+              updated_at = timezone('utc', now());
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("displayName", displayName);
+        command.Parameters.AddWithValue("email", email);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 
     private async Task<AccountRecord?> LoadAccountAsync(
         Guid userId,
@@ -94,42 +129,65 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
     }
 
     private async Task<StatsRecord> LoadStatsAsync(
-        string universeId,
+        UniverseDefinition universe,
         Guid userId,
         CancellationToken cancellationToken)
     {
-        const string sql =
-            """
+        var quoteAvailabilityProjection = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? "0::int as quote_total_available"
+            : "count(*) filter (where games.quote_id is not null)::int as quote_total_available";
+        var sql =
+            $"""
+            with available_games as (
+              select
+                count(*)::int as character_total_available,
+                {quoteAvailabilityProjection}
+              from {universe.GameTableName} as games
+              where games.datetime <= now()
+            )
             select
               count(*) filter (where results.status = 'won')::int as total_wins,
               count(*)::int as total_plays,
               count(*) filter (where results.status = 'lost')::int as total_losses,
-              round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
               round(
                 case
-                  when count(*) = 0 then 0
-                  else (count(*) filter (where results.status = 'won')::numeric / count(*)::numeric) * 100
+                  when ((select character_total_available from available_games) + (select quote_total_available from available_games)) = 0 then 0
+                  else (count(*) filter (where results.status = 'won')::numeric / ((select character_total_available from available_games) + (select quote_total_available from available_games))::numeric) * 100
                 end,
                 1
-              ) as win_rate,
+              ) as total_completion_rate,
+              round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
               count(*) filter (where results.mode = 'character' and results.status = 'won')::int as character_wins,
               count(*) filter (where results.mode = 'character')::int as character_plays,
               count(*) filter (where results.mode = 'character' and results.status = 'lost')::int as character_losses,
               round(avg(results.guess_count) filter (where results.mode = 'character' and results.status = 'won')::numeric, 2) as character_average_guesses,
               round(avg(results.hint_count) filter (where results.mode = 'character')::numeric, 2) as character_average_hints,
+              round(
+                case
+                  when (select character_total_available from available_games) = 0 then 0
+                  else (count(*) filter (where results.mode = 'character' and results.status = 'won')::numeric / (select character_total_available from available_games)::numeric) * 100
+                end,
+                1
+              ) as character_completion_rate,
               count(*) filter (where results.mode = 'quote' and results.status = 'won')::int as quote_wins,
               count(*) filter (where results.mode = 'quote')::int as quote_plays,
               count(*) filter (where results.mode = 'quote' and results.status = 'lost')::int as quote_losses,
               round(avg(results.guess_count) filter (where results.mode = 'quote' and results.status = 'won')::numeric, 2) as quote_average_guesses,
-              round(avg(results.hint_count) filter (where results.mode = 'quote')::numeric, 2) as quote_average_hints
+              round(avg(results.hint_count) filter (where results.mode = 'quote')::numeric, 2) as quote_average_hints,
+              round(
+                case
+                  when (select quote_total_available from available_games) = 0 then 0
+                  else (count(*) filter (where results.mode = 'quote' and results.status = 'won')::numeric / (select quote_total_available from available_games)::numeric) * 100
+                end,
+                1
+              ) as quote_completion_rate
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
-              and results.hint_count = 0
               and results.user_id = @userId;
             """;
 
         await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("userId", userId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
@@ -138,18 +196,20 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             GetInt32(reader, 0),
             GetInt32(reader, 1),
             GetInt32(reader, 2),
-            GetNullableDouble(reader, 3),
-            GetRequiredDouble(reader, 4),
+            GetRequiredDouble(reader, 3),
+            GetNullableDouble(reader, 4),
             GetInt32(reader, 5),
             GetInt32(reader, 6),
             GetInt32(reader, 7),
             GetNullableDouble(reader, 8),
             GetNullableDouble(reader, 9),
-            GetInt32(reader, 10),
+            GetRequiredDouble(reader, 10),
             GetInt32(reader, 11),
             GetInt32(reader, 12),
-            GetNullableDouble(reader, 13),
-            GetNullableDouble(reader, 14));
+            GetInt32(reader, 13),
+            GetNullableDouble(reader, 14),
+            GetNullableDouble(reader, 15),
+            GetRequiredDouble(reader, 16));
     }
 
     private async Task<RankRecord> LoadRanksAsync(
@@ -335,18 +395,20 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         int TotalWins,
         int TotalPlays,
         int TotalLosses,
+        double TotalCompletionRate,
         double? AverageGuesses,
-        double WinRate,
         int CharacterWins,
         int CharacterPlays,
         int CharacterLosses,
         double? CharacterAverageGuesses,
         double? CharacterAverageHints,
+        double CharacterCompletionRate,
         int QuoteWins,
         int QuotePlays,
         int QuoteLosses,
         double? QuoteAverageGuesses,
-        double? QuoteAverageHints);
+        double? QuoteAverageHints,
+        double QuoteCompletionRate);
 
     private sealed record RankRecord(
         int? OverallRank,

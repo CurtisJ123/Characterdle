@@ -1,7 +1,9 @@
+import { CharacterPortrait } from './CharacterPortrait';
 import type { CharacterGameStatus } from '../../types/universeGame';
 
 interface GameResultPanelProps {
   answerName: string;
+  answerPortraitUrl?: string | null;
   averageGuesses: number | null;
   guessCount: number;
   hintCount: number;
@@ -27,6 +29,7 @@ function formatAverageGuesses(value: number | null): string {
 
 export function GameResultPanel({
   answerName,
+  answerPortraitUrl = null,
   averageGuesses,
   guessCount,
   hintCount,
@@ -44,20 +47,26 @@ export function GameResultPanel({
 
   if (status === 'lost') {
     return (
-      <section className="result-panel glass-card" aria-label="Answer revealed">
-        <div>
-          <p className="card-kicker">Game Over</p>
-          <h2>{answerName}</h2>
+      <section className="result-panel glass-card" aria-label="Answer revealed" data-result-panel="true">
+        <div className="result-panel-main">
+          <CharacterPortrait
+            character={{ displayName: answerName, portraitUrl: answerPortraitUrl }}
+            variant="guess"
+          />
+          <div className="result-answer-copy">
+            <p className="card-kicker">Game Over</p>
+            <h2>{answerName}</h2>
 
-          <div className="result-stats-grid" aria-label="Game summary">
-            <article className="result-stat-card">
-              <span>Guesses</span>
-              <strong>{guessCount}</strong>
-            </article>
-            <article className="result-stat-card">
-              <span>Hints</span>
-              <strong>{hintCount}</strong>
-            </article>
+            <div className="result-stats-grid" aria-label="Game summary">
+              <article className="result-stat-card">
+                <span>Guesses</span>
+                <strong>{guessCount}</strong>
+              </article>
+              <article className="result-stat-card">
+                <span>Hints</span>
+                <strong>{hintCount}</strong>
+              </article>
+            </div>
           </div>
         </div>
 
@@ -80,33 +89,39 @@ export function GameResultPanel({
   }
 
   return (
-    <section className="result-panel glass-card" aria-label="Correct answer details">
-      <div>
-        <p className="card-kicker">{primaryTitle}</p>
-        <h2>{answerName}</h2>
+    <section className="result-panel glass-card" aria-label="Correct answer details" data-result-panel="true">
+      <div className="result-panel-main">
+        <CharacterPortrait
+          character={{ displayName: answerName, portraitUrl: answerPortraitUrl }}
+          variant="guess"
+        />
+        <div className="result-answer-copy">
+          <p className="card-kicker">{primaryTitle}</p>
+          <h2>{answerName}</h2>
 
-        <div className="result-stats-grid" aria-label="Game statistics">
-          <article className="result-stat-card">
-            <span>Guesses</span>
-            <strong>{guessCount}</strong>
-          </article>
-          {showHintCount ? (
+          <div className="result-stats-grid" aria-label="Game statistics">
             <article className="result-stat-card">
-              <span>Hints</span>
-              <strong>{hintCount}</strong>
+              <span>Guesses</span>
+              <strong>{guessCount}</strong>
             </article>
-          ) : (
-            <>
+            {showHintCount ? (
               <article className="result-stat-card">
-                <span>Avg guess</span>
-                <strong>{formatAverageGuesses(averageGuesses)}</strong>
+                <span>Hints</span>
+                <strong>{hintCount}</strong>
               </article>
-              <article className="result-stat-card">
-                <span>Plays</span>
-                <strong>{playCount}</strong>
-              </article>
-            </>
-          )}
+            ) : (
+              <>
+                <article className="result-stat-card">
+                  <span>Avg guess</span>
+                  <strong>{formatAverageGuesses(averageGuesses)}</strong>
+                </article>
+                <article className="result-stat-card">
+                  <span>Plays</span>
+                  <strong>{playCount}</strong>
+                </article>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

@@ -167,8 +167,8 @@ async function recoverFromStartupFailure(root: Root, error: unknown) {
   for (let attempt = 1; attempt <= RECOVERY_MAX_ATTEMPTS; attempt += 1) {
     renderStartupScreen(
       root,
-      'Waking up Characterdle',
-      'Please wait while the game server starts. On free hosting this can take up to a minute. We will retry automatically.',
+      'Starting Characterdle',
+      'Please wait while Characterdle loads. We will retry automatically.',
     );
 
     const backendReady = await isBackendReady();
@@ -183,7 +183,7 @@ async function recoverFromStartupFailure(root: Root, error: unknown) {
       renderStartupScreen(
         root,
         'Characterdle is ready',
-        'The server is awake. Reloading the page now...',
+        'Reloading the page now...',
       );
       window.setTimeout(() => window.location.reload(), 600);
       return;
