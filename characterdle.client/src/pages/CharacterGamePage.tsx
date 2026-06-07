@@ -73,9 +73,29 @@ export function CharacterGamePage({
     : [];
 
   const attributeCount = data?.attributeDefinitions.length ?? 0;
-  const tableGridStyle = useMemo<CSSProperties>(() => ({
-    gridTemplateColumns: `minmax(212px, 1.24fr) repeat(${Math.max(attributeCount, 1)}, minmax(92px, 1fr))`,
-  }), [attributeCount]);
+  const tableGridStyle = useMemo<CSSProperties>(() => {
+    const resolvedAttributeCount = Math.max(attributeCount, 1);
+    const minCharacterWidth = 212;
+    const minAttributeWidth = 92;
+    const trackGap = 10;
+    const desktopBoardWidth = 1180;
+    const rowHorizontalPadding = 28;
+    const flexibleWeightTotal = 1.24 + resolvedAttributeCount;
+    const availableWidth = desktopBoardWidth - rowHorizontalPadding - (trackGap * resolvedAttributeCount);
+    const minimumWidth = minCharacterWidth + (minAttributeWidth * resolvedAttributeCount);
+    const distributableWidth = Math.max(availableWidth - minimumWidth, 0);
+    const fullCharacterWidth = (
+      minCharacterWidth + ((distributableWidth * 1.24) / flexibleWeightTotal)
+    ).toFixed(3);
+    const fullAttributeWidth = (
+      minAttributeWidth + (distributableWidth / flexibleWeightTotal)
+    ).toFixed(3);
+
+    return {
+      '--character-board-columns': `minmax(${minCharacterWidth}px, 1.24fr) repeat(${resolvedAttributeCount}, minmax(${minAttributeWidth}px, 1fr))`,
+      '--character-board-scroll-columns': `${fullCharacterWidth}px repeat(${resolvedAttributeCount}, ${fullAttributeWidth}px)`,
+    } as CSSProperties;
+  }, [attributeCount]);
   const characterResult = useMemo(
     () => data
       ? persistedResults.find((result) => result.mode === 'character' && result.gameId === data.id) ?? null

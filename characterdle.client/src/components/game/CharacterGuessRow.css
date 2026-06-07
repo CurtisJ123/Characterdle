@@ -2,6 +2,7 @@
   display: grid;
   align-items: stretch;
   gap: 10px;
+  grid-template-columns: var(--character-board-columns);
   padding: 14px;
 }
 
