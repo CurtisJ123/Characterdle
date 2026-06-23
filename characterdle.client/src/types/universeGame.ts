@@ -81,6 +81,7 @@ export type CharacterGameStatus = 'playing' | 'won' | 'lost';
 export interface QuotePrompt {
   characterId: number;
   episodeNumber: number;
+  episodeTitle?: string | null;
   id: string;
   seasonNumber: number;
   text: string;

@@ -6,6 +6,7 @@ import {
   readQuoteGameGuessCounts,
 } from '../lib/characterGameProgress';
 import { resolveCharacterSearch } from '../lib/characterSearch';
+import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
 import { compareAttributeValue, formatAttributeValue } from '../lib/universeAttributes';
 import type {
   CharacterGameHint,
@@ -267,7 +268,7 @@ export function useQuoteGame(game: QuoteGameData | null): GameRoundState<QuoteGa
           return {
             id: QUOTE_SOURCE_HINT_ID,
             label: 'Season / Episode',
-            value: `S${game.prompt.seasonNumber} E${game.prompt.episodeNumber}`,
+            value: formatQuoteEpisodeLabel(game.prompt),
           };
         }
 

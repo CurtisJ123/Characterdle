@@ -52,21 +52,33 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         Action<NpgsqlCommand>? configureCommand,
         CancellationToken cancellationToken)
     {
-        var quoteProjection = string.IsNullOrWhiteSpace(universe.QuoteTableName)
-            ? "null::bigint as quote_id,\n              null::bigint as quote_character_id,\n              null::text as quote_text,\n              null::integer as quote_season_number,\n              null::integer as quote_episode_number,"
-            : """
+        var hasQuoteTable = !string.IsNullOrWhiteSpace(universe.QuoteTableName);
+        var hasEpisodeTitleTable = hasQuoteTable && !string.IsNullOrWhiteSpace(universe.EpisodeTitleTableName);
+        var episodeTitleProjection = hasEpisodeTitleTable
+            ? "episode_titles.title"
+            : "null::text";
+        var quoteProjection = !hasQuoteTable
+            ? "null::bigint as quote_id,\n              null::bigint as quote_character_id,\n              null::text as quote_text,\n              null::integer as quote_season_number,\n              null::integer as quote_episode_number,\n              null::text as quote_episode_title,"
+            : $"""
               quotes.id as quote_id,
               quotes.character_id as quote_character_id,
               quotes.quote_text,
               quotes.season_number,
               quotes.episode_number,
+              {episodeTitleProjection} as quote_episode_title,
             """;
-        var quoteJoin = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+        var quoteJoin = !hasQuoteTable
             ? string.Empty
             : $"""
             left join {universe.QuoteTableName} as quotes
               on quotes.id = games.quote_id
             """;
+        var episodeTitleJoin = hasEpisodeTitleTable
+            ? $"""
+            left join {universe.EpisodeTitleTableName} as episode_titles
+              on episode_titles.id = quotes.episode_title_id
+            """
+            : string.Empty;
 
         var gameSql =
             $"""
@@ -79,6 +91,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             join {universe.CharacterTableName} as characters
               on characters.id = games.character_id
             {quoteJoin}
+            {episodeTitleJoin}
             where {whereClause}
             order by games.datetime desc
             limit 1;
@@ -96,7 +109,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         var resolvedGameId = gameReader.GetInt64(0);
         var playedAt = gameReader.GetDateTime(1);
         var quotePrompt = ReadQuotePrompt(gameReader, 2);
-        var answerCharacter = ReadCharacter(gameReader, 7, universe.AttributeDefinitions);
+        var answerCharacter = ReadCharacter(gameReader, 8, universe.AttributeDefinitions);
 
         await gameReader.CloseAsync();
 
@@ -317,6 +330,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             reader.GetInt64(offset + 1),
             reader.GetString(offset + 2),
             reader.GetInt32(offset + 3),
-            reader.GetInt32(offset + 4));
+            reader.GetInt32(offset + 4),
+            reader.IsDBNull(offset + 5) ? null : reader.GetString(offset + 5));
     }
 }

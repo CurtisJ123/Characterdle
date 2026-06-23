@@ -6,6 +6,7 @@ import { CharacterPortrait } from '../components/game/CharacterPortrait';
 import { QuoteGameBoard } from '../components/game/QuoteGameBoard';
 import { QuoteHintPills } from '../components/game/QuoteHintPills';
 import { QuotePromptCard } from '../components/game/QuotePromptCard';
+import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { useAuth } from '../hooks/useAuth';
 import { useCharacterGame } from '../hooks/useCharacterGame';
 import { useQuoteGame } from '../hooks/useQuoteGame';
@@ -15,6 +16,7 @@ import { useUniverse } from '../hooks/useUniverse';
 import { getRemoteGameOutcome } from '../lib/characterGameProgress';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { buildQuoteGameData } from '../lib/quoteGameData';
+import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
 import { compareAttributeValue } from '../lib/universeAttributes';
 import { submitUniverseGameResult } from '../services/leaderboardApi';
 import type { GameMode } from '../types/game';
@@ -36,6 +38,7 @@ export function CharacterGamePage({
   selectedGameId,
   selectedGameMode,
 }: CharacterGamePageProps) {
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const resultPanelRef = useRef<HTMLDivElement | null>(null);
@@ -50,6 +53,22 @@ export function CharacterGamePage({
   const quoteGameData = useMemo(() => buildQuoteGameData(data), [data]);
   const quoteGame = useQuoteGame(quoteGameData);
   const isQuoteMode = selectedGameMode === 'quote';
+  const isGameLoading = isLoading && !data && !error;
+
+  useEffect(() => {
+    if (!isGameLoading) {
+      setShowLoadingOverlay(false);
+      return;
+    }
+
+    const overlayTimer = window.setTimeout(() => {
+      setShowLoadingOverlay(true);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(overlayTimer);
+    };
+  }, [isGameLoading]);
 
   useEffect(() => {
     setQuery('');
@@ -438,6 +457,13 @@ export function CharacterGamePage({
 
   return (
     <main className="page centered-page game-page">
+      {showLoadingOverlay && (
+        <LoadingOverlay
+          title="Please wait"
+          message="Loading game..."
+        />
+      )}
+
       <div className="game-top-actions" aria-label="Game actions">
         <button
           className="game-action-button history-button"
@@ -476,6 +502,7 @@ export function CharacterGamePage({
               answerName={quoteGameData.answerCharacter.displayName}
               answerPortraitUrl={quoteGameData.answerCharacter.portraitUrl ?? null}
               completedGameStats={quoteGame.completedGameStats}
+              episodeLabel={formatQuoteEpisodeLabel(quoteGameData.prompt)}
               guessCount={displayedQuoteGuessCount}
               hintCount={displayedQuoteHintCount}
               onPrimaryAction={quotePrimaryAction}

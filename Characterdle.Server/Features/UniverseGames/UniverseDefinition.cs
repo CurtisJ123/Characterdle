@@ -7,4 +7,5 @@ public sealed record UniverseDefinition(
     string CharacterTableName,
     string GameTableName,
     string? QuoteTableName,
+    string? EpisodeTitleTableName,
     IReadOnlyList<UniverseAttributeDefinition> AttributeDefinitions);

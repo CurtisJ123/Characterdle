@@ -16,6 +16,7 @@ export function buildQuoteGameData(game: CurrentUniverseGame | null): QuoteGameD
     prompt: {
       characterId: game.quotePrompt.characterId,
       episodeNumber: game.quotePrompt.episodeNumber,
+      episodeTitle: game.quotePrompt.episodeTitle ?? null,
       id: String(game.quotePrompt.id),
       seasonNumber: game.quotePrompt.seasonNumber,
       text: game.quotePrompt.text,

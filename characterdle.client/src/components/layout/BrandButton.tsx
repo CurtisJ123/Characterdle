@@ -5,7 +5,12 @@ interface BrandButtonProps {
 export function BrandButton({ onClick }: BrandButtonProps) {
   return (
     <button className="brand-button" type="button" onClick={onClick}>
-      <span className="brand-mark" aria-hidden="true" />
+      <img
+        className="brand-mark"
+        src="/brand/characterdle-logo.png"
+        alt=""
+        aria-hidden="true"
+      />
       Characterdle
     </button>
   );

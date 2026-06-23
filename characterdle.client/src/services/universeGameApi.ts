@@ -9,6 +9,9 @@ import { buildApiUrl } from '../lib/runtimeConfig';
 
 const universeGameRequests = new Map<string, Promise<CurrentUniverseGame>>();
 const previousUniverseGamesRequests = new Map<string, Promise<PreviousUniverseGames>>();
+const debugGameLoadDelayMs = import.meta.env.DEV
+  ? parseDebugGameLoadDelay(import.meta.env.VITE_DEBUG_GAME_LOAD_DELAY_MS)
+  : 0;
 
 interface UniverseCharacterPayload {
   id: number;
@@ -30,6 +33,24 @@ interface UniverseAttributeDefinitionPayload {
 
 function createUniverseGameCacheKey(universeId: string, gameId: number | null): string {
   return `${universeId}:${gameId ?? 'current'}`;
+}
+
+function parseDebugGameLoadDelay(value: string | undefined): number {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : 0;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
 }
 
 export function getCurrentUniverseGame(universeId: string): Promise<CurrentUniverseGame> {
@@ -72,6 +93,10 @@ export function getPreviousUniverseGames(universeId: string): Promise<PreviousUn
 }
 
 async function fetchUniverseGame(universeId: string, gameId: number | null): Promise<CurrentUniverseGame> {
+  if (debugGameLoadDelayMs > 0) {
+    await delay(debugGameLoadDelayMs);
+  }
+
   const gamePath = gameId === null ? 'current' : String(gameId);
   const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/${gamePath}`), {
     headers: {
@@ -93,6 +118,7 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
     quotePrompt: {
       characterId: number;
       episodeNumber: number;
+      episodeTitle?: string | null;
       id: number | string;
       seasonNumber: number;
       text: string;
@@ -110,6 +136,7 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
       ? {
         characterId: payload.quotePrompt.characterId,
         episodeNumber: payload.quotePrompt.episodeNumber,
+        episodeTitle: payload.quotePrompt.episodeTitle ?? null,
         id: String(payload.quotePrompt.id),
         seasonNumber: payload.quotePrompt.seasonNumber,
         text: payload.quotePrompt.text,

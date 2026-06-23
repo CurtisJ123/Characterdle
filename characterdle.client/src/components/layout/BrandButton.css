@@ -1,7 +1,7 @@
 .brand-button {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
   border: 0;
   color: var(--primary);
   background: transparent;
@@ -13,15 +13,13 @@
 }
 
 .brand-mark {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--primary);
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, transparent 45%, rgba(224, 182, 255, 0.9) 46% 55%, transparent 56%),
-    radial-gradient(circle at 65% 35%, rgba(224, 182, 255, 0.65), transparent 42%),
-    var(--surface-container);
-  box-shadow: 0 0 18px rgba(224, 182, 255, 0.3);
+  width: 60px;
+  height: 60px;
+  display: block;
+  flex-shrink: 0;
+  border-radius: 20px;
+  box-shadow: 0 0 18px rgba(224, 182, 255, 0.28);
+  object-fit: cover;
 }
 
 @media (max-width: 760px) {

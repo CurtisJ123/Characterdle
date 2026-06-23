@@ -9,6 +9,7 @@ interface QuoteGameBoardProps {
   answerName: string;
   answerPortraitUrl?: string | null;
   completedGameStats: CompletedGameStats;
+  episodeLabel?: string | null;
   guessCount: number;
   hintCount: number;
   onPrimaryAction?: () => void;
@@ -35,6 +36,7 @@ export function QuoteGameBoard({
   answerName,
   answerPortraitUrl = null,
   completedGameStats,
+  episodeLabel = null,
   guessCount,
   hintCount,
   onPrimaryAction,
@@ -94,6 +96,7 @@ export function QuoteGameBoard({
             <div className="quote-summary-copy">
               <p className="card-kicker">{status === 'won' ? 'Speaker Found' : 'Answer Revealed'}</p>
               <h2>{answerName}</h2>
+              {episodeLabel && <p className="quote-summary-meta">{episodeLabel}</p>}
             </div>
           </div>
 

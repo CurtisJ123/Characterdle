@@ -83,6 +83,19 @@ function renderStartupScreen(
             boxShadow: '0 24px 60px rgba(0, 0, 0, 0.28)',
           }}
         >
+          <img
+            src="/brand/characterdle-logo.png"
+            alt=""
+            aria-hidden="true"
+            style={{
+              width: '64px',
+              height: '64px',
+              display: 'block',
+              borderRadius: '20px',
+              marginBottom: '16px',
+              boxShadow: '0 18px 34px rgba(157, 78, 221, 0.18)',
+            }}
+          />
           <p
             style={{
               margin: 0,

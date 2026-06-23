@@ -126,6 +126,14 @@
   margin: 0 0 8px;
 }
 
+.quote-summary-meta {
+  margin: 8px 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .quote-summary-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

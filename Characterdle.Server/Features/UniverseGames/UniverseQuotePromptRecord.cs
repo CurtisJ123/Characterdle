@@ -5,4 +5,5 @@ public sealed record UniverseQuotePromptRecord(
     long CharacterId,
     string Text,
     int SeasonNumber,
-    int EpisodeNumber);
+    int EpisodeNumber,
+    string? EpisodeTitle);

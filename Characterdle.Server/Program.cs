@@ -1,10 +1,8 @@
 using System.Net.Http.Headers;
-using System.Text.Json;
 using Characterdle.Server.Configuration;
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.Profile;
 using Characterdle.Server.Features.UniverseGames;
-using Characterdle.Server.Infrastructure.Database;
 using Characterdle.Server.Infrastructure.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -29,7 +27,6 @@ if (int.TryParse(renderPort, out var parsedRenderPort)
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ClientAppOptions>(builder.Configuration.GetSection(ClientAppOptions.SectionName));
-builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.SectionName));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection(SchedulingOptions.SectionName));
 builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection(SupabaseOptions.SectionName));
 
@@ -75,14 +72,7 @@ builder.Services.AddSingleton(UniverseCatalog.CreateDefault());
 builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameRepository>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
-builder.Services.AddSingleton<UniverseCharacterCleanupService>();
-builder.Services.AddSingleton<UniverseQuoteImportService>();
 builder.Services.AddSingleton<UniverseGameScheduler>();
-builder.Services.AddSingleton<DatabaseMigrator>();
-builder.Services.AddSingleton<IDatabaseMigration, Migration001CreateGotCoreSchema>();
-builder.Services.AddSingleton<IDatabaseMigration, Migration002CreateGotQuotesSchema>();
-builder.Services.AddSingleton<IDatabaseMigration, Migration003CreateLeaderboardSchema>();
-builder.Services.AddSingleton<IDatabaseMigration, Migration004ApplyRowLevelSecurityPolicies>();
 builder.Services.AddHttpClient<SupabaseAuthClient>(client =>
 {
     client.BaseAddress = new Uri(supabaseOptions.Url);
@@ -92,57 +82,6 @@ builder.Services.AddHttpClient<SupabaseAuthClient>(client =>
 builder.Services.AddHostedService<UniverseGameScheduleService>();
 
 var app = builder.Build();
-var databaseOptions = app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value;
-
-if (databaseOptions.RunMigrationsOnStartup || args.Any(static arg => string.Equals(arg, "migrate", StringComparison.OrdinalIgnoreCase)))
-{
-    var migrator = app.Services.GetRequiredService<DatabaseMigrator>();
-    await migrator.ApplyPendingMigrationsAsync();
-}
-
-if (args.Length > 0 && string.Equals(args[0], "migrate", StringComparison.OrdinalIgnoreCase))
-{
-    Console.WriteLine("Database migrations completed.");
-    return;
-}
-
-if (args.Length > 0 && string.Equals(args[0], "import-quotes", StringComparison.OrdinalIgnoreCase))
-{
-    var quotesFilePath = args.Length > 1
-        ? Path.GetFullPath(args[1])
-        : Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "Quotes.txt"));
-    var quoteImportService = app.Services.GetRequiredService<UniverseQuoteImportService>();
-    var importResult = await quoteImportService.ImportAsync(quotesFilePath);
-
-    Console.WriteLine(
-        $"Quote import complete. Quotes={importResult.QuoteCount}, Speakers={importResult.SpeakerCount}, LinkedGames={importResult.LinkedGameCount}/{importResult.GameCount}, File={importResult.QuotesFilePath}");
-    return;
-}
-
-if (args.Length > 0 && string.Equals(args[0], "cleanup-characters", StringComparison.OrdinalIgnoreCase))
-{
-    var parsedCharacterIds = args
-        .Skip(1)
-        .SelectMany(value => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        .Select(value => long.TryParse(value, out var parsedValue)
-            ? parsedValue
-            : throw new InvalidOperationException($"'{value}' is not a valid character id."))
-        .ToArray();
-
-    var cleanupService = app.Services.GetRequiredService<UniverseCharacterCleanupService>();
-    var cleanupResult = await cleanupService.CleanupAsync(parsedCharacterIds);
-
-    Console.WriteLine(
-        $"Character cleanup complete. Deleted={cleanupResult.DeletedCharacters.Count}, QuotesRemoved={cleanupResult.DeletedQuoteCount}, GamesReassigned={cleanupResult.ReassignedGameCount}.");
-
-    foreach (var deletedCharacter in cleanupResult.DeletedCharacters)
-    {
-        Console.WriteLine(
-            $"{deletedCharacter.Id}|{deletedCharacter.DisplayName}|{deletedCharacter.PortraitUrl ?? string.Empty}");
-    }
-
-    return;
-}
 
 if (args.Length > 0 && string.Equals(args[0], "run-scheduled-games", StringComparison.OrdinalIgnoreCase))
 {

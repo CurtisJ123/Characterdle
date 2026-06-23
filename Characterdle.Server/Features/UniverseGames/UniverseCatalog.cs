@@ -27,6 +27,7 @@ public sealed class UniverseCatalog
                 CharacterTableName: "public.\"GOTCharacters\"",
                 GameTableName: "public.\"GOTGames\"",
                 QuoteTableName: "public.\"GOTQuotes\"",
+                EpisodeTitleTableName: "public.\"GOTEpisodeTitles\"",
                 AttributeDefinitions:
                 [
                     new UniverseAttributeDefinition("gender", "Gender", "gender", "string", "ERROR"),
