@@ -1,4 +1,5 @@
 import type { CharacterAttribute } from '../types/game';
+import { getShareUrlForCurrentLocation } from './siteRouting';
 import type {
   CharacterGameRow,
   CharacterGameStatus,
@@ -9,8 +10,6 @@ const MAX_VISIBLE_SHARE_ROWS = 10;
 const MAX_X_TEXT_LENGTH = 250;
 const X_HEADER_EMOJI = '🐉';
 const QUOTE_HEADER_EMOJI = '🗨️';
-const PRODUCTION_SITE_ORIGIN = 'https://characterdle.com';
-
 type ShareableStatus = Extract<CharacterGameStatus, 'won' | 'lost'>;
 
 interface BaseSharePayload {
@@ -18,6 +17,7 @@ interface BaseSharePayload {
   guessCount: number;
   hintCount: number;
   status: ShareableStatus;
+  universeId: string;
   universeName: string;
 }
 
@@ -139,16 +139,27 @@ function getDisplayFooter(shareUrl: string): string {
 }
 
 export function getProductionShareUrl(): string {
-  if (typeof window === 'undefined') {
-    return PRODUCTION_SITE_ORIGIN;
+  return getShareUrlForCurrentLocation('got');
+}
+
+export function getShareUrl(payload: GameSharePayload): string {
+  const shareUrl = new URL(getShareUrlForCurrentLocation(payload.universeId));
+
+  if (
+    typeof window !== 'undefined'
+    && payload.universeId === 'got'
+    && payload.mode === 'character'
+  ) {
+    const normalizedPathname = window.location.pathname.replace(/\/+$/, '').toLowerCase() || '/';
+
+    if (normalizedPathname === '/' || normalizedPathname === '/game/character') {
+      shareUrl.pathname = '/';
+      shareUrl.search = '';
+      shareUrl.hash = '';
+    }
   }
 
-  const productionUrl = new URL(PRODUCTION_SITE_ORIGIN);
-  productionUrl.pathname = window.location.pathname;
-  productionUrl.search = window.location.search;
-  productionUrl.hash = window.location.hash;
-
-  return productionUrl.toString();
+  return shareUrl.toString();
 }
 
 function buildConstrainedShareText(

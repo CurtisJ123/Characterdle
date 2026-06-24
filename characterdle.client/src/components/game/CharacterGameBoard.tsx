@@ -30,6 +30,7 @@ interface CharacterGameBoardProps {
   secondaryActionLabel?: string;
   showHintCount?: boolean;
   status: CharacterGameStatus;
+  universeId: string;
   universeName: string;
 }
 
@@ -50,6 +51,7 @@ export function CharacterGameBoard({
   secondaryActionLabel,
   showHintCount = false,
   status,
+  universeId,
   universeName,
 }: CharacterGameBoardProps) {
   return (
@@ -107,6 +109,7 @@ export function CharacterGameBoard({
             mode: 'character',
             rows,
             status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
+            universeId,
             universeName,
           }}
           secondaryActionLabel={secondaryActionLabel}

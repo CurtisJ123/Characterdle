@@ -22,6 +22,7 @@ interface QuoteGameBoardProps {
   secondaryActionLabel?: string;
   showHintCount?: boolean;
   status: CharacterGameStatus;
+  universeId: string;
   universeName: string;
 }
 
@@ -51,6 +52,7 @@ export function QuoteGameBoard({
   secondaryActionLabel,
   showHintCount = false,
   status,
+  universeId,
   universeName,
 }: QuoteGameBoardProps) {
   const showPrimaryAction = !!primaryActionLabel;
@@ -152,6 +154,7 @@ export function QuoteGameBoard({
                 mode: 'quote',
                 rows,
                 status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
+                universeId,
                 universeName,
               }}
             />

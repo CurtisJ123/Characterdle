@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import { AppShell } from './components/layout/AppShell';
+import { getUniverseSubdomainUniverseId } from './lib/siteRouting';
 import { LandingPage } from './pages/LandingPage';
 import type { GameMode } from './types/game';
 import type { AuthMode, Page } from './types/routes';
@@ -12,12 +13,27 @@ interface AppRoute {
   page: Page;
 }
 
-const defaultRoute: AppRoute = {
+const mainSiteDefaultRoute: AppRoute = {
   authMode: 'login',
   gameId: null,
   gameMode: 'character',
   page: 'landing',
 };
+
+function getDefaultRoute(): AppRoute {
+  if (typeof window === 'undefined') {
+    return mainSiteDefaultRoute;
+  }
+
+  return getUniverseSubdomainUniverseId(window.location.hostname)
+    ? {
+      authMode: 'login',
+      gameId: null,
+      gameMode: 'character',
+      page: 'game',
+    }
+    : mainSiteDefaultRoute;
+}
 
 function parseGameMode(value: string | undefined): GameMode | null {
   return value === 'quote' || value === 'character'
@@ -47,88 +63,143 @@ function parseAuthMode(value: string | undefined): AuthMode {
         : 'login';
 }
 
-function readRouteFromLocation(): AppRoute {
-  if (typeof window === 'undefined') {
-    return defaultRoute;
-  }
-
-  const normalizedPathname = window.location.pathname.replace(/\/+$/, '') || '/';
-
-  if (normalizedPathname === '/reset-password') {
-    return {
-      authMode: 'resetPassword',
-      gameId: null,
-      gameMode: 'character',
-      page: 'auth',
-    };
-  }
-
-  const normalizedHash = window.location.hash.replace(/^#\/?/, '').trim();
-
-  if (!normalizedHash) {
-    return defaultRoute;
-  }
-
-  const [pageSegment, modeSegment] = normalizedHash.split('/');
-
-  if (pageSegment === 'auth') {
-    return {
-      authMode: parseAuthMode(modeSegment),
-      gameId: null,
-      gameMode: 'character',
-      page: 'auth',
-    };
-  }
-
-  if (pageSegment === 'game') {
-    const parsedMode = parseGameMode(modeSegment);
-
-    return {
-      authMode: 'login',
-      gameId: parsedMode
-        ? parseGameId(normalizedHash.split('/')[2])
-        : parseGameId(modeSegment),
-      gameMode: parsedMode ?? 'character',
-      page: 'game',
-    };
-  }
-
-  if (pageSegment === 'history') {
-    return {
-      authMode: 'login',
-      gameId: null,
-      gameMode: parseGameMode(modeSegment) ?? 'character',
-      page: 'history',
-    };
-  }
-
-  const validPages: Page[] = ['landing', 'launcher', 'game', 'history', 'leaderboard', 'profile'];
-
-  return validPages.includes(pageSegment as Page)
-    ? { authMode: 'login', gameId: null, gameMode: 'character', page: pageSegment as Page }
-    : defaultRoute;
+function buildAuthRoute(authMode: AuthMode): AppRoute {
+  return {
+    authMode,
+    gameId: null,
+    gameMode: 'character',
+    page: 'auth',
+  };
 }
 
-function buildHash(route: AppRoute): string {
-  return route.page === 'auth'
-    ? route.authMode === 'forgotPassword'
-      ? '#/auth/forgot-password'
-      : route.authMode === 'resetPassword'
-        ? '#/auth/reset-password'
-        : `#/auth/${route.authMode}`
-    : route.page === 'game' && route.gameId !== null
-      ? `#/game/${route.gameMode}/${route.gameId}`
-      : route.page === 'game'
-        ? `#/game/${route.gameMode}`
-        : route.page === 'history'
-          ? `#/history/${route.gameMode}`
-          : `#/${route.page}`;
+function readRouteFromSegments(segments: string[]): AppRoute | null {
+  const [pageSegment, modeSegment, gameIdSegment] = segments;
+
+  switch (pageSegment) {
+    case 'landing':
+      return {
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'landing',
+      };
+    case 'home':
+    case 'launcher':
+      return {
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'launcher',
+      };
+    case 'login':
+      return buildAuthRoute('login');
+    case 'signup':
+      return buildAuthRoute('signup');
+    case 'forgot-password':
+      return buildAuthRoute('forgotPassword');
+    case 'reset-password':
+      return buildAuthRoute('resetPassword');
+    case 'auth':
+      return buildAuthRoute(parseAuthMode(modeSegment));
+    case 'game': {
+      const parsedMode = parseGameMode(modeSegment);
+
+      return {
+        authMode: 'login',
+        gameId: parsedMode
+          ? parseGameId(gameIdSegment)
+          : parseGameId(modeSegment),
+        gameMode: parsedMode ?? 'character',
+        page: 'game',
+      };
+    }
+    case 'archive':
+    case 'history':
+      return {
+        authMode: 'login',
+        gameId: null,
+        gameMode: parseGameMode(modeSegment) ?? 'character',
+        page: 'history',
+      };
+    case 'leaderboard':
+      return {
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'leaderboard',
+      };
+    case 'profile':
+      return {
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'profile',
+      };
+    default:
+      return null;
+  }
+}
+
+function readLegacyHashRoute(hash: string): AppRoute | null {
+  const normalizedHash = hash.replace(/^#\/?/, '').trim();
+
+  if (!normalizedHash) {
+    return null;
+  }
+
+  return readRouteFromSegments(normalizedHash.split('/').filter(Boolean));
+}
+
+function readRouteFromLocation(): AppRoute {
+  if (typeof window === 'undefined') {
+    return getDefaultRoute();
+  }
+
+  const legacyHashRoute = readLegacyHashRoute(window.location.hash);
+
+  if (legacyHashRoute) {
+    return legacyHashRoute;
+  }
+
+  const normalizedPathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
+
+  if (!normalizedPathname) {
+    return getDefaultRoute();
+  }
+
+  return readRouteFromSegments(normalizedPathname.split('/')) ?? getDefaultRoute();
 }
 
 function buildBrowserUrl(route: AppRoute): string {
-  return route.page === 'auth' && route.authMode === 'resetPassword'
-    ? '/reset-password'
-    : `/${buildHash(route)}`;
+  if (route.page === 'auth' && route.authMode === 'resetPassword') {
+    return '/reset-password';
+  }
+
+  const defaultRoute = getDefaultRoute();
+  const isDefaultRoute = route.page === defaultRoute.page
+    && route.authMode === defaultRoute.authMode
+    && route.gameId === defaultRoute.gameId
+    && route.gameMode === defaultRoute.gameMode;
+
+  return isDefaultRoute
+    ? '/'
+    : route.page === 'landing'
+      ? '/landing'
+      : route.page === 'launcher'
+        ? '/home'
+        : route.page === 'auth'
+          ? route.authMode === 'signup'
+            ? '/signup'
+            : route.authMode === 'forgotPassword'
+              ? '/forgot-password'
+              : '/login'
+          : route.page === 'game' && route.gameId !== null
+            ? `/game/${route.gameMode}/${route.gameId}`
+            : route.page === 'game'
+              ? `/game/${route.gameMode}`
+              : route.page === 'history'
+                ? `/archive/${route.gameMode}`
+                : `/${route.page}`;
 }
 
 function App() {
@@ -136,20 +207,22 @@ function App() {
 
   useEffect(() => {
     function syncRouteFromLocation() {
-      setRoute(readRouteFromLocation());
+      const nextRoute = readRouteFromLocation();
+      setRoute(nextRoute);
+
+      const currentPathAndSearch = `${window.location.pathname}${window.location.search}`;
+      const canonicalPathAndSearch = `${buildBrowserUrl(nextRoute)}${window.location.search}`;
+
+      if (readLegacyHashRoute(window.location.hash) || currentPathAndSearch !== canonicalPathAndSearch) {
+        window.history.replaceState(null, '', canonicalPathAndSearch);
+      }
     }
 
-    if (!window.location.hash && window.location.pathname === '/') {
-      window.history.replaceState(null, '', buildBrowserUrl(defaultRoute));
-    } else {
-      syncRouteFromLocation();
-    }
+    syncRouteFromLocation();
 
-    window.addEventListener('hashchange', syncRouteFromLocation);
     window.addEventListener('popstate', syncRouteFromLocation);
 
     return () => {
-      window.removeEventListener('hashchange', syncRouteFromLocation);
       window.removeEventListener('popstate', syncRouteFromLocation);
     };
   }, []);
@@ -157,22 +230,14 @@ function App() {
   function navigateToRoute(nextRoute: AppRoute) {
     setRoute(nextRoute);
 
-    const nextHash = buildHash(nextRoute);
     const nextUrl = buildBrowserUrl(nextRoute);
-    const currentUrl = `${window.location.pathname}${window.location.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
 
     if (currentUrl === nextUrl) {
       return;
     }
 
-    if (window.location.pathname !== '/' || nextRoute.authMode === 'resetPassword') {
-      window.history.pushState(null, '', nextUrl);
-      return;
-    }
-
-    if (window.location.hash !== nextHash) {
-      window.location.hash = nextHash;
-    }
+    window.history.pushState(null, '', nextUrl);
   }
 
   function handleNavigate(page: Page) {

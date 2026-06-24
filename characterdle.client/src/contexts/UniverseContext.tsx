@@ -1,5 +1,6 @@
 import { createContext, useMemo, useState, type PropsWithChildren } from 'react';
 import { defaultUniverseId, getUniverseById, universes } from '../data/universeCatalog';
+import { getDefaultUniverseIdForHostname } from '../lib/siteRouting';
 import type { Universe } from '../types/game';
 
 interface UniverseContextValue {
@@ -12,7 +13,13 @@ interface UniverseContextValue {
 export const UniverseContext = createContext<UniverseContextValue | null>(null);
 
 export function UniverseProvider({ children }: PropsWithChildren) {
-  const [selectedUniverseId, setSelectedUniverseIdState] = useState(defaultUniverseId);
+  const [selectedUniverseId, setSelectedUniverseIdState] = useState(() => {
+    if (typeof window === 'undefined') {
+      return defaultUniverseId;
+    }
+
+    return getDefaultUniverseIdForHostname(window.location.hostname);
+  });
 
   const selectedUniverse = getUniverseById(selectedUniverseId) ?? universes[0];
 

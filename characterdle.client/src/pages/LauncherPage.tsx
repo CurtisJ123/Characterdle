@@ -4,6 +4,7 @@ import { MiniLeaderboardCard } from '../components/launcher/MiniLeaderboardCard'
 import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
 import { useUniverse } from '../hooks/useUniverse';
+import { getUniverseGameUrl, isUniverseHostedOnCurrentHostname, universeHasDedicatedHost } from '../lib/siteRouting';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 import type { UserProfile } from '../types/user';
@@ -27,6 +28,15 @@ export function LauncherPage({ authError, isUserLoading, onNavigate, onOpenGame,
     const selectedUniverse = universes.find((universe) => universe.id === universeId);
 
     if (!selectedUniverse?.isPlayable) {
+      return;
+    }
+
+    if (
+      typeof window !== 'undefined'
+      && universeHasDedicatedHost(universeId)
+      && !isUniverseHostedOnCurrentHostname(universeId, window.location.hostname)
+    ) {
+      window.location.assign(getUniverseGameUrl(universeId, gameMode, null));
       return;
     }
 

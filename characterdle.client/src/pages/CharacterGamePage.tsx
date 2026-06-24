@@ -514,6 +514,7 @@ export function CharacterGamePage({
               secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={usesRemoteQuoteResult}
               status={displayedQuoteStatus}
+              universeId={quoteGameData.universeId}
               universeName={quoteGameData.universeName}
             />
           </div>
@@ -564,6 +565,7 @@ export function CharacterGamePage({
               secondaryActionLabel={characterSecondaryActionLabel}
               showHintCount={usesRemoteCharacterResult}
               status={displayedCharacterStatus}
+              universeId={data?.universeId ?? selectedUniverse.id}
               universeName={data?.universeName ?? selectedUniverse.title}
             />
           </div>

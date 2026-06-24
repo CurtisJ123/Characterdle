@@ -3,7 +3,7 @@ import {
   buildClipboardShareText,
   buildNativeShareText,
   buildXShareText,
-  getProductionShareUrl,
+  getShareUrl,
   type GameSharePayload,
 } from '../../lib/gameShare';
 
@@ -87,7 +87,7 @@ export function GameShareButton({ payload }: GameShareButtonProps) {
   }, [feedback]);
 
   function resolveShareUrl(): string {
-    return getProductionShareUrl();
+    return getShareUrl(payload);
   }
 
   function openShareWindow(url: string) {
