@@ -1,4 +1,6 @@
 import { CharacterPortrait } from './CharacterPortrait';
+import { GameShareButton } from '../ui/GameShareButton';
+import type { GameSharePayload } from '../../lib/gameShare';
 import type { CharacterGameStatus } from '../../types/universeGame';
 
 interface GameResultPanelProps {
@@ -13,6 +15,7 @@ interface GameResultPanelProps {
   primaryTitle?: string;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
+  sharePayload: GameSharePayload;
   secondaryActionLabel?: string;
   status: Extract<CharacterGameStatus, 'won' | 'lost'>;
 }
@@ -39,6 +42,7 @@ export function GameResultPanel({
   primaryTitle = 'Correct',
   onPrimaryAction,
   onSecondaryAction,
+  sharePayload,
   secondaryActionLabel,
   status,
 }: GameResultPanelProps) {
@@ -70,20 +74,19 @@ export function GameResultPanel({
           </div>
         </div>
 
-        {(showPrimaryAction || showSecondaryAction) && (
-          <div className="button-stack">
-            {showPrimaryAction && (
-              <button className="primary-button" type="button" onClick={onPrimaryAction}>
-                {primaryActionLabel}
-              </button>
-            )}
-            {showSecondaryAction && (
-              <button className="secondary-button" type="button" onClick={onSecondaryAction}>
-                {secondaryActionLabel}
-              </button>
-            )}
-          </div>
-        )}
+        <div className="button-stack">
+          {showPrimaryAction && (
+            <button className="primary-button" type="button" onClick={onPrimaryAction}>
+              {primaryActionLabel}
+            </button>
+          )}
+          {showSecondaryAction && (
+            <button className="secondary-button" type="button" onClick={onSecondaryAction}>
+              {secondaryActionLabel}
+            </button>
+          )}
+          <GameShareButton payload={sharePayload} />
+        </div>
       </section>
     );
   }
@@ -125,20 +128,19 @@ export function GameResultPanel({
         </div>
       </div>
 
-      {(showPrimaryAction || showSecondaryAction) && (
-        <div className="button-stack">
-          {showPrimaryAction && (
-            <button className="primary-button" type="button" onClick={onPrimaryAction}>
-              {primaryActionLabel}
-            </button>
-          )}
-          {showSecondaryAction && (
-            <button className="secondary-button" type="button" onClick={onSecondaryAction}>
-              {secondaryActionLabel}
-            </button>
-          )}
-        </div>
-      )}
+      <div className="button-stack">
+        {showPrimaryAction && (
+          <button className="primary-button" type="button" onClick={onPrimaryAction}>
+            {primaryActionLabel}
+          </button>
+        )}
+        {showSecondaryAction && (
+          <button className="secondary-button" type="button" onClick={onSecondaryAction}>
+            {secondaryActionLabel}
+          </button>
+        )}
+        <GameShareButton payload={sharePayload} />
+      </div>
     </section>
   );
 }

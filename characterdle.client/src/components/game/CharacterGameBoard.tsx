@@ -18,6 +18,7 @@ interface CharacterGameBoardProps {
   answerPortraitUrl?: string | null;
   attributeDefinitions: UniverseAttributeDefinition[];
   completedGameStats: CompletedGameStats;
+  gameId: number;
   gridStyle: CSSProperties;
   guessCount: number;
   hintCount: number;
@@ -29,6 +30,7 @@ interface CharacterGameBoardProps {
   secondaryActionLabel?: string;
   showHintCount?: boolean;
   status: CharacterGameStatus;
+  universeName: string;
 }
 
 export function CharacterGameBoard({
@@ -36,6 +38,7 @@ export function CharacterGameBoard({
   answerPortraitUrl = null,
   attributeDefinitions,
   completedGameStats,
+  gameId,
   gridStyle,
   guessCount,
   hintCount,
@@ -47,6 +50,7 @@ export function CharacterGameBoard({
   secondaryActionLabel,
   showHintCount = false,
   status,
+  universeName,
 }: CharacterGameBoardProps) {
   return (
     <section className="character-board" aria-label="Character game board">
@@ -96,6 +100,15 @@ export function CharacterGameBoard({
           primaryTitle="Correct"
           onPrimaryAction={onPrimaryAction ?? onViewLeaderboard}
           onSecondaryAction={onSecondaryAction}
+          sharePayload={{
+            gameId,
+            guessCount,
+            hintCount,
+            mode: 'character',
+            rows,
+            status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
+            universeName,
+          }}
           secondaryActionLabel={secondaryActionLabel}
           status={status}
         />

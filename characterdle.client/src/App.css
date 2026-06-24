@@ -30,4 +30,5 @@
 @import './pages/ProfilePage.css';
 @import './components/leaderboard/LeaderboardTable.css';
 @import './components/ui/MetricRow.css';
+@import './components/ui/GameShareButton.css';
 @import './components/ui/LoadingOverlay.css';

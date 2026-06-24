@@ -503,6 +503,7 @@ export function CharacterGamePage({
               answerPortraitUrl={quoteGameData.answerCharacter.portraitUrl ?? null}
               completedGameStats={quoteGame.completedGameStats}
               episodeLabel={formatQuoteEpisodeLabel(quoteGameData.prompt)}
+              gameId={quoteGameData.gameId}
               guessCount={displayedQuoteGuessCount}
               hintCount={displayedQuoteHintCount}
               onPrimaryAction={quotePrimaryAction}
@@ -513,6 +514,7 @@ export function CharacterGamePage({
               secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={usesRemoteQuoteResult}
               status={displayedQuoteStatus}
+              universeName={quoteGameData.universeName}
             />
           </div>
         </section>
@@ -550,6 +552,7 @@ export function CharacterGamePage({
               answerPortraitUrl={data?.answerCharacter.portraitUrl ?? null}
               attributeDefinitions={data?.attributeDefinitions ?? []}
               completedGameStats={characterGame.completedGameStats}
+              gameId={data?.id ?? 0}
               gridStyle={tableGridStyle}
               guessCount={displayedCharacterGuessCount}
               hintCount={displayedCharacterHintCount}
@@ -561,6 +564,7 @@ export function CharacterGamePage({
               secondaryActionLabel={characterSecondaryActionLabel}
               showHintCount={usesRemoteCharacterResult}
               status={displayedCharacterStatus}
+              universeName={data?.universeName ?? selectedUniverse.title}
             />
           </div>
         </>

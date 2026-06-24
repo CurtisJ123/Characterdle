@@ -1,4 +1,5 @@
 import { CharacterPortrait } from './CharacterPortrait';
+import { GameShareButton } from '../ui/GameShareButton';
 import type {
   CharacterGameStatus,
   CompletedGameStats,
@@ -10,6 +11,7 @@ interface QuoteGameBoardProps {
   answerPortraitUrl?: string | null;
   completedGameStats: CompletedGameStats;
   episodeLabel?: string | null;
+  gameId: number;
   guessCount: number;
   hintCount: number;
   onPrimaryAction?: () => void;
@@ -20,6 +22,7 @@ interface QuoteGameBoardProps {
   secondaryActionLabel?: string;
   showHintCount?: boolean;
   status: CharacterGameStatus;
+  universeName: string;
 }
 
 function formatAverageGuesses(value: number | null): string {
@@ -37,6 +40,7 @@ export function QuoteGameBoard({
   answerPortraitUrl = null,
   completedGameStats,
   episodeLabel = null,
+  gameId,
   guessCount,
   hintCount,
   onPrimaryAction,
@@ -47,6 +51,7 @@ export function QuoteGameBoard({
   secondaryActionLabel,
   showHintCount = false,
   status,
+  universeName,
 }: QuoteGameBoardProps) {
   const showPrimaryAction = !!primaryActionLabel;
   const showSecondaryAction = !!secondaryActionLabel && !!onSecondaryAction;
@@ -124,24 +129,33 @@ export function QuoteGameBoard({
             )}
           </div>
 
-          {(showPrimaryAction || showSecondaryAction) && (
-            <div className="button-stack quote-summary-actions">
-              {showPrimaryAction && (
-                <button
-                  className="primary-button quote-summary-button"
-                  type="button"
-                  onClick={onPrimaryAction ?? onViewLeaderboard}
-                >
-                  {primaryActionLabel}
-                </button>
-              )}
-              {showSecondaryAction && (
-                <button className="secondary-button quote-summary-button" type="button" onClick={onSecondaryAction}>
-                  {secondaryActionLabel}
-                </button>
-              )}
-            </div>
-          )}
+          <div className="button-stack quote-summary-actions">
+            {showPrimaryAction && (
+              <button
+                className="primary-button quote-summary-button"
+                type="button"
+                onClick={onPrimaryAction ?? onViewLeaderboard}
+              >
+                {primaryActionLabel}
+              </button>
+            )}
+            {showSecondaryAction && (
+              <button className="secondary-button quote-summary-button" type="button" onClick={onSecondaryAction}>
+                {secondaryActionLabel}
+              </button>
+            )}
+            <GameShareButton
+              payload={{
+                gameId,
+                guessCount,
+                hintCount,
+                mode: 'quote',
+                rows,
+                status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
+                universeName,
+              }}
+            />
+          </div>
         </section>
       )}
     </section>
