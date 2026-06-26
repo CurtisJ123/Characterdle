@@ -4,7 +4,6 @@ import { MiniLeaderboardCard } from '../components/launcher/MiniLeaderboardCard'
 import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
 import { useUniverse } from '../hooks/useUniverse';
-import { getUniverseGameUrl, isUniverseHostedOnCurrentHostname, universeHasDedicatedHost } from '../lib/siteRouting';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 import type { UserProfile } from '../types/user';
@@ -13,7 +12,7 @@ interface LauncherPageProps {
   authError: Error | null;
   isUserLoading: boolean;
   onNavigate: NavigateToPage;
-  onOpenGame: (gameMode: GameMode, gameId: number | null) => void;
+  onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   user: UserProfile | null;
 }
 
@@ -31,17 +30,8 @@ export function LauncherPage({ authError, isUserLoading, onNavigate, onOpenGame,
       return;
     }
 
-    if (
-      typeof window !== 'undefined'
-      && universeHasDedicatedHost(universeId)
-      && !isUniverseHostedOnCurrentHostname(universeId, window.location.hostname)
-    ) {
-      window.location.assign(getUniverseGameUrl(universeId, gameMode, null));
-      return;
-    }
-
     setSelectedUniverseId(universeId);
-    onOpenGame(gameMode, null);
+    onOpenGame(gameMode, null, universeId);
   }
 
   return (
