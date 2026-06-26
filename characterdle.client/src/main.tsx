@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import './index.css';
 import { getBuildTimePublicConfig, type CharacterdlePublicConfig } from './lib/runtimeConfig';
+import { getUniverseHostRedirectUrl } from './lib/siteRouting';
 
 const RECOVERY_POLL_INTERVAL_MS = 3000;
 const RECOVERY_MAX_ATTEMPTS = 20;
@@ -158,6 +159,18 @@ async function recoverFromStartupFailure(root: Root, error: unknown) {
 }
 
 async function start() {
+  const hostRedirectUrl = getUniverseHostRedirectUrl(
+    window.location.hostname,
+    window.location.pathname,
+    window.location.search,
+    window.location.hash,
+  );
+
+  if (hostRedirectUrl && hostRedirectUrl !== window.location.href) {
+    window.location.replace(hostRedirectUrl);
+    return;
+  }
+
   const container = document.getElementById('root');
 
   if (!container) {

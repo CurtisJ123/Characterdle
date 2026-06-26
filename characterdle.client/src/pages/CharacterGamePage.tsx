@@ -25,8 +25,8 @@ import type { CharacterGameRow, CurrentUniverseGame, QuoteGameRow } from '../typ
 
 interface CharacterGamePageProps {
   onNavigate: NavigateToPage;
-  onOpenGame: (gameMode: GameMode, gameId: number | null) => void;
-  onOpenHistory: (gameMode: GameMode) => void;
+  onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
+  onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
   selectedGameId: number | null;
   selectedGameMode: GameMode;
 }

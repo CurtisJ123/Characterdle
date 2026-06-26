@@ -1,5 +1,5 @@
 import type { CharacterAttribute } from '../types/game';
-import { getShareUrlForCurrentLocation } from './siteRouting';
+import { getShareUrlForCurrentLocation, getUniverseGamePath } from './siteRouting';
 import type {
   CharacterGameRow,
   CharacterGameStatus,
@@ -151,9 +151,15 @@ export function getShareUrl(payload: GameSharePayload): string {
     && payload.mode === 'character'
   ) {
     const normalizedPathname = window.location.pathname.replace(/\/+$/, '').toLowerCase() || '/';
+    const canonicalDailyCharacterPath = getUniverseGamePath(payload.universeId, 'character', null).toLowerCase();
 
-    if (normalizedPathname === '/' || normalizedPathname === '/game/character') {
-      shareUrl.pathname = '/';
+    if (
+      normalizedPathname === '/'
+      || normalizedPathname === '/game/character'
+      || normalizedPathname === canonicalDailyCharacterPath
+      || normalizedPathname === `${canonicalDailyCharacterPath}/game/character`
+    ) {
+      shareUrl.pathname = canonicalDailyCharacterPath;
       shareUrl.search = '';
       shareUrl.hash = '';
     }

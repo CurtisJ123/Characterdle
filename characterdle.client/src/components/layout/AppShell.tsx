@@ -17,8 +17,8 @@ interface AppShellProps {
   currentGameMode: GameMode;
   onAuthNavigate: (mode: AuthMode) => void;
   onNavigate: NavigateToPage;
-  onOpenGame: (gameMode: GameMode, gameId: number | null) => void;
-  onOpenHistory: (gameMode: GameMode) => void;
+  onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
+  onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
 }
 
 export function AppShell({

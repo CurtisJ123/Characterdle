@@ -1,4 +1,4 @@
-import { defaultUniverseId } from '../data/universeCatalog';
+import { defaultUniverseId, getUniverseById } from '../data/universeCatalog';
 import type { GameMode } from '../types/game';
 
 const PRIMARY_SITE_ORIGIN = 'https://characterdle.com';
@@ -10,6 +10,23 @@ const universeSubdomainOrigins: Partial<Record<string, string>> = {
 
 function normalizeHostname(value: string): string {
   return value.trim().replace(/\.+$/, '').toLowerCase();
+}
+
+function normalizePathname(value: string): string {
+  const trimmedValue = value.trim();
+  const normalizedPathname = `/${trimmedValue.replace(/^\/+|\/+$/g, '')}`;
+
+  return normalizedPathname === '//'
+    ? '/'
+    : normalizedPathname;
+}
+
+function getPathSegments(pathname: string): string[] {
+  return normalizePathname(pathname).split('/').filter(Boolean);
+}
+
+function isPlayableUniverseId(universeId: string): boolean {
+  return Boolean(getUniverseById(universeId)?.isPlayable);
 }
 
 function isLocalhostEnvironment(hostname: string): boolean {
@@ -34,6 +51,44 @@ function buildOrigin(hostname: string, protocol: string, port: string): string {
   return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
 }
 
+function getPrimarySiteOriginForHostname(hostname: string): string {
+  if (typeof window !== 'undefined' && isLocalhostEnvironment(hostname)) {
+    return buildOrigin(LOCALHOST_HOSTNAME, getCurrentProtocol(), getCurrentPort());
+  }
+
+  return PRIMARY_SITE_ORIGIN;
+}
+
+function getUniversePathPrefix(universeId: string): string {
+  return `/${universeId}`;
+}
+
+function ensureUniversePath(universeId: string, pathname: string): string {
+  const normalizedPathname = normalizePathname(pathname);
+  const universePathPrefix = getUniversePathPrefix(universeId).toLowerCase();
+
+  if (
+    normalizedPathname.toLowerCase() === universePathPrefix
+    || normalizedPathname.toLowerCase().startsWith(`${universePathPrefix}/`)
+  ) {
+    return normalizedPathname;
+  }
+
+  return normalizedPathname === '/'
+    ? getUniversePathPrefix(universeId)
+    : `${getUniversePathPrefix(universeId)}${normalizedPathname}`;
+}
+
+function readLegacyHashPath(hash: string): string | null {
+  const normalizedHash = hash.replace(/^#\/?/, '').trim();
+
+  if (!normalizedHash) {
+    return null;
+  }
+
+  return normalizePathname(normalizedHash);
+}
+
 export function getUniverseSubdomainUniverseId(hostname: string): string | null {
   const normalizedHostname = normalizeHostname(hostname);
 
@@ -54,41 +109,50 @@ export function getUniverseSubdomainUniverseId(hostname: string): string | null 
   return null;
 }
 
+export function getUniverseIdFromPathname(pathname: string): string | null {
+  const [firstSegment] = getPathSegments(pathname);
+
+  return firstSegment && isPlayableUniverseId(firstSegment)
+    ? firstSegment
+    : null;
+}
+
 export function getDefaultUniverseIdForHostname(hostname: string): string {
   return getUniverseSubdomainUniverseId(hostname) ?? defaultUniverseId;
 }
 
-export function getSiteOriginForUniverse(universeId: string): string {
-  if (typeof window !== 'undefined' && isLocalhostEnvironment(window.location.hostname)) {
-    const protocol = getCurrentProtocol();
-    const port = getCurrentPort();
+export function getDefaultUniverseIdForLocation(hostname: string, pathname: string): string {
+  return getUniverseSubdomainUniverseId(hostname)
+    ?? getUniverseIdFromPathname(pathname)
+    ?? defaultUniverseId;
+}
 
-    return universeId === 'got'
-      ? buildOrigin(`got.${LOCALHOST_HOSTNAME}`, protocol, port)
-      : buildOrigin(LOCALHOST_HOSTNAME, protocol, port);
+export function getPrimarySiteOrigin(): string {
+  if (typeof window === 'undefined') {
+    return PRIMARY_SITE_ORIGIN;
   }
 
-  return universeSubdomainOrigins[universeId] ?? PRIMARY_SITE_ORIGIN;
+  return getPrimarySiteOriginForHostname(window.location.hostname);
 }
 
-export function universeHasDedicatedHost(universeId: string): boolean {
-  return typeof universeSubdomainOrigins[universeId] === 'string';
+export function getSiteOriginForUniverse(_universeId: string): string {
+  return getPrimarySiteOrigin();
 }
 
-export function isUniverseHostedOnCurrentHostname(universeId: string, hostname: string): boolean {
-  return normalizeHostname(new URL(getSiteOriginForUniverse(universeId)).hostname) === normalizeHostname(hostname);
+export function getUniverseGamePath(universeId: string, gameMode: GameMode, gameId: number | null): string {
+  if (gameMode === 'character' && gameId === null) {
+    return getUniversePathPrefix(universeId);
+  }
+
+  return gameId === null
+    ? `${getUniversePathPrefix(universeId)}/game/${gameMode}`
+    : `${getUniversePathPrefix(universeId)}/game/${gameMode}/${gameId}`;
 }
 
 export function getUniverseGameUrl(universeId: string, gameMode: GameMode, gameId: number | null): string {
-  const gameUrl = new URL(getSiteOriginForUniverse(universeId));
+  const gameUrl = new URL(getPrimarySiteOrigin());
 
-  if (universeId === 'got' && gameMode === 'character' && gameId === null) {
-    return gameUrl.toString();
-  }
-
-  gameUrl.pathname = gameId === null
-    ? `/game/${gameMode}`
-    : `/game/${gameMode}/${gameId}`;
+  gameUrl.pathname = getUniverseGamePath(universeId, gameMode, gameId);
   gameUrl.search = '';
   gameUrl.hash = '';
 
@@ -96,15 +160,43 @@ export function getUniverseGameUrl(universeId: string, gameMode: GameMode, gameI
 }
 
 export function getShareUrlForCurrentLocation(universeId: string): string {
-  const shareUrl = new URL(getSiteOriginForUniverse(universeId));
+  const shareUrl = new URL(getPrimarySiteOrigin());
 
   if (typeof window === 'undefined') {
+    shareUrl.pathname = getUniverseGamePath(universeId, 'character', null);
     return shareUrl.toString();
   }
 
-  shareUrl.pathname = window.location.pathname;
+  shareUrl.pathname = ensureUniversePath(
+    universeId,
+    readLegacyHashPath(window.location.hash) ?? window.location.pathname,
+  );
   shareUrl.search = window.location.search;
   shareUrl.hash = '';
 
   return shareUrl.toString();
+}
+
+export function getUniverseHostRedirectUrl(
+  hostname: string,
+  pathname: string,
+  search: string,
+  hash: string,
+): string | null {
+  const universeId = getUniverseSubdomainUniverseId(hostname);
+
+  if (!universeId) {
+    return null;
+  }
+
+  const redirectUrl = new URL(getPrimarySiteOriginForHostname(hostname));
+
+  redirectUrl.pathname = ensureUniversePath(
+    universeId,
+    readLegacyHashPath(hash) ?? pathname,
+  );
+  redirectUrl.search = search;
+  redirectUrl.hash = '';
+
+  return redirectUrl.toString();
 }
