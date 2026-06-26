@@ -4,15 +4,15 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  border: 1px solid rgba(77, 67, 83, 0.72);
-  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 72%, transparent);
+  border-radius: var(--radius-pill);
   padding: 6px;
-  background: rgba(17, 12, 21, 0.58);
+  background: color-mix(in srgb, var(--surface-container-lowest) 58%, transparent);
 }
 
 .auth-toggle button {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 12px 16px;
   color: var(--on-surface-variant);
   background: transparent;
@@ -20,7 +20,7 @@
 }
 
 .auth-toggle .is-selected {
-  color: #4c007d;
+  color: var(--on-primary-button);
   background: var(--primary);
-  box-shadow: 0 0 18px rgba(224, 182, 255, 0.22);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 22%, transparent);
 }

@@ -45,7 +45,7 @@ export function CharacterGamePage({
   const pendingSubmissionKeysRef = useRef(new Set<string>());
   const syncedSubmissionKeysRef = useRef(new Set<string>());
   const wasCompleteRef = useRef(false);
-  const { session, user } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, session, user } = useAuth();
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = useUniverseGame(selectedUniverse.id, selectedGameId);
   const { data: persistedResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
@@ -166,6 +166,7 @@ export function CharacterGamePage({
     : displayedCharacterStatus !== 'playing';
   const shouldOfferQuoteFollowUp = displayedCharacterStatus === 'won' && !!quoteGameData && !hasPlayedQuoteGame;
   const shouldOfferCharacterFollowUp = displayedQuoteStatus === 'won' && !!data && !hasWonCharacterGame;
+  const shouldShowGuestSignupPrompt = !isAuthLoading && !isAuthenticated;
 
   useEffect(() => {
     if (!isComplete) {
@@ -513,6 +514,7 @@ export function CharacterGamePage({
               rows={displayedQuoteRows}
               secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={usesRemoteQuoteResult}
+              showGuestSignupPrompt={shouldShowGuestSignupPrompt && displayedQuoteStatus === 'won'}
               status={displayedQuoteStatus}
               universeId={quoteGameData.universeId}
               universeName={quoteGameData.universeName}
@@ -564,6 +566,7 @@ export function CharacterGamePage({
               rows={displayedCharacterRows}
               secondaryActionLabel={characterSecondaryActionLabel}
               showHintCount={usesRemoteCharacterResult}
+              showGuestSignupPrompt={shouldShowGuestSignupPrompt && displayedCharacterStatus === 'won'}
               status={displayedCharacterStatus}
               universeId={data?.universeId ?? selectedUniverse.id}
               universeName={data?.universeName ?? selectedUniverse.title}

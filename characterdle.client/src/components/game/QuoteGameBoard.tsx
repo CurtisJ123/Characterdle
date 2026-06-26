@@ -1,4 +1,5 @@
 import { CharacterPortrait } from './CharacterPortrait';
+import { GuestVictorySignupPrompt } from './GuestVictorySignupPrompt';
 import { GameShareButton } from '../ui/GameShareButton';
 import type {
   CharacterGameStatus,
@@ -21,6 +22,7 @@ interface QuoteGameBoardProps {
   rows: QuoteGameRow[];
   secondaryActionLabel?: string;
   showHintCount?: boolean;
+  showGuestSignupPrompt?: boolean;
   status: CharacterGameStatus;
   universeId: string;
   universeName: string;
@@ -51,6 +53,7 @@ export function QuoteGameBoard({
   rows,
   secondaryActionLabel,
   showHintCount = false,
+  showGuestSignupPrompt = false,
   status,
   universeId,
   universeName,
@@ -159,6 +162,12 @@ export function QuoteGameBoard({
               }}
             />
           </div>
+
+          {showGuestSignupPrompt && (
+            <div className="quote-summary-signup">
+              <GuestVictorySignupPrompt />
+            </div>
+          )}
         </section>
       )}
     </section>

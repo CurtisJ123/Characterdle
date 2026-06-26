@@ -6,7 +6,7 @@
   align-items: start;
   margin-top: 28px;
   margin-inline: auto;
-  border-radius: 24px;
+  border-radius: var(--radius-panel);
   padding: 24px;
 }
 
@@ -43,9 +43,9 @@
 .result-stat-card {
   display: grid;
   gap: 6px;
-  border-radius: 16px;
+  border-radius: var(--radius-soft);
   padding: 14px 16px;
-  background: rgba(46, 40, 49, 0.72);
+  background: color-mix(in srgb, var(--surface-container-high) 72%, transparent);
 }
 
 .result-stat-card span {
@@ -61,6 +61,10 @@
   font-family: var(--heading-font);
   font-size: 1.5rem;
   line-height: 1;
+}
+
+.result-guest-signup {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 760px) {

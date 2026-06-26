@@ -1,3 +1,4 @@
+/* Future palette reference. Keep @import rules first; unused tokens live below. */
 @import './styles/shared.css';
 @import './components/layout/AppShell.css';
 @import './components/layout/BrandButton.css';
@@ -24,6 +25,7 @@
 @import './components/game/CharacterGameBoard.css';
 @import './components/game/QuoteGameBoard.css';
 @import './components/game/GameResultPanel.css';
+@import './components/game/GuestVictorySignupPrompt.css';
 @import './pages/PreviousGamesPage.css';
 @import './components/history/PreviousGamesGrid.css';
 @import './pages/LeaderboardPage.css';

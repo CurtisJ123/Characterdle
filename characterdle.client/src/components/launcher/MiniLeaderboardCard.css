@@ -1,5 +1,5 @@
 .mini-board {
-  border-radius: 24px;
+  border-radius: var(--radius-panel);
   padding: 18px 20px;
 }
 
@@ -20,10 +20,10 @@
 
 .section-heading button {
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-soft);
   padding: 7px 10px;
   color: var(--primary);
-  background: rgba(224, 182, 255, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -37,11 +37,11 @@
   gap: 10px;
   align-items: center;
   padding-block: 10px;
-  border-top: 1px solid rgba(77, 67, 83, 0.38);
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent);
 }
 
 .rank-number {
-  color: #f0b429;
+  color: var(--accent-gold);
   font-size: 0.88rem;
   font-weight: 900;
 }

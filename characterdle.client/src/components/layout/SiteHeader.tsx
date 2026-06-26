@@ -23,6 +23,7 @@ export function SiteHeader({
 }: SiteHeaderProps) {
   const activeNav = currentPage === 'game' ? 'launcher' : currentPage;
   const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
+  const profileInitials = getProfileInitials(profileLabel, isAuthenticated);
 
   return (
     <header className="site-header">
@@ -46,6 +47,7 @@ export function SiteHeader({
         <div className="header-actions" aria-label="Account actions">
           <button
             className="profile-button"
+            data-initials={profileInitials}
             type="button"
             onClick={() => (isAuthenticated ? onNavigate('profile') : onAuthNavigate('login'))}
           >
@@ -63,4 +65,25 @@ export function SiteHeader({
       </div>
     </header>
   );
+}
+
+function getProfileInitials(label: string, isAuthenticated: boolean): string {
+  if (!isAuthenticated) {
+    return 'In';
+  }
+
+  const words = label
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return 'Me';
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2);
+  }
+
+  return `${words[0][0] ?? ''}${words[1][0] ?? ''}`;
 }

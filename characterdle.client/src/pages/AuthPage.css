@@ -24,7 +24,7 @@
 .auth-card {
   position: relative;
   overflow: hidden;
-  border-radius: 30px;
+  border-radius: var(--radius-panel);
   padding: clamp(22px, 4vw, 34px);
 }
 
@@ -34,7 +34,7 @@
   width: 340px;
   height: 340px;
   content: '';
-  background: radial-gradient(circle, rgba(240, 180, 41, 0.2), transparent 65%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-gold) 20%, transparent), transparent 65%);
 }
 
 .auth-card-heading {

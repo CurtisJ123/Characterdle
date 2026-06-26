@@ -2,9 +2,9 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-soft);
   padding: 13px 14px;
-  background: rgba(46, 40, 49, 0.86);
+  background: color-mix(in srgb, var(--surface-container-high) 86%, transparent);
 }
 
 .metric-row span {
@@ -16,5 +16,5 @@
 }
 
 .metric-row .danger-text {
-  color: #ffb4ab;
+  color: var(--error);
 }

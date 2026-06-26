@@ -1,23 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --surface: #16111a;
-  --surface-container-lowest: #110c15;
-  --surface-container-low: #1f1a22;
-  --surface-container: #231e26;
-  --surface-container-high: #2e2831;
-  --surface-container-highest: #39333c;
-  --surface-bright: #3d3740;
-  --on-surface: #eadfec;
-  --on-surface-variant: #d0c2d5;
-  --outline: #998d9e;
-  --outline-variant: #4d4353;
-  --primary: #e0b6ff;
-  --primary-container: #9d4edd;
-  --secondary: #c5c5d7;
-  --error: #ffb4ab;
-  --error-container: #93000a;
-  --heading-font: 'Montserrat', 'Arial Black', sans-serif;
+  --future-theme-primary: #C5A059;
+  --future-theme-secondary: #8B0000;
+  --future-theme-tertiary: #F4EBD0;
+  --future-theme-neutral: #1A1C1E;
+
+  --white: #ffffff;
+  --black: #000000;
+  --radius-pill: 999px;
+  --radius-control: 6px;
+  --radius-soft: 8px;
+  --radius-panel: 10px;
+  --radius-image: 10px;
+
+  --surface: var(--future-theme-neutral);
+  --surface-base: var(--surface);
+  --surface-deep: color-mix(in srgb, var(--future-theme-neutral) 92%, var(--black) 8%);
+  --surface-elevated: color-mix(in srgb, var(--future-theme-neutral) 96%, var(--future-theme-primary) 4%);
+  --surface-container-lowest: color-mix(in srgb, var(--future-theme-neutral) 90%, var(--black));
+  --surface-container-low: color-mix(in srgb, var(--future-theme-neutral) 88%, var(--future-theme-primary) 12%);
+  --surface-container: color-mix(in srgb, var(--future-theme-neutral) 84%, var(--future-theme-primary) 16%);
+  --surface-container-high: color-mix(in srgb, var(--future-theme-neutral) 80%, var(--future-theme-primary) 20%);
+  --surface-container-highest: color-mix(in srgb, var(--future-theme-neutral) 72%, var(--future-theme-primary) 28%);
+  --surface-panel-strong: color-mix(in srgb, var(--surface-container-high) 90%, var(--future-theme-tertiary) 10%);
+  --surface-panel-accent: color-mix(in srgb, var(--future-theme-primary) 18%, var(--surface-container-highest));
+  --surface-panel-neutral: color-mix(in srgb, var(--future-theme-neutral) 82%, var(--future-theme-tertiary) 18%);
+  --surface-board: color-mix(in srgb, var(--future-theme-neutral) 94%, var(--future-theme-primary) 6%);
+  --surface-slate: color-mix(in srgb, var(--future-theme-neutral) 58%, var(--future-theme-tertiary) 42%);
+  --surface-slate-accent: color-mix(in srgb, var(--future-theme-neutral) 48%, var(--future-theme-tertiary) 52%);
+  --surface-metal-light: color-mix(in srgb, var(--future-theme-tertiary) 86%, var(--future-theme-primary) 14%);
+  --surface-metal-dark: color-mix(in srgb, var(--future-theme-neutral) 54%, var(--future-theme-primary) 46%);
+  --surface-bright: color-mix(in srgb, var(--future-theme-neutral) 64%, var(--future-theme-tertiary) 36%);
+  --on-surface: var(--future-theme-tertiary);
+  --on-surface-variant: color-mix(in srgb, var(--future-theme-tertiary) 82%, var(--future-theme-neutral) 18%);
+  --on-primary: var(--future-theme-neutral);
+  --on-primary-strong: var(--future-theme-neutral);
+  --on-primary-button: var(--future-theme-neutral);
+  --outline: color-mix(in srgb, var(--future-theme-primary) 46%, var(--future-theme-tertiary) 54%);
+  --outline-variant: color-mix(in srgb, var(--future-theme-neutral) 72%, var(--future-theme-primary) 28%);
+  --primary: var(--future-theme-primary);
+  --primary-soft: color-mix(in srgb, var(--future-theme-primary) 76%, var(--future-theme-tertiary) 24%);
+  --primary-strong: color-mix(in srgb, var(--future-theme-primary) 86%, var(--future-theme-tertiary) 14%);
+  --primary-container: color-mix(in srgb, var(--future-theme-primary) 34%, var(--future-theme-neutral) 66%);
+  --secondary: var(--future-theme-secondary);
+  --accent-gold: var(--future-theme-primary);
+  --accent-gold-soft: color-mix(in srgb, var(--future-theme-primary) 74%, var(--future-theme-tertiary) 26%);
+  --accent-bronze: color-mix(in srgb, var(--future-theme-primary) 55%, var(--future-theme-secondary) 45%);
+  --accent-slate: color-mix(in srgb, var(--future-theme-neutral) 42%, var(--future-theme-tertiary) 58%);
+  --accent-slate-soft: color-mix(in srgb, var(--future-theme-neutral) 32%, var(--future-theme-tertiary) 68%);
+  --accent-ribbon-light: var(--future-theme-tertiary);
+  --accent-ribbon-neutral: color-mix(in srgb, var(--future-theme-tertiary) 88%, var(--future-theme-neutral) 12%);
+  --ribbon-dark: color-mix(in srgb, var(--future-theme-neutral) 86%, var(--black) 14%);
+  --ribbon-dark-alt: color-mix(in srgb, var(--future-theme-neutral) 78%, var(--black) 22%);
+  --status-success: #20c763;
+  --status-warning: #f2b705;
+  --status-danger: color-mix(in srgb, var(--future-theme-secondary) 72%, var(--future-theme-tertiary) 28%);
+  --status-danger-strong: color-mix(in srgb, var(--future-theme-secondary) 86%, var(--future-theme-neutral) 14%);
+  --status-danger-deep: color-mix(in srgb, var(--future-theme-secondary) 72%, var(--black) 28%);
+  --error: color-mix(in srgb, var(--future-theme-secondary) 38%, var(--future-theme-tertiary) 62%);
+  --error-soft: color-mix(in srgb, var(--future-theme-secondary) 22%, var(--future-theme-tertiary) 78%);
+  --error-container: var(--future-theme-secondary);
+  --universe-got-accent: var(--accent-gold);
+  --universe-lotr-accent: var(--accent-gold-soft);
+  --universe-coming-soon-accent: var(--accent-slate);
+  --heading-font: 'Cormorant Garamond', Georgia, serif;
+  --brand-font: 'Cinzel', 'Cormorant Garamond', serif;
   --body-font: 'Inter', 'Segoe UI', sans-serif;
 
   color: var(--on-surface);
@@ -38,7 +86,8 @@
 html {
   min-width: 320px;
   background:
-    radial-gradient(circle at 50% -10%, rgba(224, 182, 255, 0.14), transparent 35%),
+    radial-gradient(circle at 50% -16%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 34%),
+    radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--white) 2%, transparent), transparent 42%),
     var(--surface);
 }
 
@@ -48,10 +97,12 @@ body {
   margin: 0;
   color: var(--on-surface);
   background:
-    linear-gradient(rgba(224, 182, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(224, 182, 255, 0.02) 1px, transparent 1px),
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 32%),
+    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--white) 2.8%, transparent), transparent 28%),
+    linear-gradient(color-mix(in srgb, var(--primary) 1.2%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 1%, transparent) 1px, transparent 1px),
     var(--surface);
-  background-size: 56px 56px;
+  background-size: auto, auto, 72px 72px, 72px 72px, auto;
 }
 
 body,
@@ -78,6 +129,68 @@ a {
 }
 
 ::selection {
-  color: #2e004e;
+  color: var(--on-primary);
   background: var(--primary);
+}
+
+.startup-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--surface-deep) 0%, var(--surface-elevated) 100%);
+  color: var(--on-surface);
+}
+
+.startup-screen__card {
+  width: min(520px, 100%);
+  padding: 32px;
+  border-radius: var(--radius-panel);
+  border: 1px solid color-mix(in srgb, var(--primary-strong) 18%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--black) 28%, transparent);
+}
+
+.startup-screen__logo {
+  width: 64px;
+  height: 64px;
+  display: block;
+  border-radius: 0;
+  margin-bottom: 16px;
+  object-fit: contain;
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--primary-container) 18%, transparent);
+}
+
+.startup-screen__kicker {
+  margin: 0;
+  color: var(--primary-soft);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.startup-screen__title {
+  margin: 12px 0 0;
+  font-family: var(--heading-font);
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 0.98;
+}
+
+.startup-screen__message {
+  margin: 16px 0 0;
+  color: color-mix(in srgb, var(--on-surface) 82%, transparent);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.startup-screen__retry {
+  margin-top: 24px;
+  border: 0;
+  border-radius: var(--radius-control);
+  padding: 14px 18px;
+  background: var(--primary-strong);
+  color: var(--on-primary-strong);
+  font-size: 0.98rem;
+  font-weight: 800;
 }

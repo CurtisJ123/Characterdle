@@ -20,11 +20,11 @@
 .app-shell::before {
   top: -12rem;
   left: 12%;
-  background: radial-gradient(circle, rgba(157, 78, 221, 0.32), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary-container) 32%, transparent), transparent 68%);
 }
 
 .app-shell::after {
   right: -10rem;
   bottom: 18rem;
-  background: radial-gradient(circle, rgba(61, 220, 151, 0.16), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--status-success) 16%, transparent), transparent 68%);
 }

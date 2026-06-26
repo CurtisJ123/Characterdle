@@ -1,4 +1,5 @@
 import { CharacterPortrait } from './CharacterPortrait';
+import { GuestVictorySignupPrompt } from './GuestVictorySignupPrompt';
 import { GameShareButton } from '../ui/GameShareButton';
 import type { GameSharePayload } from '../../lib/gameShare';
 import type { CharacterGameStatus } from '../../types/universeGame';
@@ -17,6 +18,7 @@ interface GameResultPanelProps {
   onSecondaryAction?: () => void;
   sharePayload: GameSharePayload;
   secondaryActionLabel?: string;
+  showGuestSignupPrompt?: boolean;
   status: Extract<CharacterGameStatus, 'won' | 'lost'>;
 }
 
@@ -44,6 +46,7 @@ export function GameResultPanel({
   onSecondaryAction,
   sharePayload,
   secondaryActionLabel,
+  showGuestSignupPrompt = false,
   status,
 }: GameResultPanelProps) {
   const showPrimaryAction = !!primaryActionLabel && !!onPrimaryAction;
@@ -141,6 +144,12 @@ export function GameResultPanel({
         )}
         <GameShareButton payload={sharePayload} />
       </div>
+
+      {showGuestSignupPrompt && (
+        <div className="result-guest-signup">
+          <GuestVictorySignupPrompt />
+        </div>
+      )}
     </section>
   );
 }

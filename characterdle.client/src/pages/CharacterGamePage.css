@@ -1,27 +1,38 @@
 .game-page {
   position: relative;
-  padding-top: 14px;
+  padding-top: 18px;
 }
 
 .game-hero {
-  max-width: 780px;
+  max-width: 760px;
   text-align: center;
 }
 
 .game-hero h1 {
+  position: relative;
   margin: 0;
   color: var(--on-surface);
   font-family: var(--heading-font);
-  font-size: clamp(2.2rem, 5.4vw, 4.15rem);
-  font-weight: 900;
-  line-height: 0.95;
-  letter-spacing: -0.06em;
-  text-shadow: 0 0 18px rgba(224, 182, 255, 0.28);
+  font-size: clamp(2.55rem, 5vw, 3.35rem);
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: 0;
+  text-wrap: balance;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.game-hero h1::after {
+  display: block;
+  width: 110px;
+  height: 1px;
+  margin: 12px auto 0;
+  content: '';
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
 }
 
 .game-top-actions {
   position: absolute;
-  top: 0;
+  top: 4px;
   right: 0;
   z-index: 2;
   display: flex;
@@ -30,20 +41,20 @@
 }
 
 .game-action-button {
-  border: 1px solid rgba(224, 182, 255, 0.2);
-  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-control);
   color: var(--on-surface);
-  background: rgba(17, 12, 21, 0.82);
+  background: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
 }
 
 .game-action-button:hover {
-  border-color: rgba(224, 182, 255, 0.48);
-  background: rgba(224, 182, 255, 0.12);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .history-button {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   display: inline-grid;
   place-items: center;
   padding: 0;
@@ -52,27 +63,27 @@
 .history-button img {
   width: 22px;
   height: 22px;
-  color: var(--primary);
+  display: block;
 }
 
 .debug-reset-button {
-  padding: 10px 14px;
-  font-size: 0.74rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .search-box {
   position: relative;
   z-index: 4;
-  width: min(720px, 100%);
+  width: min(680px, 100%);
   display: grid;
-  gap: 8px;
-  margin: 30px 0 24px;
+  gap: 10px;
+  margin: 26px 0 22px;
   color: var(--outline);
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -90,42 +101,45 @@
 
 .search-input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 92px 92px;
+  gap: 10px;
   align-items: stretch;
 }
 
 .search-box input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid rgba(153, 141, 158, 0.45);
-  border-radius: 18px;
-  padding: 28px 32px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  border-radius: var(--radius-control);
+  padding: 13px 16px;
   color: var(--on-surface);
-  background: rgba(35, 30, 38, 0.76);
-  font-size: 1.08rem;
+  background: color-mix(in srgb, var(--surface-container-lowest) 88%, transparent);
+  font-size: 0.86rem;
   outline: none;
-  box-shadow: 0 0 28px rgba(157, 78, 221, 0.12);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 2%, transparent);
 }
 
 .search-box input:focus {
-  border-color: rgba(224, 182, 255, 0.82);
-  box-shadow: 0 0 0 4px rgba(224, 182, 255, 0.1), 0 0 32px rgba(157, 78, 221, 0.22);
+  border-color: color-mix(in srgb, var(--primary) 54%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--primary) 8%, transparent),
+    0 0 18px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
-.search-submit {
-  min-width: 132px;
-}
-
+.search-submit,
 .hint-trigger-button {
-  min-width: 118px;
-  padding-inline: 16px;
-  white-space: nowrap;
+  min-width: 0;
+  padding-inline: 0;
 }
 
 .hint-trigger-wrap {
   position: relative;
   display: inline-flex;
+  width: 100%;
+}
+
+.hint-trigger-button {
+  width: 100%;
 }
 
 .hint-trigger-tooltip {
@@ -134,20 +148,24 @@
   right: 0;
   z-index: 8;
   width: min(260px, 72vw);
-  padding: 12px 14px;
-  border: 1px solid rgba(224, 182, 255, 0.24);
-  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  border-radius: var(--radius-control);
   color: var(--on-surface);
   background:
-    linear-gradient(180deg, rgba(46, 39, 56, 0.98), rgba(24, 20, 30, 0.98));
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-panel-strong) 98%, transparent),
+      color-mix(in srgb, var(--surface-elevated) 98%, transparent)
+    );
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--black) 34%, transparent);
   opacity: 0;
   pointer-events: none;
   transform: translateY(6px);
   transition:
     opacity 140ms ease,
     transform 140ms ease;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   line-height: 1.45;
   letter-spacing: 0.02em;
@@ -161,14 +179,14 @@
   right: 28px;
   width: 14px;
   height: 14px;
-  border-top: 1px solid rgba(224, 182, 255, 0.24);
-  border-left: 1px solid rgba(224, 182, 255, 0.24);
-  background: rgba(46, 39, 56, 0.98);
+  border-top: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  background: color-mix(in srgb, var(--surface-panel-strong) 98%, transparent);
   transform: rotate(45deg);
 }
 
 .hint-trigger-wrap:hover .hint-trigger-tooltip,
-.hint-trigger-wrap:focus-within .hint-trigger-tooltip {
+.hint-trigger-button:focus-visible + .hint-trigger-tooltip {
   opacity: 1;
   transform: translateY(0);
 }
@@ -180,34 +198,34 @@
   left: 0;
   z-index: 6;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   max-height: 320px;
   overflow-y: auto;
-  border: 1px solid rgba(224, 182, 255, 0.18);
-  border-radius: 22px;
-  padding: 10px;
-  background: rgba(17, 12, 21, 0.94);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-soft);
+  padding: 8px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 94%, transparent);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--black) 30%, transparent);
+  backdrop-filter: blur(10px);
 }
 
 .suggestion-row {
   width: 100%;
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  border: 1px solid rgba(224, 182, 255, 0.18);
-  border-radius: 18px;
-  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
   color: var(--on-surface);
-  background: rgba(57, 51, 60, 0.72);
+  background: color-mix(in srgb, var(--surface-container-highest) 72%, transparent);
   text-align: left;
 }
 
 .suggestion-row:hover {
-  border-color: rgba(224, 182, 255, 0.48);
-  background: rgba(224, 182, 255, 0.12);
+  border-color: color-mix(in srgb, var(--primary) 48%, transparent);
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
 }
 
 .suggestion-copy {
@@ -227,16 +245,19 @@
 }
 
 .search-feedback {
-  margin: 4px 2px 0;
-  color: var(--on-surface-variant);
-  font-size: 0.84rem;
-  font-weight: 700;
+  margin: -2px 2px 0;
+  color: color-mix(in srgb, var(--on-surface-variant) 84%, transparent);
+  font-family: var(--heading-font);
+  font-size: 0.78rem;
+  font-style: italic;
+  font-weight: 500;
   letter-spacing: normal;
+  text-align: center;
   text-transform: none;
 }
 
 .game-board-shell {
-  width: min(1180px, 100%);
+  width: min(1080px, 100%);
 }
 
 .quote-mode-layout {
@@ -296,7 +317,7 @@
   }
 
   .hint-trigger-wrap:hover .hint-trigger-tooltip,
-  .hint-trigger-wrap:focus-within .hint-trigger-tooltip {
+  .hint-trigger-button:focus-visible + .hint-trigger-tooltip {
     transform: translate(-50%, 0);
   }
 }
@@ -307,7 +328,7 @@
   }
 
   .search-box input {
-    padding: 22px 24px;
+    padding: 13px 14px;
   }
 
   .search-input-row {

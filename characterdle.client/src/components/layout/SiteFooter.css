@@ -2,17 +2,23 @@
   width: min(1200px, calc(100% - 32px));
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 24px;
   margin-top: auto;
   margin-inline: auto;
-  border-top: 1px solid rgba(77, 67, 83, 0.5);
-  padding-block: 34px;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  padding-block: 40px 30px;
   color: var(--on-surface-variant);
+  text-align: center;
 }
 
 .site-footer strong {
-  color: var(--on-surface);
+  color: var(--primary);
+  font-family: var(--brand-font);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 760px) {

@@ -3,11 +3,11 @@
   align-items: stretch;
   gap: 10px;
   grid-template-columns: var(--character-board-columns);
-  padding: 14px;
+  padding: 12px 16px;
 }
 
 .guess-row + .guess-row {
-  border-top: 1px solid rgba(77, 67, 83, 0.42);
+  border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .character-cell {
@@ -21,8 +21,9 @@
   display: block;
   min-width: 0;
   color: var(--on-surface);
-  font-size: 1.22rem;
-  font-weight: 900;
+  font-family: var(--heading-font);
+  font-size: 1.12rem;
+  font-weight: 700;
   overflow-wrap: anywhere;
   line-height: 1.16;
 }

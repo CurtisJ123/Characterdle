@@ -7,7 +7,8 @@
   aspect-ratio: 1 / 1;
   min-height: 86px;
   height: auto;
-  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
+  border-radius: var(--radius-soft);
   padding: 8px 7px;
   text-align: center;
   font-size: 1.16rem;
@@ -56,11 +57,11 @@
   padding: 0;
   overflow: hidden;
   isolation: isolate;
-  border: 1px solid rgba(153, 141, 158, 0.22);
-  background: #30303d;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  background: var(--surface-panel-neutral);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 18px rgba(0, 0, 0, 0.22);
+    inset 0 1px 0 color-mix(in srgb, var(--white) 6%, transparent),
+    0 8px 16px color-mix(in srgb, var(--black) 18%, transparent);
 }
 
 .attribute-chip-arrow {
@@ -70,7 +71,7 @@
   align-items: center;
   justify-content: center;
   opacity: 0.78;
-  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
+  filter: drop-shadow(0 8px 10px color-mix(in srgb, var(--black) 22%, transparent));
 }
 
 .attribute-chip-arrow.is-up,
@@ -81,7 +82,7 @@
 .attribute-chip-arrow-head,
 .attribute-chip-arrow-shaft {
   flex: 0 0 auto;
-  background: rgba(18, 12, 23, 0.72);
+  background: color-mix(in srgb, var(--surface-deep) 72%, transparent);
 }
 
 .attribute-chip-arrow-head {
@@ -93,12 +94,12 @@
 .attribute-chip-arrow-shaft {
   width: 34px;
   height: 42px;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
 }
 
 .attribute-chip-arrow.is-up .attribute-chip-arrow-head {
   border-right: 28px solid transparent;
-  border-bottom: 30px solid rgba(18, 12, 23, 0.72);
+  border-bottom: 30px solid color-mix(in srgb, var(--surface-deep) 72%, transparent);
   border-left: 28px solid transparent;
 }
 
@@ -108,7 +109,7 @@
 
 .attribute-chip-arrow.is-down .attribute-chip-arrow-head {
   order: 2;
-  border-top: 30px solid rgba(18, 12, 23, 0.72);
+  border-top: 30px solid color-mix(in srgb, var(--surface-deep) 72%, transparent);
   border-right: 28px solid transparent;
   border-left: 28px solid transparent;
 }
@@ -125,28 +126,29 @@
   place-items: center;
   min-height: 100%;
   padding-inline: 8px;
-  color: white;
+  color: var(--white);
   font-family: var(--heading-font);
   font-size: 2rem;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.42);
+  text-shadow: 0 2px 16px color-mix(in srgb, var(--black) 42%, transparent);
 }
 
 .attribute-chip.correct:not(.is-directional) {
-  color: white;
-  background: #20c763;
-  box-shadow: 0 0 24px rgba(32, 199, 99, 0.25);
+  color: var(--white);
+  background: var(--status-success);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 10%, transparent);
 }
 
 .attribute-chip.partial:not(.is-directional) {
-  color: white;
-  background: #f2b705;
-  box-shadow: 0 0 24px rgba(242, 183, 5, 0.25);
+  color: var(--white);
+  background: var(--status-warning);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 10%, transparent);
 }
 
 .attribute-chip.neutral:not(.is-directional) {
   color: var(--on-surface-variant);
-  background: #30303d;
+  background: var(--surface-panel-neutral);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 4%, transparent);
 }

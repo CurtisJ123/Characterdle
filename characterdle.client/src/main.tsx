@@ -63,86 +63,22 @@ function renderStartupScreen(
 ) {
   root.render(
     <StrictMode>
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'grid',
-          placeItems: 'center',
-          padding: '24px',
-          background: 'linear-gradient(180deg, #140f18 0%, #1c1522 100%)',
-          color: '#f6edff',
-        }}
-      >
-        <section
-          style={{
-            width: 'min(520px, 100%)',
-            padding: '32px',
-            borderRadius: '28px',
-            border: '1px solid rgba(212, 171, 255, 0.18)',
-            background: 'rgba(28, 21, 34, 0.92)',
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.28)',
-          }}
-        >
+      <main className="startup-screen">
+        <section className="startup-screen__card">
           <img
             src="/brand/characterdle-logo.png"
             alt=""
             aria-hidden="true"
-            style={{
-              width: '64px',
-              height: '64px',
-              display: 'block',
-              borderRadius: '20px',
-              marginBottom: '16px',
-              boxShadow: '0 18px 34px rgba(157, 78, 221, 0.18)',
-            }}
+            className="startup-screen__logo"
           />
-          <p
-            style={{
-              margin: 0,
-              color: '#d8b3ff',
-              fontSize: '0.78rem',
-              fontWeight: 900,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Characterdle
-          </p>
-          <h1
-            style={{
-              margin: '12px 0 0',
-              fontFamily: 'var(--heading-font, system-ui)',
-              fontSize: 'clamp(2rem, 6vw, 3rem)',
-              lineHeight: 0.98,
-            }}
-          >
-            {title}
-          </h1>
-          <p
-            style={{
-              margin: '16px 0 0',
-              color: 'rgba(246, 237, 255, 0.82)',
-              fontSize: '1rem',
-              lineHeight: 1.6,
-            }}
-          >
-            {message}
-          </p>
+          <p className="startup-screen__kicker">Characterdle</p>
+          <h1 className="startup-screen__title">{title}</h1>
+          <p className="startup-screen__message">{message}</p>
           {retryAction && (
             <button
               type="button"
               onClick={retryAction}
-              style={{
-                marginTop: '24px',
-                border: 0,
-                borderRadius: '16px',
-                padding: '14px 18px',
-                background: '#d4abff',
-                color: '#33164d',
-                fontSize: '0.98rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-              }}
+              className="startup-screen__retry"
             >
               Retry
             </button>

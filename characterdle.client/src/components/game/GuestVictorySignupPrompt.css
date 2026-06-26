@@ -1,0 +1,59 @@
+.guest-victory-signup {
+  display: grid;
+  gap: 18px;
+  border-radius: var(--radius-panel);
+  padding: 20px;
+}
+
+.guest-victory-signup-copy h3 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1.5rem;
+}
+
+.guest-victory-signup-copy .muted-copy {
+  margin: 10px 0 0;
+}
+
+.guest-victory-signup-form {
+  margin-top: 0;
+}
+
+.guest-victory-signup-social {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  padding-top: 18px;
+}
+
+.guest-victory-signup-social-copy {
+  margin: 0;
+  color: var(--outline);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guest-victory-signup-social-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.guest-victory-signup-social-actions .secondary-button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.guest-victory-signup-social-actions .secondary-button[disabled]:hover {
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .guest-victory-signup-social-actions {
+    grid-template-columns: 1fr;
+  }
+}

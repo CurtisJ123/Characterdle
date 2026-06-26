@@ -5,21 +5,22 @@
   border: 0;
   color: var(--primary);
   background: transparent;
-  font-family: var(--heading-font);
-  font-size: clamp(1.35rem, 2.2vw, 1.95rem);
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  text-shadow: 0 0 18px rgba(224, 182, 255, 0.38);
+  font-family: var(--brand-font);
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .brand-mark {
-  width: 60px;
-  height: 60px;
+  width: 42px;
+  height: 42px;
   display: block;
   flex-shrink: 0;
-  border-radius: 20px;
-  box-shadow: 0 0 18px rgba(224, 182, 255, 0.28);
-  object-fit: cover;
+  border-radius: 0;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 18%, transparent);
+  object-fit: contain;
 }
 
 @media (max-width: 760px) {

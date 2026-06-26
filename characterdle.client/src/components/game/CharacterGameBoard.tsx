@@ -29,6 +29,7 @@ interface CharacterGameBoardProps {
   rows: CharacterGameRow[];
   secondaryActionLabel?: string;
   showHintCount?: boolean;
+  showGuestSignupPrompt?: boolean;
   status: CharacterGameStatus;
   universeId: string;
   universeName: string;
@@ -50,6 +51,7 @@ export function CharacterGameBoard({
   rows,
   secondaryActionLabel,
   showHintCount = false,
+  showGuestSignupPrompt = false,
   status,
   universeId,
   universeName,
@@ -84,7 +86,13 @@ export function CharacterGameBoard({
           ))
         ) : (
           <div className="empty-guess-state">
-            No guesses yet.
+            <span className="material-symbols-outlined empty-guess-state-mark" aria-hidden="true">
+              history_edu
+            </span>
+            <span className="empty-guess-state-title">No guesses yet.</span>
+            <span className="empty-guess-state-copy">
+              Search for a character above, then make your first guess.
+            </span>
           </div>
         )}
       </section>
@@ -113,6 +121,7 @@ export function CharacterGameBoard({
             universeName,
           }}
           secondaryActionLabel={secondaryActionLabel}
+          showGuestSignupPrompt={showGuestSignupPrompt}
           status={status}
         />
       )}

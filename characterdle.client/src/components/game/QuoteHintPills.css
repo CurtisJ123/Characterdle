@@ -8,10 +8,10 @@
 .quote-hint-pill {
   display: grid;
   gap: 6px;
-  border: 1px solid rgba(224, 182, 255, 0.12);
-  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: var(--radius-soft);
   padding: 12px 14px;
-  background: rgba(35, 30, 38, 0.68);
+  background: color-mix(in srgb, var(--surface-container) 68%, transparent);
 }
 
 .quote-hint-pill span {
@@ -30,7 +30,7 @@
 }
 
 .quote-hint-pill.is-hidden {
-  background: rgba(27, 24, 31, 0.54);
+  background: color-mix(in srgb, var(--surface-elevated) 54%, transparent);
 }
 
 .quote-hint-pill.is-hidden strong {
@@ -38,9 +38,9 @@
 }
 
 .quote-hint-pill.is-revealed {
-  border-color: rgba(224, 182, 255, 0.24);
-  background: rgba(57, 51, 60, 0.74);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  border-color: color-mix(in srgb, var(--primary) 24%, transparent);
+  background: color-mix(in srgb, var(--surface-container-highest) 74%, transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--black) 18%, transparent);
 }
 
 @media (max-width: 760px) {

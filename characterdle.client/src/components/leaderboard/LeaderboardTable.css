@@ -1,5 +1,5 @@
 .leaderboard-table {
-  border-radius: 24px;
+  border-radius: var(--radius-panel);
   padding: 0;
   overflow-x: auto;
 }
@@ -16,17 +16,17 @@
   align-items: center;
   min-width: 760px;
   padding: 20px 24px;
-  border-top: 1px solid rgba(77, 67, 83, 0.38);
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent);
 }
 
 .table-row.is-current-user {
-  background: rgba(224, 182, 255, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .table-head {
   border-top: 0;
   color: var(--outline);
-  background: rgba(57, 51, 60, 0.72);
+  background: color-mix(in srgb, var(--surface-container-highest) 72%, transparent);
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -38,26 +38,26 @@
   height: 38px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(153, 141, 158, 0.24);
+  border: 1px solid color-mix(in srgb, var(--outline) 24%, transparent);
   border-radius: 50%;
   color: var(--on-surface-variant);
   font-weight: 900;
 }
 
 .rank-1 {
-  border-color: rgba(240, 180, 41, 0.62);
-  color: #f0b429;
-  background: rgba(240, 180, 41, 0.13);
+  border-color: color-mix(in srgb, var(--accent-gold) 62%, transparent);
+  color: var(--accent-gold);
+  background: color-mix(in srgb, var(--accent-gold) 13%, transparent);
 }
 
 .rank-2 {
-  color: #c5c5d7;
-  background: rgba(197, 197, 215, 0.12);
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
 }
 
 .rank-3 {
-  color: #ff9f43;
-  background: rgba(255, 159, 67, 0.12);
+  color: var(--accent-bronze);
+  background: color-mix(in srgb, var(--accent-bronze) 12%, transparent);
 }
 
 .player-cell {

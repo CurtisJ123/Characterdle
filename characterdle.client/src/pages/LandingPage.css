@@ -4,9 +4,13 @@
   flex-direction: column;
   overflow: hidden;
   background:
-    radial-gradient(circle at 74% 22%, rgba(240, 180, 41, 0.16), transparent 28%),
-    radial-gradient(circle at 22% 18%, rgba(224, 182, 255, 0.18), transparent 28%),
-    linear-gradient(145deg, rgba(17, 12, 21, 0.92), rgba(22, 17, 26, 0.98));
+    radial-gradient(circle at 74% 22%, color-mix(in srgb, var(--accent-gold) 16%, transparent), transparent 28%),
+    radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 28%),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--surface-container-lowest) 92%, transparent),
+      color-mix(in srgb, var(--surface) 98%, transparent)
+    );
 }
 
 .landing-shell::before,
@@ -25,13 +29,13 @@
 .landing-shell::before {
   top: 18%;
   right: -8rem;
-  background: radial-gradient(circle, rgba(240, 180, 41, 0.18), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-gold) 18%, transparent), transparent 68%);
 }
 
 .landing-shell::after {
   bottom: -12rem;
   left: -8rem;
-  background: radial-gradient(circle, rgba(157, 78, 221, 0.24), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary-container) 24%, transparent), transparent 68%);
 }
 
 .landing-nav,
@@ -84,7 +88,7 @@
   font-weight: 900;
   line-height: 0.88;
   letter-spacing: -0.075em;
-  text-shadow: 0 0 28px rgba(224, 182, 255, 0.18);
+  text-shadow: 0 0 28px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .landing-copy > p:not(.eyebrow) {
@@ -105,7 +109,7 @@
 .landing-preview {
   position: relative;
   overflow: hidden;
-  border-radius: 32px;
+  border-radius: var(--radius-panel);
   padding: clamp(28px, 5vw, 42px);
 }
 
@@ -115,7 +119,7 @@
   width: 360px;
   height: 360px;
   content: '';
-  background: radial-gradient(circle, rgba(240, 180, 41, 0.22), transparent 64%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-gold) 22%, transparent), transparent 64%);
 }
 
 .landing-preview h2 {
