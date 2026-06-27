@@ -1,0 +1,71 @@
+.guest-victory-signup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.guest-victory-signup-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: color-mix(in srgb, var(--surface-container-lowest) 74%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.guest-victory-signup-overlay-panel {
+  position: relative;
+  z-index: 1;
+  width: min(640px, 100%);
+}
+
+.guest-victory-signup-overlay-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 8px 12px;
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface-panel-strong) 82%, transparent);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.guest-victory-signup-overlay-close:hover {
+  border-color: color-mix(in srgb, var(--primary) 34%, transparent);
+  background: color-mix(in srgb, var(--surface-panel-strong) 94%, transparent);
+  transform: translateY(-1px);
+}
+
+.guest-victory-signup-overlay-close:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 54%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .guest-victory-signup-overlay {
+    align-items: flex-start;
+    padding: 18px;
+    padding-top: 26px;
+  }
+
+  .guest-victory-signup-overlay-close {
+    top: 12px;
+    right: 12px;
+  }
+}

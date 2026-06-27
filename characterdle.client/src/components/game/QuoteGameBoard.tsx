@@ -1,5 +1,5 @@
 import { CharacterPortrait } from './CharacterPortrait';
-import { GuestVictorySignupPrompt } from './GuestVictorySignupPrompt';
+import { GuestVictorySignupOverlay } from './GuestVictorySignupOverlay';
 import { GameShareButton } from '../ui/GameShareButton';
 import type {
   CharacterGameStatus,
@@ -162,14 +162,10 @@ export function QuoteGameBoard({
               }}
             />
           </div>
-
-          {showGuestSignupPrompt && (
-            <div className="quote-summary-signup">
-              <GuestVictorySignupPrompt />
-            </div>
-          )}
         </section>
       )}
+
+      {showGuestSignupPrompt && <GuestVictorySignupOverlay />}
     </section>
   );
 }

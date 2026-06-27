@@ -26,6 +26,7 @@
 @import './components/game/QuoteGameBoard.css';
 @import './components/game/GameResultPanel.css';
 @import './components/game/GuestVictorySignupPrompt.css';
+@import './components/game/GuestVictorySignupOverlay.css';
 @import './pages/PreviousGamesPage.css';
 @import './components/history/PreviousGamesGrid.css';
 @import './pages/LeaderboardPage.css';
