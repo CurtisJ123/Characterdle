@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { CharacterGuessRow } from './CharacterGuessRow';
 import { GameResultPanel } from './GameResultPanel';
+import { GuestVictorySignupOverlay } from './GuestVictorySignupOverlay';
 import type {
   CharacterGameRow,
   CharacterGameStatus,
@@ -121,10 +122,11 @@ export function CharacterGameBoard({
             universeName,
           }}
           secondaryActionLabel={secondaryActionLabel}
-          showGuestSignupPrompt={showGuestSignupPrompt}
           status={status}
         />
       )}
+
+      {showGuestSignupPrompt && <GuestVictorySignupOverlay />}
     </section>
   );
 }

@@ -3,39 +3,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 74% 22%, color-mix(in srgb, var(--accent-gold) 16%, transparent), transparent 28%),
-    radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 28%),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface-container-lowest) 92%, transparent),
-      color-mix(in srgb, var(--surface) 98%, transparent)
-    );
-}
-
-.landing-shell::before,
-.landing-shell::after {
-  position: fixed;
-  inset: auto;
-  z-index: -1;
-  width: 36rem;
-  height: 36rem;
-  content: '';
-  pointer-events: none;
-  filter: blur(24px);
-  opacity: 0.65;
-}
-
-.landing-shell::before {
-  top: 18%;
-  right: -8rem;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-gold) 18%, transparent), transparent 68%);
-}
-
-.landing-shell::after {
-  bottom: -12rem;
-  left: -8rem;
-  background: radial-gradient(circle, color-mix(in srgb, var(--primary-container) 24%, transparent), transparent 68%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-board) 58%, var(--surface)),
+    var(--surface) 54%,
+    var(--surface-container-lowest)
+  );
 }
 
 .landing-nav,
@@ -88,7 +61,6 @@
   font-weight: 900;
   line-height: 0.88;
   letter-spacing: -0.075em;
-  text-shadow: 0 0 28px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .landing-copy > p:not(.eyebrow) {
@@ -109,17 +81,17 @@
 .landing-preview {
   position: relative;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
   border-radius: var(--radius-panel);
   padding: clamp(28px, 5vw, 42px);
-}
-
-.landing-preview::before {
-  position: absolute;
-  inset: -30% -20% auto auto;
-  width: 360px;
-  height: 360px;
-  content: '';
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-gold) 22%, transparent), transparent 64%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-board) 96%, transparent),
+    color-mix(in srgb, var(--surface-container-lowest) 98%, transparent)
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--white) 2%, transparent),
+    0 18px 34px color-mix(in srgb, var(--black) 20%, transparent);
 }
 
 .landing-preview h2 {

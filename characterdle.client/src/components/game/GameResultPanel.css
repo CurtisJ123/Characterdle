@@ -63,10 +63,6 @@
   line-height: 1;
 }
 
-.result-guest-signup {
-  grid-column: 1 / -1;
-}
-
 @media (max-width: 760px) {
   .result-panel,
   .result-stats-grid {

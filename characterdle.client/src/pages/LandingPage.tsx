@@ -1,4 +1,5 @@
 import { BrandButton } from '../components/layout/BrandButton';
+import { SiteFooter } from '../components/layout/SiteFooter';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 
 interface LandingPageProps {
@@ -36,7 +37,7 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
           </div>
         </div>
 
-        <aside className="landing-preview glass-card" aria-label="Game preview">
+        <aside className="landing-preview" aria-label="Game preview">
           <span className="pill">Play</span>
           <h2>How to play</h2>
           <ol>
@@ -46,6 +47,8 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
           </ol>
         </aside>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }

@@ -1,4 +1,5 @@
 .character-board {
+  position: relative;
   width: min(1080px, 100%);
   display: grid;
   gap: 18px;
