@@ -38,26 +38,11 @@
   height: 38px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--outline) 24%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 62%, transparent);
   border-radius: 50%;
-  color: var(--on-surface-variant);
-  font-weight: 900;
-}
-
-.rank-1 {
-  border-color: color-mix(in srgb, var(--accent-gold) 62%, transparent);
   color: var(--accent-gold);
   background: color-mix(in srgb, var(--accent-gold) 13%, transparent);
-}
-
-.rank-2 {
-  color: var(--secondary);
-  background: color-mix(in srgb, var(--secondary) 12%, transparent);
-}
-
-.rank-3 {
-  color: var(--accent-bronze);
-  background: color-mix(in srgb, var(--accent-bronze) 12%, transparent);
+  font-weight: 900;
 }
 
 .player-cell {

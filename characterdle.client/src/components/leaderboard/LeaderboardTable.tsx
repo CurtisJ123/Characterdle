@@ -40,7 +40,7 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
       </div>
       {rows.map((row) => (
         <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} key={row.userId}>
-          <span className={`rank-medal rank-${row.rank}`}>{row.rank}</span>
+          <span className="rank-medal">{row.rank}</span>
           <div className="player-cell">
             <span className="avatar">{getInitials(row.displayName)}</span>
             <div>

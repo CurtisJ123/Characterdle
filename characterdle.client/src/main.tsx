@@ -6,6 +6,46 @@ import { getUniverseHostRedirectUrl } from './lib/siteRouting';
 
 const RECOVERY_POLL_INTERVAL_MS = 3000;
 const RECOVERY_MAX_ATTEMPTS = 20;
+let hasStartedBackendWarmup = false;
+
+function normalizeApiBaseUrl(value: string | undefined): string {
+  return value?.trim().replace(/\/+$/, '') ?? '';
+}
+
+function buildApiUrlFromConfig(config: CharacterdlePublicConfig, path: string): string {
+  const normalizedPath = path.startsWith('/')
+    ? path
+    : `/${path}`;
+  const apiBaseUrl = normalizeApiBaseUrl(config.apiBaseUrl);
+
+  return apiBaseUrl
+    ? `${apiBaseUrl}${normalizedPath}`
+    : normalizedPath;
+}
+
+function startBackendWarmup(config: CharacterdlePublicConfig | null): void {
+  if (!config || hasStartedBackendWarmup) {
+    return;
+  }
+
+  hasStartedBackendWarmup = true;
+  const statusUrl = buildApiUrlFromConfig(config, '/api/status');
+
+  void fetch(statusUrl, {
+    cache: 'no-store',
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Backend warmup status request failed with ${response.status}.`);
+      }
+
+      const { getCurrentUniverseGame } = await import('./services/universeGameApi');
+      return getCurrentUniverseGame('got');
+    })
+    .catch((error) => {
+      console.info('Characterdle backend warmup is still pending.', error);
+    });
+}
 
 async function resolveRuntimeConfig(): Promise<CharacterdlePublicConfig> {
   if (window.__CHARACTERDLE_PUBLIC_CONFIG__) {
@@ -92,6 +132,7 @@ function renderStartupScreen(
 
 async function bootstrap(root: Root) {
   window.__CHARACTERDLE_PUBLIC_CONFIG__ = await resolveRuntimeConfig();
+  startBackendWarmup(window.__CHARACTERDLE_PUBLIC_CONFIG__);
 
   const [{ default: App }, { AuthProvider }, { UniverseProvider }] = await Promise.all([
     import('./App.tsx'),
@@ -170,6 +211,8 @@ async function start() {
     window.location.replace(hostRedirectUrl);
     return;
   }
+
+  startBackendWarmup(getBuildTimePublicConfig());
 
   const container = document.getElementById('root');
 
