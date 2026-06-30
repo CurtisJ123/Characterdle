@@ -82,6 +82,8 @@ builder.Services.AddHttpClient<SupabaseAuthClient>(client =>
 builder.Services.AddHostedService<UniverseGameScheduleService>();
 
 var app = builder.Build();
+var dataSource = app.Services.GetRequiredService<NpgsqlDataSource>();
+await UniverseGamePlaySchemaInitializer.EnsureSchemaAsync(dataSource, CancellationToken.None);
 
 if (args.Length > 0 && string.Equals(args[0], "run-scheduled-games", StringComparison.OrdinalIgnoreCase))
 {

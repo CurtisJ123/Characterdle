@@ -1,4 +1,5 @@
 import type {
+  CompletedGameStats,
   CurrentUniverseGame,
   PreviousUniverseGames,
   UniverseAttributeDefinition,
@@ -29,6 +30,12 @@ interface UniverseAttributeDefinitionPayload {
   falseLabel?: string | null;
   helpText?: string | null;
   trueLabel?: string | null;
+}
+
+interface CompletedGameStatsPayload {
+  averageGuessSampleSize: number;
+  averageGuesses: number | null;
+  playCount: number;
 }
 
 function createUniverseGameCacheKey(universeId: string, gameId: number | null): string {
@@ -113,6 +120,8 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
     dateTime: string;
     universeId: string;
     universeName: string;
+    characterStats: CompletedGameStatsPayload;
+    quoteStats: CompletedGameStatsPayload | null;
     attributeDefinitions: UniverseAttributeDefinitionPayload[];
     answerCharacter: UniverseCharacterPayload;
     quotePrompt: {
@@ -129,6 +138,7 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
   return {
     attributeDefinitions: payload.attributeDefinitions.map(mapAttributeDefinition),
     answerCharacter: mapCharacter(payload.answerCharacter),
+    characterStats: mapCompletedGameStats(payload.characterStats),
     dateTime: payload.dateTime,
     characters: payload.characters.map(mapCharacter),
     id: payload.id,
@@ -142,6 +152,7 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
         text: payload.quotePrompt.text,
       }
       : null,
+    quoteStats: payload.quoteStats ? mapCompletedGameStats(payload.quoteStats) : null,
     universeId: payload.universeId,
     universeName: payload.universeName,
   };
@@ -195,5 +206,13 @@ function mapCharacter(payload: UniverseCharacterPayload): UniverseCharacter {
     displayName: payload.displayName,
     id: payload.id,
     portraitUrl: payload.portraitUrl ?? null,
+  };
+}
+
+function mapCompletedGameStats(payload: CompletedGameStatsPayload): CompletedGameStats {
+  return {
+    averageGuessSampleSize: payload.averageGuessSampleSize,
+    averageGuesses: payload.averageGuesses,
+    playCount: payload.playCount,
   };
 }

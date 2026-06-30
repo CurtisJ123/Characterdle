@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   getCharacterGameStorageKey,
-  getCharacterGameStatsStorageKey,
   getLegacyCharacterGameSessionStorageKey,
   hasExpiredGiveUp,
-  readCharacterGameGuessCounts,
 } from '../lib/characterGameProgress';
 import { resolveCharacterSearch } from '../lib/characterSearch';
 import { compareAttributeValue, formatAttributeValue } from '../lib/universeAttributes';
@@ -108,21 +106,51 @@ function getLegacySessionStorageKey(universeId: string, gameId: number): string 
   return getLegacyCharacterGameSessionStorageKey(universeId, gameId);
 }
 
-function getPlayStatsStorageKey(universeId: string, gameId: number): string {
-  return getCharacterGameStatsStorageKey(universeId, gameId);
+function createEmptyCompletedGameStats(): CompletedGameStats {
+  return {
+    averageGuessSampleSize: 0,
+    averageGuesses: null,
+    playCount: 0,
+  };
+}
+
+function cloneCompletedGameStats(stats: CompletedGameStats | null | undefined): CompletedGameStats {
+  return stats
+    ? {
+      averageGuessSampleSize: stats.averageGuessSampleSize,
+      averageGuesses: stats.averageGuesses,
+      playCount: stats.playCount,
+    }
+    : createEmptyCompletedGameStats();
+}
+
+function incrementPlayCount(stats: CompletedGameStats): CompletedGameStats {
+  return {
+    ...stats,
+    playCount: stats.playCount + 1,
+  };
+}
+
+function recordQualifiedWin(stats: CompletedGameStats, guessCount: number): CompletedGameStats {
+  const nextSampleSize = stats.averageGuessSampleSize + 1;
+  const currentTotalGuesses = (stats.averageGuesses ?? 0) * stats.averageGuessSampleSize;
+
+  return {
+    averageGuessSampleSize: nextSampleSize,
+    averageGuesses: (currentTotalGuesses + guessCount) / nextSampleSize,
+    playCount: stats.playCount,
+  };
+}
+
+function hasStoredActivity(state: StoredCharacterGameState): boolean {
+  return state.completionRecorded
+    || state.gaveUp
+    || state.firstLetterRevealed
+    || state.guessedCharacterIds.length > 0
+    || state.revealedHintKeys.length > 0;
 }
 
 function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
-  if (typeof window === 'undefined') {
-    return {
-      completionRecorded: false,
-      firstLetterRevealed: false,
-      gaveUp: false,
-      guessedCharacterIds: [],
-      revealedHintKeys: [],
-    };
-  }
-
   const defaultState: StoredCharacterGameState = {
     completionRecorded: false,
     firstLetterRevealed: false,
@@ -130,6 +158,10 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
     guessedCharacterIds: [],
     revealedHintKeys: [],
   };
+
+  if (typeof window === 'undefined') {
+    return defaultState;
+  }
 
   const allowedCharacterIds = new Set(game.characters.map((character) => character.id));
   const allowedHintKeys = new Set(game.attributeDefinitions.map((definition) => definition.key));
@@ -196,64 +228,41 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
   return defaultState;
 }
 
-function readStoredGameStats(game: CurrentUniverseGame): CompletedGameStats {
-  return buildCompletedGameStats(readStoredGuessCounts(game));
-}
-
-function readStoredGuessCounts(game: CurrentUniverseGame): number[] {
-  return readCharacterGameGuessCounts(game.universeId, game.id);
-}
-
-function buildCompletedGameStats(guessCounts: number[]): CompletedGameStats {
-  if (guessCounts.length === 0) {
-    return {
-      averageGuesses: null,
-      playCount: 0,
-    };
-  }
-
-  const totalGuesses = guessCounts.reduce((sum, value) => sum + value, 0);
-
-  return {
-    averageGuesses: totalGuesses / guessCounts.length,
-    playCount: guessCounts.length,
-  };
-}
-
 export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundState<CharacterGameRow> {
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [completionRecorded, setCompletionRecorded] = useState(false);
+  const [hasRecordedPlay, setHasRecordedPlay] = useState(false);
+  const [isAggregateUpdateEligible, setIsAggregateUpdateEligible] = useState(false);
   const [firstLetterRevealed, setFirstLetterRevealed] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
   const [revealedHintKeys, setRevealedHintKeys] = useState<string[]>([]);
-  const [completedGameStats, setCompletedGameStats] = useState<CompletedGameStats>({
-    averageGuesses: null,
-    playCount: 0,
-  });
+  const [completedGameStats, setCompletedGameStats] = useState<CompletedGameStats>(createEmptyCompletedGameStats());
 
   useEffect(() => {
     if (!game) {
       setGuessedCharacterIds([]);
       setMessage(null);
       setCompletionRecorded(false);
+      setHasRecordedPlay(false);
+      setIsAggregateUpdateEligible(false);
       setFirstLetterRevealed(false);
       setGaveUp(false);
       setRevealedHintKeys([]);
-      setCompletedGameStats({
-        averageGuesses: null,
-        playCount: 0,
-      });
+      setCompletedGameStats(createEmptyCompletedGameStats());
       return;
     }
 
     const storedState = readStoredState(game);
+    const storedActivity = hasStoredActivity(storedState);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
     setCompletionRecorded(storedState.completionRecorded);
+    setHasRecordedPlay(storedActivity);
+    setIsAggregateUpdateEligible(!storedActivity);
     setFirstLetterRevealed(storedState.firstLetterRevealed);
     setGaveUp(storedState.gaveUp);
     setRevealedHintKeys(storedState.revealedHintKeys);
-    setCompletedGameStats(readStoredGameStats(game));
+    setCompletedGameStats(cloneCompletedGameStats(game.characterStats));
     setMessage(null);
   }, [game]);
 
@@ -329,25 +338,29 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
   const status: CharacterGameStatus = isSolved ? 'won' : gaveUp ? 'lost' : 'playing';
   const hintActionLabel = firstLetterRevealed ? 'Give Up' : 'Hint';
   const isStatsEligible = hintCount === 0;
+  const hasMeaningfulActivity = guessedCharacterIds.length > 0 || hintCount > 0 || status !== 'playing';
+
+  useEffect(() => {
+    if (!game || hasRecordedPlay || !hasMeaningfulActivity) {
+      return;
+    }
+
+    setCompletedGameStats((currentStats) => incrementPlayCount(currentStats));
+    setHasRecordedPlay(true);
+  }, [game, hasMeaningfulActivity, hasRecordedPlay]);
 
   useEffect(() => {
     if (!game || !isSolved || completionRecorded || typeof window === 'undefined') {
       return;
     }
 
-    if (isStatsEligible) {
-      const storageKey = getPlayStatsStorageKey(game.universeId, game.id);
-      const existingGuessCounts = readStoredGuessCounts(game);
-      const nextGuessCounts = [...existingGuessCounts, guessedCharacterIds.length];
-
-      window.localStorage.setItem(storageKey, JSON.stringify({ guessCounts: nextGuessCounts }));
-      setCompletedGameStats(buildCompletedGameStats(nextGuessCounts));
-    } else {
-      setCompletedGameStats(readStoredGameStats(game));
+    if (isStatsEligible && isAggregateUpdateEligible) {
+      setCompletedGameStats((currentStats) => recordQualifiedWin(currentStats, guessedCharacterIds.length));
     }
 
+    setIsAggregateUpdateEligible(false);
     setCompletionRecorded(true);
-  }, [completionRecorded, game, guessedCharacterIds.length, isSolved, isStatsEligible]);
+  }, [completionRecorded, game, guessedCharacterIds.length, isAggregateUpdateEligible, isSolved, isStatsEligible]);
 
   function submitGuess(query: string): SubmitGuessResult {
     if (!game) {
@@ -437,9 +450,12 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
     setGuessedCharacterIds([]);
     setMessage(null);
     setCompletionRecorded(false);
+    setHasRecordedPlay(false);
+    setIsAggregateUpdateEligible(true);
     setFirstLetterRevealed(false);
     setGaveUp(false);
     setRevealedHintKeys([]);
+    setCompletedGameStats(cloneCompletedGameStats(game?.characterStats));
 
     if (!game || typeof window === 'undefined') {
       return;

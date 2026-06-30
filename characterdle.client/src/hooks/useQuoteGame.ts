@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  getQuoteGameStatsStorageKey,
   getQuoteGameStorageKey,
   hasExpiredGiveUp,
-  readQuoteGameGuessCounts,
 } from '../lib/characterGameProgress';
 import { resolveCharacterSearch } from '../lib/characterSearch';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
@@ -81,28 +79,48 @@ function buildHint(
   };
 }
 
-function readStoredGuessCounts(game: QuoteGameData): number[] {
-  return readQuoteGameGuessCounts(game.universeId, game.gameId);
-}
-
-function buildCompletedGameStats(guessCounts: number[]): CompletedGameStats {
-  if (guessCounts.length === 0) {
-    return {
-      averageGuesses: null,
-      playCount: 0,
-    };
-  }
-
-  const totalGuesses = guessCounts.reduce((sum, value) => sum + value, 0);
-
+function createEmptyCompletedGameStats(): CompletedGameStats {
   return {
-    averageGuesses: totalGuesses / guessCounts.length,
-    playCount: guessCounts.length,
+    averageGuessSampleSize: 0,
+    averageGuesses: null,
+    playCount: 0,
   };
 }
 
-function readStoredGameStats(game: QuoteGameData): CompletedGameStats {
-  return buildCompletedGameStats(readStoredGuessCounts(game));
+function cloneCompletedGameStats(stats: CompletedGameStats | null | undefined): CompletedGameStats {
+  return stats
+    ? {
+      averageGuessSampleSize: stats.averageGuessSampleSize,
+      averageGuesses: stats.averageGuesses,
+      playCount: stats.playCount,
+    }
+    : createEmptyCompletedGameStats();
+}
+
+function incrementPlayCount(stats: CompletedGameStats): CompletedGameStats {
+  return {
+    ...stats,
+    playCount: stats.playCount + 1,
+  };
+}
+
+function recordQualifiedWin(stats: CompletedGameStats, guessCount: number): CompletedGameStats {
+  const nextSampleSize = stats.averageGuessSampleSize + 1;
+  const currentTotalGuesses = (stats.averageGuesses ?? 0) * stats.averageGuessSampleSize;
+
+  return {
+    averageGuessSampleSize: nextSampleSize,
+    averageGuesses: (currentTotalGuesses + guessCount) / nextSampleSize,
+    playCount: stats.playCount,
+  };
+}
+
+function hasStoredActivity(state: StoredQuoteGameState): boolean {
+  return state.completionRecorded
+    || state.gaveUp
+    || state.firstLetterRevealed
+    || state.guessedCharacterIds.length > 0
+    || state.revealedHintKeys.length > 0;
 }
 
 function readStoredState(game: QuoteGameData): StoredQuoteGameState {
@@ -180,36 +198,37 @@ export function useQuoteGame(game: QuoteGameData | null): GameRoundState<QuoteGa
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [completionRecorded, setCompletionRecorded] = useState(false);
+  const [hasRecordedPlay, setHasRecordedPlay] = useState(false);
+  const [isAggregateUpdateEligible, setIsAggregateUpdateEligible] = useState(false);
   const [firstLetterRevealed, setFirstLetterRevealed] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
   const [revealedHintKeys, setRevealedHintKeys] = useState<string[]>([]);
-  const [completedGameStats, setCompletedGameStats] = useState<CompletedGameStats>({
-    averageGuesses: null,
-    playCount: 0,
-  });
+  const [completedGameStats, setCompletedGameStats] = useState<CompletedGameStats>(createEmptyCompletedGameStats());
 
   useEffect(() => {
     if (!game) {
       setGuessedCharacterIds([]);
       setMessage(null);
       setCompletionRecorded(false);
+      setHasRecordedPlay(false);
+      setIsAggregateUpdateEligible(false);
       setFirstLetterRevealed(false);
       setGaveUp(false);
       setRevealedHintKeys([]);
-      setCompletedGameStats({
-        averageGuesses: null,
-        playCount: 0,
-      });
+      setCompletedGameStats(createEmptyCompletedGameStats());
       return;
     }
 
     const storedState = readStoredState(game);
+    const storedActivity = hasStoredActivity(storedState);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
     setCompletionRecorded(storedState.completionRecorded);
+    setHasRecordedPlay(storedActivity);
+    setIsAggregateUpdateEligible(!storedActivity);
     setFirstLetterRevealed(storedState.firstLetterRevealed);
     setGaveUp(storedState.gaveUp);
     setRevealedHintKeys(storedState.revealedHintKeys);
-    setCompletedGameStats(readStoredGameStats(game));
+    setCompletedGameStats(cloneCompletedGameStats(game.completedGameStats));
     setMessage(null);
   }, [game]);
 
@@ -293,25 +312,29 @@ export function useQuoteGame(game: QuoteGameData | null): GameRoundState<QuoteGa
   const status: CharacterGameStatus = isSolved ? 'won' : gaveUp ? 'lost' : 'playing';
   const hintActionLabel = firstLetterRevealed ? 'Give Up' : 'Hint';
   const isStatsEligible = hintCount === 0;
+  const hasMeaningfulActivity = guessedCharacterIds.length > 0 || hintCount > 0 || status !== 'playing';
+
+  useEffect(() => {
+    if (!game || hasRecordedPlay || !hasMeaningfulActivity) {
+      return;
+    }
+
+    setCompletedGameStats((currentStats) => incrementPlayCount(currentStats));
+    setHasRecordedPlay(true);
+  }, [game, hasMeaningfulActivity, hasRecordedPlay]);
 
   useEffect(() => {
     if (!game || !isSolved || completionRecorded || typeof window === 'undefined') {
       return;
     }
 
-    if (isStatsEligible) {
-      const storageKey = getQuoteGameStatsStorageKey(game.universeId, game.gameId);
-      const existingGuessCounts = readStoredGuessCounts(game);
-      const nextGuessCounts = [...existingGuessCounts, guessedCharacterIds.length];
-
-      window.localStorage.setItem(storageKey, JSON.stringify({ guessCounts: nextGuessCounts }));
-      setCompletedGameStats(buildCompletedGameStats(nextGuessCounts));
-    } else {
-      setCompletedGameStats(readStoredGameStats(game));
+    if (isStatsEligible && isAggregateUpdateEligible) {
+      setCompletedGameStats((currentStats) => recordQualifiedWin(currentStats, guessedCharacterIds.length));
     }
 
+    setIsAggregateUpdateEligible(false);
     setCompletionRecorded(true);
-  }, [completionRecorded, game, guessedCharacterIds.length, isSolved, isStatsEligible]);
+  }, [completionRecorded, game, guessedCharacterIds.length, isAggregateUpdateEligible, isSolved, isStatsEligible]);
 
   function submitGuess(query: string): SubmitGuessResult {
     if (!game) {
@@ -405,9 +428,12 @@ export function useQuoteGame(game: QuoteGameData | null): GameRoundState<QuoteGa
     setGuessedCharacterIds([]);
     setMessage(null);
     setCompletionRecorded(false);
+    setHasRecordedPlay(false);
+    setIsAggregateUpdateEligible(true);
     setFirstLetterRevealed(false);
     setGaveUp(false);
     setRevealedHintKeys([]);
+    setCompletedGameStats(cloneCompletedGameStats(game?.completedGameStats));
 
     if (!game || typeof window === 'undefined') {
       return;

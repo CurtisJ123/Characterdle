@@ -1,0 +1,131 @@
+.site-help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    visibility 180ms ease;
+}
+
+.site-help-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.site-help-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: color-mix(in srgb, var(--surface-container-lowest) 76%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.site-help-panel {
+  position: relative;
+  z-index: 1;
+  width: min(860px, 100%);
+  display: grid;
+  gap: 22px;
+  border-radius: var(--radius-panel);
+  padding: 28px;
+}
+
+.site-help-overlay-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 8px 12px;
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface-panel-strong) 82%, transparent);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.site-help-panel-copy h2 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  line-height: 1.05;
+}
+
+.site-help-panel-copy .muted-copy {
+  max-width: 62ch;
+  margin: 12px 0 0;
+}
+
+.site-help-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.site-help-panel-section {
+  display: grid;
+  gap: 10px;
+  border-radius: var(--radius-soft);
+  padding: 18px;
+  background: color-mix(in srgb, var(--surface-container-high) 64%, transparent);
+}
+
+.site-help-panel-section--full {
+  grid-column: 1 / -1;
+}
+
+.site-help-panel-section h3 {
+  margin: 0;
+  color: var(--primary);
+  font-family: var(--heading-font);
+  font-size: 1rem;
+}
+
+.site-help-panel-section ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--on-surface);
+  line-height: 1.55;
+}
+
+.site-help-panel-section li::marker {
+  color: var(--primary);
+}
+
+@media (max-width: 760px) {
+  .site-help-overlay {
+    align-items: flex-start;
+    padding: 18px;
+    padding-top: 26px;
+  }
+
+  .site-help-panel {
+    padding: 22px 18px 18px;
+  }
+
+  .site-help-overlay-close {
+    top: 12px;
+    right: 12px;
+  }
+
+  .site-help-panel-grid {
+    grid-template-columns: 1fr;
+  }
+}

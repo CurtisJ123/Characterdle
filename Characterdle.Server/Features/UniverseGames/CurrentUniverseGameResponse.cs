@@ -5,6 +5,8 @@ public sealed record CurrentUniverseGameResponse(
     DateTime DateTime,
     string UniverseId,
     string UniverseName,
+    UniverseGameModeStatsResponse CharacterStats,
+    UniverseGameModeStatsResponse? QuoteStats,
     IReadOnlyList<UniverseAttributeDefinition> AttributeDefinitions,
     UniverseCharacterRecord AnswerCharacter,
     UniverseQuotePromptRecord? QuotePrompt,

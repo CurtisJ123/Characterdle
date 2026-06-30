@@ -11,6 +11,16 @@ public interface IUniverseGameRepository
         long gameId,
         CancellationToken cancellationToken);
 
+    Task<bool> UpsertGamePlayAsync(
+        UniverseDefinition universe,
+        long gameId,
+        string mode,
+        string participantKey,
+        int guessCount,
+        int hintCount,
+        string status,
+        CancellationToken cancellationToken);
+
     Task<PreviousUniverseGamesResponse> GetPreviousGamesAsync(
         UniverseDefinition universe,
         CancellationToken cancellationToken);

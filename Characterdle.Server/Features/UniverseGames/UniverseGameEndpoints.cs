@@ -23,6 +23,13 @@ public static class UniverseGameEndpoints
             .Produces<PreviousUniverseGamesResponse>()
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        games.MapPost("/{gameId:long}/plays", TrackGamePlayAsync)
+            .WithName("TrackUniverseGamePlay")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return app;
     }
 
@@ -133,5 +140,104 @@ public static class UniverseGameEndpoints
                 detail: detail,
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }
+    }
+
+    private static async Task<IResult> TrackGamePlayAsync(
+        string universeId,
+        long gameId,
+        SubmitUniverseGamePlayRequest request,
+        IHostEnvironment hostEnvironment,
+        UniverseCatalog universeCatalog,
+        IUniverseGameRepository repository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        if (!universeCatalog.TryGet(universeId, out var universe))
+        {
+            return Results.NotFound(new { message = $"No universe named '{universeId}' is registered." });
+        }
+
+        try
+        {
+            var validationErrors = Validate(request);
+
+            if (gameId <= 0)
+            {
+                validationErrors["gameId"] = ["Game id must be a positive integer."];
+            }
+
+            if (validationErrors.Count > 0)
+            {
+                return Results.ValidationProblem(validationErrors);
+            }
+
+            var wasTracked = await repository.UpsertGamePlayAsync(
+                universe,
+                gameId,
+                request.Mode.Trim().ToLowerInvariant(),
+                request.ParticipantKey.Trim(),
+                request.GuessCount,
+                request.HintCount,
+                request.Status.Trim().ToLowerInvariant(),
+                cancellationToken);
+
+            return wasTracked
+                ? Results.NoContent()
+                : Results.NotFound(new { message = $"No game '{gameId}' exists for universe '{universe.DisplayName}'." });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(UniverseGameEndpoints).FullName!);
+            logger.LogError(exception, "Unable to track game play for {UniverseId} game {GameId}.", universeId, gameId);
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The database request failed while saving game play data.";
+
+            return Results.Problem(
+                title: "Unable to save game play data.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+
+    private static Dictionary<string, string[]> Validate(SubmitUniverseGamePlayRequest request)
+    {
+        var errors = new Dictionary<string, string[]>();
+
+        if (string.IsNullOrWhiteSpace(request.ParticipantKey))
+        {
+            errors["participantKey"] = ["Participant key is required."];
+        }
+        else if (request.ParticipantKey.Trim().Length > 128)
+        {
+            errors["participantKey"] = ["Participant key is too long."];
+        }
+
+        if (request.GuessCount < 0)
+        {
+            errors["guessCount"] = ["Guess count cannot be negative."];
+        }
+
+        if (request.HintCount < 0)
+        {
+            errors["hintCount"] = ["Hint count cannot be negative."];
+        }
+
+        var normalizedMode = request.Mode?.Trim().ToLowerInvariant();
+
+        if (normalizedMode is not "character" and not "quote")
+        {
+            errors["mode"] = ["Mode must be either 'character' or 'quote'."];
+        }
+
+        var normalizedStatus = request.Status?.Trim().ToLowerInvariant();
+
+        if (normalizedStatus is not "playing" and not "won" and not "lost")
+        {
+            errors["status"] = ["Status must be 'playing', 'won', or 'lost'."];
+        }
+
+        return errors;
     }
 }

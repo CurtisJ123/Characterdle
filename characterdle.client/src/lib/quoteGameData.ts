@@ -12,6 +12,11 @@ export function buildQuoteGameData(game: CurrentUniverseGame | null): QuoteGameD
     answerCharacter,
     attributeDefinitions: game.attributeDefinitions,
     characters: game.characters,
+    completedGameStats: game.quoteStats ?? {
+      averageGuessSampleSize: 0,
+      averageGuesses: null,
+      playCount: 0,
+    },
     gameId: game.id,
     prompt: {
       characterId: game.quotePrompt.characterId,

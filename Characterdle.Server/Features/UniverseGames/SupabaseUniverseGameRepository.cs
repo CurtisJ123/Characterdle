@@ -46,6 +46,80 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             cancellationToken);
     }
 
+    public async Task<bool> UpsertGamePlayAsync(
+        UniverseDefinition universe,
+        long gameId,
+        string mode,
+        string participantKey,
+        int guessCount,
+        int hintCount,
+        string status,
+        CancellationToken cancellationToken)
+    {
+        var sql =
+            $"""
+            insert into public."UniverseGamePlays" (
+              universe_id,
+              game_id,
+              mode,
+              participant_key,
+              status,
+              guess_count,
+              hint_count,
+              started_at,
+              completed_at,
+              updated_at
+            )
+            select
+              @universeId,
+              @gameId,
+              @mode,
+              @participantKey,
+              @status,
+              @guessCount,
+              @hintCount,
+              timezone('utc', now()),
+              case when @status in ('won', 'lost') then timezone('utc', now()) else null end,
+              timezone('utc', now())
+            where exists (
+              select 1
+              from {universe.GameTableName} as games
+              where games.id = @gameId
+                and games.datetime <= now()
+            )
+            on conflict (universe_id, game_id, mode, participant_key) do update
+            set
+              status = case
+                when excluded.status in ('won', 'lost') then excluded.status
+                else public."UniverseGamePlays".status
+              end,
+              guess_count = case
+                when excluded.status in ('won', 'lost') then excluded.guess_count
+                else greatest(public."UniverseGamePlays".guess_count, excluded.guess_count)
+              end,
+              hint_count = case
+                when excluded.status in ('won', 'lost') then excluded.hint_count
+                else greatest(public."UniverseGamePlays".hint_count, excluded.hint_count)
+              end,
+              completed_at = case
+                when excluded.status in ('won', 'lost') then timezone('utc', now())
+                else public."UniverseGamePlays".completed_at
+              end,
+              updated_at = timezone('utc', now());
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("gameId", gameId);
+        command.Parameters.AddWithValue("mode", mode);
+        command.Parameters.AddWithValue("participantKey", participantKey);
+        command.Parameters.AddWithValue("status", status);
+        command.Parameters.AddWithValue("guessCount", guessCount);
+        command.Parameters.AddWithValue("hintCount", hintCount);
+
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
     private async Task<CurrentUniverseGameResponse?> GetGameAsync(
         UniverseDefinition universe,
         string whereClause,
@@ -131,11 +205,27 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             characters.Add(ReadCharacter(charactersReader, 0, universe.AttributeDefinitions));
         }
 
+        await charactersReader.CloseAsync();
+        var modeStats = await LoadModeStatsAsync(universe, resolvedGameId, cancellationToken);
+        var characterStats = modeStats.TryGetValue("character", out var resolvedCharacterStats)
+            ? resolvedCharacterStats
+            : EmptyModeStats();
+        UniverseGameModeStatsResponse? quoteStats = null;
+
+        if (hasQuoteTable)
+        {
+            quoteStats = modeStats.TryGetValue("quote", out var resolvedQuoteStats)
+                ? resolvedQuoteStats
+                : EmptyModeStats();
+        }
+
         return new CurrentUniverseGameResponse(
             resolvedGameId,
             playedAt,
             universe.Id,
             universe.DisplayName,
+            characterStats,
+            quoteStats,
             universe.AttributeDefinitions,
             answerCharacter,
             quotePrompt,
@@ -266,6 +356,49 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             HasCharacters: hasCharacters,
             GameId: gameId);
     }
+
+    private async Task<Dictionary<string, UniverseGameModeStatsResponse>> LoadModeStatsAsync(
+        UniverseDefinition universe,
+        long gameId,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            select
+              plays.mode,
+              count(*)::int as play_count,
+              count(*) filter (where plays.status = 'won' and plays.hint_count = 0)::int as average_guess_sample_size,
+              round(avg(plays.guess_count) filter (where plays.status = 'won' and plays.hint_count = 0)::numeric, 2) as average_guesses
+            from public."UniverseGamePlays" as plays
+            where plays.universe_id = @universeId
+              and plays.game_id = @gameId
+            group by plays.mode;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("gameId", gameId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var statsByMode = new Dictionary<string, UniverseGameModeStatsResponse>(StringComparer.OrdinalIgnoreCase);
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var mode = reader.GetString(0);
+            statsByMode[mode] = new UniverseGameModeStatsResponse(
+                PlayCount: reader.GetInt32(1),
+                AverageGuessSampleSize: reader.GetInt32(2),
+                AverageGuesses: reader.IsDBNull(3) ? null : (double)reader.GetFieldValue<decimal>(3));
+        }
+
+        return statsByMode;
+    }
+
+    private static UniverseGameModeStatsResponse EmptyModeStats() =>
+        new(
+            PlayCount: 0,
+            AverageGuessSampleSize: 0,
+            AverageGuesses: null);
 
     private static string BuildCharacterSelectProjection(
         string? tableAlias,

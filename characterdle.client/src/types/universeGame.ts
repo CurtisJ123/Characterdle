@@ -27,6 +27,8 @@ export interface CurrentUniverseGame {
   dateTime: string;
   universeId: string;
   universeName: string;
+  characterStats: CompletedGameStats;
+  quoteStats: CompletedGameStats | null;
   attributeDefinitions: UniverseAttributeDefinition[];
   answerCharacter: UniverseCharacter;
   quotePrompt: QuotePrompt | null;
@@ -91,6 +93,7 @@ export interface QuoteGameData {
   answerCharacter: UniverseCharacter;
   attributeDefinitions: UniverseAttributeDefinition[];
   characters: UniverseCharacter[];
+  completedGameStats: CompletedGameStats;
   gameId: number;
   prompt: QuotePrompt;
   universeId: string;
@@ -98,6 +101,7 @@ export interface QuoteGameData {
 }
 
 export interface CompletedGameStats {
+  averageGuessSampleSize: number;
   averageGuesses: number | null;
   playCount: number;
 }

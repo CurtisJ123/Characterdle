@@ -32,7 +32,7 @@
 
 .game-top-actions {
   position: absolute;
-  top: 4px;
+  top: 18px;
   right: 0;
   z-index: 2;
   display: flex;
@@ -52,7 +52,8 @@
   background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
-.history-button {
+.history-button,
+.help-button {
   width: 38px;
   height: 38px;
   display: inline-grid;
@@ -60,10 +61,28 @@
   padding: 0;
 }
 
-.history-button img {
+.history-button img,
+.help-button img {
   width: 22px;
   height: 22px;
   display: block;
+}
+
+.game-mode-switch-button {
+  min-width: 112px;
+  height: 38px;
+  padding: 0 16px;
+  border-color: var(--primary);
+  color: var(--on-primary-button);
+  background: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.game-mode-switch-button:hover {
+  border-color: var(--primary-soft);
+  color: var(--on-primary-button);
+  background: var(--primary-soft);
 }
 
 .debug-reset-button {
@@ -323,6 +342,13 @@
 }
 
 @media (max-width: 520px) {
+  .game-top-actions {
+    position: static;
+    width: 100%;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
   .search-box {
     margin: 24px 0 22px;
   }

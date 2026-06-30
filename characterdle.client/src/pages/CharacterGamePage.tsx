@@ -1,11 +1,13 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import calendarDaysIcon from '../assets/calendar-days-heroicons.svg';
+import questionMarkCircleIcon from '../assets/question-mark-circle-heroicons.svg';
 import { CharacterGameBoard } from '../components/game/CharacterGameBoard';
 import { CharacterHintPanel } from '../components/game/CharacterHintPanel';
 import { CharacterPortrait } from '../components/game/CharacterPortrait';
 import { QuoteGameBoard } from '../components/game/QuoteGameBoard';
 import { QuoteHintPills } from '../components/game/QuoteHintPills';
 import { QuotePromptCard } from '../components/game/QuotePromptCard';
+import { SiteHelpOverlay } from '../components/layout/SiteHelpOverlay';
 import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { useAuth } from '../hooks/useAuth';
 import { useCharacterGame } from '../hooks/useCharacterGame';
@@ -13,11 +15,13 @@ import { useQuoteGame } from '../hooks/useQuoteGame';
 import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverseGame } from '../hooks/useUniverseGame';
 import { useUniverse } from '../hooks/useUniverse';
+import { getAnonymousParticipantKey } from '../lib/anonymousParticipant';
 import { getRemoteGameOutcome } from '../lib/characterGameProgress';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
 import { compareAttributeValue } from '../lib/universeAttributes';
+import { trackUniverseGamePlay } from '../services/gamePlayTrackingApi';
 import { submitUniverseGameResult } from '../services/leaderboardApi';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
@@ -38,12 +42,15 @@ export function CharacterGamePage({
   selectedGameId,
   selectedGameMode,
 }: CharacterGamePageProps) {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const resultPanelRef = useRef<HTMLDivElement | null>(null);
   const pendingSubmissionKeysRef = useRef(new Set<string>());
   const syncedSubmissionKeysRef = useRef(new Set<string>());
+  const pendingPlayTrackingKeysRef = useRef(new Set<string>());
+  const syncedPlayTrackingKeysRef = useRef(new Set<string>());
   const wasCompleteRef = useRef(false);
   const { isAuthenticated, isLoading: isAuthLoading, session, user } = useAuth();
   const { selectedUniverse } = useUniverse();
@@ -213,6 +220,68 @@ export function CharacterGamePage({
   }, [isComplete]);
 
   useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    const currentGame = data;
+    const hasMeaningfulActivity = characterGame.guessCount > 0
+      || characterGame.hintCount > 0
+      || characterGame.status !== 'playing';
+
+    if (!hasMeaningfulActivity) {
+      return;
+    }
+
+    const participantKey = getAnonymousParticipantKey();
+    const trackingStateKey = characterGame.status === 'playing'
+      ? 'playing'
+      : `${characterGame.status}:${characterGame.guessCount}:${characterGame.hintCount}`;
+    const trackingKey = [
+      participantKey,
+      currentGame.universeId,
+      currentGame.id,
+      'character',
+      trackingStateKey,
+    ].join(':');
+
+    if (
+      syncedPlayTrackingKeysRef.current.has(trackingKey)
+      || pendingPlayTrackingKeysRef.current.has(trackingKey)
+    ) {
+      return;
+    }
+
+    pendingPlayTrackingKeysRef.current.add(trackingKey);
+
+    async function syncPlayTracking() {
+      try {
+        await trackUniverseGamePlay({
+          gameId: currentGame.id,
+          guessCount: characterGame.guessCount,
+          hintCount: characterGame.hintCount,
+          mode: 'character',
+          participantKey,
+          status: characterGame.status === 'playing' ? 'playing' : characterGame.status,
+          universeId: currentGame.universeId,
+        });
+        syncedPlayTrackingKeysRef.current.add(trackingKey);
+      } catch (trackingError) {
+        console.error(trackingError);
+      } finally {
+        pendingPlayTrackingKeysRef.current.delete(trackingKey);
+      }
+    }
+
+    void syncPlayTracking();
+  }, [
+    characterGame.guessCount,
+    characterGame.hintCount,
+    characterGame.status,
+    data,
+  ]);
+
+  useEffect(() => {
     if (
       !data
       || !session?.access_token
@@ -270,6 +339,68 @@ export function CharacterGamePage({
     data,
     session?.access_token,
     user,
+  ]);
+
+  useEffect(() => {
+    if (!quoteGameData) {
+      return;
+    }
+
+    const currentQuoteGame = quoteGameData;
+    const hasMeaningfulActivity = quoteGame.guessCount > 0
+      || quoteGame.hintCount > 0
+      || quoteGame.status !== 'playing';
+
+    if (!hasMeaningfulActivity) {
+      return;
+    }
+
+    const participantKey = getAnonymousParticipantKey();
+    const trackingStateKey = quoteGame.status === 'playing'
+      ? 'playing'
+      : `${quoteGame.status}:${quoteGame.guessCount}:${quoteGame.hintCount}`;
+    const trackingKey = [
+      participantKey,
+      currentQuoteGame.universeId,
+      currentQuoteGame.gameId,
+      'quote',
+      trackingStateKey,
+    ].join(':');
+
+    if (
+      syncedPlayTrackingKeysRef.current.has(trackingKey)
+      || pendingPlayTrackingKeysRef.current.has(trackingKey)
+    ) {
+      return;
+    }
+
+    pendingPlayTrackingKeysRef.current.add(trackingKey);
+
+    async function syncPlayTracking() {
+      try {
+        await trackUniverseGamePlay({
+          gameId: currentQuoteGame.gameId,
+          guessCount: quoteGame.guessCount,
+          hintCount: quoteGame.hintCount,
+          mode: 'quote',
+          participantKey,
+          status: quoteGame.status === 'playing' ? 'playing' : quoteGame.status,
+          universeId: currentQuoteGame.universeId,
+        });
+        syncedPlayTrackingKeysRef.current.add(trackingKey);
+      } catch (trackingError) {
+        console.error(trackingError);
+      } finally {
+        pendingPlayTrackingKeysRef.current.delete(trackingKey);
+      }
+    }
+
+    void syncPlayTracking();
+  }, [
+    quoteGame.guessCount,
+    quoteGame.hintCount,
+    quoteGame.status,
+    quoteGameData,
   ]);
 
   useEffect(() => {
@@ -347,8 +478,49 @@ export function CharacterGamePage({
     handleGuessSubmission(query);
   }
 
+  function clearTrackingKeys(set: Set<string>, prefix: string) {
+    for (const key of set) {
+      if (key.startsWith(prefix)) {
+        set.delete(key);
+      }
+    }
+  }
+
   function handleResetGame() {
     setQuery('');
+
+    const activeUniverseId = isQuoteMode
+      ? quoteGameData?.universeId
+      : data?.universeId;
+    const activeGameId = isQuoteMode
+      ? quoteGameData?.gameId
+      : data?.id;
+
+    if (activeUniverseId && activeGameId) {
+      const anonymousParticipantKey = getAnonymousParticipantKey();
+      const playTrackingPrefix = [
+        anonymousParticipantKey,
+        activeUniverseId,
+        activeGameId,
+        selectedGameMode,
+      ].join(':');
+
+      clearTrackingKeys(pendingPlayTrackingKeysRef.current, playTrackingPrefix);
+      clearTrackingKeys(syncedPlayTrackingKeysRef.current, playTrackingPrefix);
+
+      if (user) {
+        const submissionPrefix = [
+          user.id,
+          activeUniverseId,
+          activeGameId,
+          selectedGameMode,
+        ].join(':');
+
+        clearTrackingKeys(pendingSubmissionKeysRef.current, submissionPrefix);
+        clearTrackingKeys(syncedSubmissionKeysRef.current, submissionPrefix);
+      }
+    }
+
     if (isQuoteMode) {
       quoteGame.resetGame();
       return;
@@ -475,12 +647,29 @@ export function CharacterGamePage({
         >
           <img src={calendarDaysIcon} alt="" aria-hidden="true" />
         </button>
+        <button
+          className="game-action-button help-button"
+          type="button"
+          aria-label="How to play Characterdle"
+          title="How to play"
+          onClick={() => setIsHelpOpen(true)}
+        >
+          <img src={questionMarkCircleIcon} alt="" aria-hidden="true" />
+        </button>
+        <button
+          className="game-action-button game-mode-switch-button"
+          type="button"
+          onClick={() => onOpenGame(isQuoteMode ? 'character' : 'quote', null)}
+        >
+          {isQuoteMode ? 'Characterdle' : 'Quote'}
+        </button>
         {user?.isAdmin && (
           <button className="game-action-button debug-reset-button" type="button" onClick={handleResetGame}>
             Debug Reset
           </button>
         )}
       </div>
+      <SiteHelpOverlay isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
       {isQuoteMode && quoteGameData ? (
         <section className="quote-mode-layout">
