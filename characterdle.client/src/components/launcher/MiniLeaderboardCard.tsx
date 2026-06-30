@@ -1,5 +1,7 @@
 import type { LeaderboardEntry } from '../../types/leaderboard';
 
+const HOME_LEADERBOARD_LIMIT = 10;
+
 interface MiniLeaderboardCardProps {
   error: Error | null;
   isLoading: boolean;
@@ -29,7 +31,7 @@ export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniL
       {!error && !isLoading && rows.length === 0 && (
         <p className="muted-copy">No entries yet.</p>
       )}
-      {!error && rows.slice(0, 2).map((row) => (
+      {!error && rows.slice(0, HOME_LEADERBOARD_LIMIT).map((row) => (
         <div className="mini-rank" key={row.userId}>
           <span className="rank-number">{row.rank}</span>
           <span className="avatar">{getInitials(row.displayName)}</span>

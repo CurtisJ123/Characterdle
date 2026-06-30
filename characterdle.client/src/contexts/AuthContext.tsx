@@ -9,6 +9,7 @@ import type {
   PasswordResetRequestValues,
   PasswordUpdateValues,
 } from '../types/auth';
+import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../lib/authValidation';
 import type { UserProfile } from '../types/user';
 import { updateProfileDisplayName } from '../services/profileApi';
 
@@ -153,6 +154,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   async function signUp({ displayName, email, password }: AuthFormValues): Promise<AuthActionResult> {
+    if (!meetsMinimumPasswordLength(password)) {
+      throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -206,8 +211,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   async function completePasswordReset({ password }: PasswordUpdateValues): Promise<AuthActionResult> {
-    if (!password) {
-      throw new Error('A new password is required.');
+    if (!meetsMinimumPasswordLength(password)) {
+      throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
     }
 
     const { error } = await supabase.auth.updateUser({

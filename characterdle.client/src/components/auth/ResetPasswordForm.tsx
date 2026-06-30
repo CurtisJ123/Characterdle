@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../../lib/authValidation';
+import { PasswordVisibilityButton } from './PasswordVisibilityButton';
 
 interface ResetPasswordFormProps {
   errorMessage?: string;
@@ -21,8 +23,15 @@ export function ResetPasswordForm({
 }: ResetPasswordFormProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
   const passwordsMatch = password === confirmPassword;
-  const canSubmit = isReady && password.length > 0 && confirmPassword.length > 0 && passwordsMatch;
+  const hasValidPasswordLength = meetsMinimumPasswordLength(password);
+  const showPasswordTooShort = password.length > 0 && !hasValidPasswordLength;
+  const canSubmit = isReady
+    && hasValidPasswordLength
+    && confirmPassword.length > 0
+    && passwordsMatch;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,27 +52,53 @@ export function ResetPasswordForm({
       )}
 
       <label>
-        New password
-        <input
-          autoComplete="new-password"
-          name="newPassword"
-          placeholder="Enter your new password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
+        <span className="auth-field-label-row">
+          <span>New password</span>
+          <span
+            className={`password-requirement${showPasswordTooShort ? ' is-error' : ''}`}
+            id="reset-password-requirement"
+          >
+            Use at least {MIN_PASSWORD_LENGTH} characters.
+          </span>
+        </span>
+        <span className="password-input-wrap">
+          <input
+            aria-describedby="reset-password-requirement"
+            aria-invalid={showPasswordTooShort}
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            name="newPassword"
+            placeholder="Enter your new password"
+            required
+            type={isPasswordVisible ? 'text' : 'password'}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <PasswordVisibilityButton
+            isVisible={isPasswordVisible}
+            onToggle={() => setIsPasswordVisible((isVisible) => !isVisible)}
+          />
+        </span>
       </label>
 
       <label>
         Confirm password
-        <input
-          autoComplete="new-password"
-          name="confirmPassword"
-          placeholder="Confirm your new password"
-          type="password"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-        />
+        <span className="password-input-wrap">
+          <input
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            name="confirmPassword"
+            placeholder="Confirm your new password"
+            required
+            type={isConfirmPasswordVisible ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          />
+          <PasswordVisibilityButton
+            isVisible={isConfirmPasswordVisible}
+            onToggle={() => setIsConfirmPasswordVisible((isVisible) => !isVisible)}
+          />
+        </span>
       </label>
 
       {!passwordsMatch && confirmPassword.length > 0 && (
