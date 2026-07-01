@@ -27,5 +27,7 @@ public interface ILeaderboardRepository
         int hintCount,
         string mode,
         string status,
+        IReadOnlyList<long> guessedCharacterIds,
+        IReadOnlyList<string> revealedHintKeys,
         CancellationToken cancellationToken);
 }

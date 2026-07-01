@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AuthenticatedPanel } from '../components/auth/AuthenticatedPanel';
 import { AuthForm } from '../components/auth/AuthForm';
+import { EmailSentPanel } from '../components/auth/EmailSentPanel';
 import { ForgotPasswordForm } from '../components/auth/ForgotPasswordForm';
 import { ResetPasswordForm } from '../components/auth/ResetPasswordForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,12 +15,29 @@ interface AuthPageProps {
   onNavigate: NavigateToPage;
 }
 
+interface PendingEmailAction {
+  email: string;
+  kind: 'confirmation' | 'passwordReset';
+  sentAt: number | null;
+}
+
+function isEmailNotConfirmedError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const authError = error as Error & { code?: string };
+  return authError.code === 'email_not_confirmed'
+    || error.message.toLowerCase().includes('email not confirmed');
+}
+
 export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPageProps) {
   const {
     completePasswordReset,
     isAuthenticated,
     isPasswordRecovery,
     requestPasswordReset,
+    resendConfirmationEmail,
     signIn,
     signOut,
     signUp,
@@ -29,10 +47,13 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [mode, setMode] = useState<AuthMode>(isPasswordRecovery ? 'resetPassword' : initialMode);
+  const [pendingEmailAction, setPendingEmailAction] = useState<PendingEmailAction | null>(null);
   const isPrimaryMode = mode === 'login' || mode === 'signup';
   const primaryMode = mode === 'signup' ? 'signup' : 'login';
   const heroTitle = isAuthenticated && mode !== 'resetPassword'
     ? 'Welcome back'
+    : pendingEmailAction
+      ? 'Check your email'
     : mode === 'signup'
       ? 'Create account'
       : mode === 'forgotPassword'
@@ -43,6 +64,7 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
 
   useEffect(() => {
     setMode(initialMode);
+    setPendingEmailAction(null);
   }, [initialMode]);
 
   useEffect(() => {
@@ -57,6 +79,7 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
   function handleModeChange(nextMode: AuthMode) {
     setErrorMessage(undefined);
     setMessage(undefined);
+    setPendingEmailAction(null);
     setMode(nextMode);
     onAuthModeChange(nextMode);
   }
@@ -71,10 +94,27 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
 
       setMessage(result.message);
 
-      if (!result.requiresEmailConfirmation) {
-        onNavigate('launcher');
+      if (result.requiresEmailConfirmation) {
+        setPendingEmailAction({
+          email: values.email.trim(),
+          kind: 'confirmation',
+          sentAt: Date.now(),
+        });
+        return;
       }
+
+      onNavigate('launcher');
     } catch (error) {
+      if (primaryMode === 'login' && isEmailNotConfirmedError(error)) {
+        setMessage('Confirm your email before logging in.');
+        setPendingEmailAction({
+          email: values.email.trim(),
+          kind: 'confirmation',
+          sentAt: null,
+        });
+        return;
+      }
+
       setErrorMessage(error instanceof Error ? error.message : 'Unable to authenticate right now.');
     } finally {
       setIsBusy(false);
@@ -89,6 +129,11 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
     try {
       const result = await requestPasswordReset({ email });
       setMessage(result.message);
+      setPendingEmailAction({
+        email: email.trim(),
+        kind: 'passwordReset',
+        sentAt: Date.now(),
+      });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to send a password reset email.');
     } finally {
@@ -106,6 +151,31 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
       onNavigate('launcher');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to update your password.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleResendEmail() {
+    if (!pendingEmailAction) {
+      return;
+    }
+
+    setErrorMessage(undefined);
+    setIsBusy(true);
+
+    try {
+      const result = pendingEmailAction.kind === 'confirmation'
+        ? await resendConfirmationEmail({ email: pendingEmailAction.email })
+        : await requestPasswordReset({ email: pendingEmailAction.email });
+
+      setMessage(result.message);
+      setPendingEmailAction({
+        ...pendingEmailAction,
+        sentAt: Date.now(),
+      });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to resend the email.');
     } finally {
       setIsBusy(false);
     }
@@ -151,6 +221,8 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
         className="auth-card glass-card"
         aria-label={isAuthenticated && mode !== 'resetPassword'
           ? 'Account actions'
+          : pendingEmailAction
+            ? 'Email sent'
           : mode === 'signup'
             ? 'Sign up form'
             : mode === 'forgotPassword'
@@ -166,6 +238,21 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
             onSignOut={handleSignOut}
             user={user}
           />
+        ) : pendingEmailAction ? (
+          <>
+            <div className="auth-card-heading">
+              <h2>Check your email</h2>
+            </div>
+            <EmailSentPanel
+              email={pendingEmailAction.email}
+              errorMessage={errorMessage}
+              isBusy={isBusy}
+              message={message ?? 'Check your email for the link.'}
+              onBackToLogin={handleReturnToLogin}
+              onResend={handleResendEmail}
+              sentAt={pendingEmailAction.sentAt}
+            />
+          </>
         ) : isPrimaryMode ? (
           <>
             <AuthModeToggle mode={primaryMode} onChange={handleModeChange} />

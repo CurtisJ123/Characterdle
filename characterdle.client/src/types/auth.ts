@@ -17,6 +17,10 @@ export interface PasswordResetRequestValues {
   email: string;
 }
 
+export interface ResendConfirmationRequestValues {
+  email: string;
+}
+
 export interface PasswordUpdateValues {
   password: string;
 }

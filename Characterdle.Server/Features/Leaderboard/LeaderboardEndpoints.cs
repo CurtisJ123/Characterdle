@@ -125,6 +125,8 @@ public static class LeaderboardEndpoints
                 request.HintCount,
                 request.Mode.Trim().ToLowerInvariant(),
                 request.Status.Trim().ToLowerInvariant(),
+                request.GuessedCharacterIds,
+                request.RevealedHintKeys,
                 cancellationToken);
 
             return Results.NoContent();
@@ -173,9 +175,47 @@ public static class LeaderboardEndpoints
 
         var normalizedStatus = request.Status?.Trim().ToLowerInvariant();
 
-        if (normalizedStatus is not "won" and not "lost")
+        if (normalizedStatus is not "playing" and not "won" and not "lost")
         {
-            errors["status"] = ["Status must be either 'won' or 'lost'."];
+            errors["status"] = ["Status must be 'playing', 'won', or 'lost'."];
+        }
+
+        if (request.GuessedCharacterIds is null)
+        {
+            errors["guessedCharacterIds"] = ["Guessed character ids are required."];
+        }
+        else if (request.GuessedCharacterIds.Count > 50)
+        {
+            errors["guessedCharacterIds"] = ["At most 50 guessed character ids can be stored."];
+        }
+        else if (
+            request.GuessedCharacterIds.Any(static characterId => characterId <= 0)
+            || request.GuessedCharacterIds.Distinct().Count() != request.GuessedCharacterIds.Count)
+        {
+            errors["guessedCharacterIds"] = ["Guessed character ids must be unique positive integers."];
+        }
+        else if (request.GuessCount < request.GuessedCharacterIds.Count)
+        {
+            errors["guessCount"] = ["Guess count cannot be less than the number of stored guesses."];
+        }
+
+        if (request.RevealedHintKeys is null)
+        {
+            errors["revealedHintKeys"] = ["Revealed hint keys are required."];
+        }
+        else if (request.RevealedHintKeys.Count > 50)
+        {
+            errors["revealedHintKeys"] = ["At most 50 revealed hint keys can be stored."];
+        }
+        else if (
+            request.RevealedHintKeys.Any(static key => string.IsNullOrWhiteSpace(key) || key.Length > 100)
+            || request.RevealedHintKeys.Distinct(StringComparer.Ordinal).Count() != request.RevealedHintKeys.Count)
+        {
+            errors["revealedHintKeys"] = ["Revealed hint keys must be unique non-empty values no longer than 100 characters."];
+        }
+        else if (request.HintCount != request.RevealedHintKeys.Count)
+        {
+            errors["hintCount"] = ["Hint count must match the number of revealed hint keys."];
         }
 
         return errors;

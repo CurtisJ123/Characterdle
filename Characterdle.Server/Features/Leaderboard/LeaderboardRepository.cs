@@ -62,6 +62,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         int hintCount,
         string mode,
         string status,
+        IReadOnlyList<long> guessedCharacterIds,
+        IReadOnlyList<string> revealedHintKeys,
         CancellationToken cancellationToken)
     {
         const string sql =
@@ -74,7 +76,10 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               status,
               guess_count,
               hint_count,
-              completed_at
+              guessed_character_ids,
+              revealed_hint_keys,
+              completed_at,
+              updated_at
             )
             values (
               @userId,
@@ -84,6 +89,12 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               @status,
               @guessCount,
               @hintCount,
+              @guessedCharacterIds,
+              @revealedHintKeys,
+              case
+                when @status in ('won', 'lost') then timezone('utc', now())
+                else null
+              end,
               timezone('utc', now())
             )
             on conflict (user_id, universe_id, game_id, mode) do update
@@ -91,7 +102,44 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               status = excluded.status,
               guess_count = excluded.guess_count,
               hint_count = excluded.hint_count,
-              completed_at = excluded.completed_at;
+              guessed_character_ids = excluded.guessed_character_ids,
+              revealed_hint_keys = excluded.revealed_hint_keys,
+              completed_at = case
+                when public."UniverseGameResults".status = excluded.status
+                  and public."UniverseGameResults".status in ('won', 'lost')
+                  then public."UniverseGameResults".completed_at
+                else excluded.completed_at
+              end,
+              updated_at = excluded.updated_at
+            where (
+              public."UniverseGameResults".status = 'playing'
+              and (
+                excluded.guess_count + excluded.hint_count
+                  > public."UniverseGameResults".guess_count + public."UniverseGameResults".hint_count
+                or (
+                  excluded.guess_count + excluded.hint_count
+                    = public."UniverseGameResults".guess_count + public."UniverseGameResults".hint_count
+                  and excluded.status in ('won', 'lost')
+                )
+              )
+            )
+            or (
+              public."UniverseGameResults".status = 'lost'
+              and public."UniverseGameResults".completed_at <= timezone('utc', now()) - interval '30 days'
+              and excluded.status = 'playing'
+            )
+            or (
+              public."UniverseGameResults".status = excluded.status
+              and public."UniverseGameResults".status in ('won', 'lost')
+              and public."UniverseGameResults".guess_count = excluded.guess_count
+              and public."UniverseGameResults".hint_count = excluded.hint_count
+              and (
+                cardinality(excluded.guessed_character_ids)
+                  > cardinality(public."UniverseGameResults".guessed_character_ids)
+                or cardinality(excluded.revealed_hint_keys)
+                  > cardinality(public."UniverseGameResults".revealed_hint_keys)
+              )
+            );
             """;
 
         await using var command = dataSource.CreateCommand(sql);
@@ -102,6 +150,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         command.Parameters.AddWithValue("status", status);
         command.Parameters.AddWithValue("guessCount", guessCount);
         command.Parameters.AddWithValue("hintCount", hintCount);
+        command.Parameters.AddWithValue("guessedCharacterIds", guessedCharacterIds.ToArray());
+        command.Parameters.AddWithValue("revealedHintKeys", revealedHintKeys.ToArray());
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -149,6 +199,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
+              and results.status in ('won', 'lost')
               and results.hint_count = 0;
             """;
 
@@ -211,6 +262,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.status in ('won', 'lost')
                 and results.hint_count = 0
               group by profiles.user_id, profiles.display_name, profiles.avatar_url
             ),
@@ -308,6 +360,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.status in ('won', 'lost')
                 and results.hint_count = 0
               group by profiles.user_id, profiles.display_name, profiles.avatar_url
             ),

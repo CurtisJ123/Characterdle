@@ -1,5 +1,5 @@
 import type { UniverseProfile } from '../types/profile';
-import type { ProfileRecentResult } from '../types/profile';
+import type { PersistedGameResult } from '../types/profile';
 import { buildApiUrl } from '../lib/runtimeConfig';
 
 export async function getProfile(
@@ -23,7 +23,7 @@ export async function getProfile(
 export async function getGameResults(
   accessToken: string,
   universeId: string,
-): Promise<ProfileRecentResult[]> {
+): Promise<PersistedGameResult[]> {
   const response = await fetch(buildApiUrl(`/api/profile/${encodeURIComponent(universeId)}/results`), {
     headers: {
       Accept: 'application/json',
@@ -35,7 +35,7 @@ export async function getGameResults(
     throw new Error(`Profile game results request failed with ${response.status}.`);
   }
 
-  return await response.json() as ProfileRecentResult[];
+  return await response.json() as PersistedGameResult[];
 }
 
 export async function updateProfileDisplayName(

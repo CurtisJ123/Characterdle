@@ -56,9 +56,21 @@ export function CharacterGamePage({
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = useUniverseGame(selectedUniverse.id, selectedGameId);
   const { data: persistedResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
-  const characterGame = useCharacterGame(data);
+  const characterResult = useMemo(
+    () => data
+      ? persistedResults.find((result) => result.mode === 'character' && result.gameId === data.id) ?? null
+      : null,
+    [data, persistedResults],
+  );
   const quoteGameData = useMemo(() => buildQuoteGameData(data), [data]);
-  const quoteGame = useQuoteGame(quoteGameData);
+  const quoteResult = useMemo(
+    () => quoteGameData
+      ? persistedResults.find((result) => result.mode === 'quote' && result.gameId === quoteGameData.gameId) ?? null
+      : null,
+    [persistedResults, quoteGameData],
+  );
+  const characterGame = useCharacterGame(data, characterResult);
+  const quoteGame = useQuoteGame(quoteGameData, quoteResult);
   const isQuoteMode = selectedGameMode === 'quote';
   const isGameLoading = isLoading && !data && !error;
 
@@ -122,18 +134,6 @@ export function CharacterGamePage({
       '--character-board-scroll-columns': `${fullCharacterWidth}px repeat(${resolvedAttributeCount}, ${fullAttributeWidth}px)`,
     } as CSSProperties;
   }, [attributeCount]);
-  const characterResult = useMemo(
-    () => data
-      ? persistedResults.find((result) => result.mode === 'character' && result.gameId === data.id) ?? null
-      : null,
-    [data, persistedResults],
-  );
-  const quoteResult = useMemo(
-    () => quoteGameData
-      ? persistedResults.find((result) => result.mode === 'quote' && result.gameId === quoteGameData.gameId) ?? null
-      : null,
-    [persistedResults, quoteGameData],
-  );
   const remoteCharacterOutcome = characterResult
     ? getRemoteGameOutcome(characterResult.status, characterResult.completedAt)
     : 'pending';
@@ -286,7 +286,11 @@ export function CharacterGamePage({
       !data
       || !session?.access_token
       || !user
-      || characterGame.status === 'playing'
+      || (
+        characterGame.guessCount === 0
+        && characterGame.hintCount === 0
+        && characterGame.status === 'playing'
+      )
     ) {
       return;
     }
@@ -318,8 +322,10 @@ export function CharacterGamePage({
         await submitUniverseGameResult(accessToken, {
           gameId: currentGame.id,
           guessCount: characterGame.guessCount,
+          guessedCharacterIds: characterGame.guessedCharacterIds,
           hintCount: characterGame.hintCount,
           mode: 'character',
+          revealedHintKeys: characterGame.revealedHints.map((hint) => hint.id),
           status: finalizedStatus,
           universeId: currentGame.universeId,
         });
@@ -334,7 +340,9 @@ export function CharacterGamePage({
     void syncResult();
   }, [
     characterGame.guessCount,
+    characterGame.guessedCharacterIds,
     characterGame.hintCount,
+    characterGame.revealedHints,
     characterGame.status,
     data,
     session?.access_token,
@@ -408,7 +416,11 @@ export function CharacterGamePage({
       !quoteGameData
       || !session?.access_token
       || !user
-      || quoteGame.status === 'playing'
+      || (
+        quoteGame.guessCount === 0
+        && quoteGame.hintCount === 0
+        && quoteGame.status === 'playing'
+      )
     ) {
       return;
     }
@@ -440,8 +452,10 @@ export function CharacterGamePage({
         await submitUniverseGameResult(accessToken, {
           gameId: currentQuoteGame.gameId,
           guessCount: quoteGame.guessCount,
+          guessedCharacterIds: quoteGame.guessedCharacterIds,
           hintCount: quoteGame.hintCount,
           mode: 'quote',
+          revealedHintKeys: quoteGame.revealedHints.map((hint) => hint.id),
           status: finalizedStatus,
           universeId: currentQuoteGame.universeId,
         });
@@ -456,7 +470,9 @@ export function CharacterGamePage({
     void syncResult();
   }, [
     quoteGame.guessCount,
+    quoteGame.guessedCharacterIds,
     quoteGame.hintCount,
+    quoteGame.revealedHints,
     quoteGame.status,
     quoteGameData,
     session?.access_token,

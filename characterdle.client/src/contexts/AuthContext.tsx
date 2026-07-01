@@ -8,6 +8,7 @@ import type {
   AuthFormValues,
   PasswordResetRequestValues,
   PasswordUpdateValues,
+  ResendConfirmationRequestValues,
 } from '../types/auth';
 import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../lib/authValidation';
 import type { UserProfile } from '../types/user';
@@ -21,6 +22,7 @@ interface AuthContextValue {
   isPasswordRecovery: boolean;
   refreshUser: () => Promise<void>;
   requestPasswordReset: (values: PasswordResetRequestValues) => Promise<AuthActionResult>;
+  resendConfirmationEmail: (values: ResendConfirmationRequestValues) => Promise<AuthActionResult>;
   session: Session | null;
   signIn: (values: AuthFormValues) => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
@@ -210,6 +212,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }
 
+  async function resendConfirmationEmail({
+    email,
+  }: ResendConfirmationRequestValues): Promise<AuthActionResult> {
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail) {
+      throw new Error('Email is required.');
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      throw normalizeError(error, 'Unable to resend the confirmation email.');
+    }
+
+    return {
+      message: 'If an unconfirmed account exists for that email, a new confirmation link has been sent.',
+      requiresEmailConfirmation: true,
+    };
+  }
+
   async function completePasswordReset({ password }: PasswordUpdateValues): Promise<AuthActionResult> {
     if (!meetsMinimumPasswordLength(password)) {
       throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
@@ -310,6 +339,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         isPasswordRecovery,
         refreshUser,
         requestPasswordReset,
+        resendConfirmationEmail,
         session,
         signIn,
         signOut,

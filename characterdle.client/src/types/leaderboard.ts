@@ -53,9 +53,11 @@ export interface UniverseLeaderboardState {
 export interface SubmitUniverseGameResultPayload {
   gameId: number;
   guessCount: number;
+  guessedCharacterIds: number[];
   hintCount: number;
   mode: GameMode;
-  status: 'won' | 'lost';
+  revealedHintKeys: string[];
+  status: 'playing' | 'won' | 'lost';
   universeId: string;
 }
 

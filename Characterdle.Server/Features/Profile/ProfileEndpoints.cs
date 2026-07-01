@@ -18,7 +18,7 @@ public static class ProfileEndpoints
         app.MapGet("/api/profile/{universeId}/results", GetGameResultsAsync)
             .WithTags("Profile")
             .WithName("GetUniverseGameResults")
-            .Produces<IReadOnlyList<ProfileRecentResultResponse>>()
+            .Produces<IReadOnlyList<UniverseGameResultResponse>>()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);

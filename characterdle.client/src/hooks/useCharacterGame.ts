@@ -6,6 +6,7 @@ import {
 } from '../lib/characterGameProgress';
 import { resolveCharacterSearch } from '../lib/characterSearch';
 import { compareAttributeValue, formatAttributeValue } from '../lib/universeAttributes';
+import type { PersistedGameResult } from '../types/profile';
 import type {
   CharacterGameHint,
   CharacterGameRow,
@@ -22,9 +23,11 @@ interface StoredCharacterGameState {
   completionRecorded: boolean;
   firstLetterRevealed: boolean;
   gaveUp: boolean;
+  guessCount: number;
   guessedCharacterIds: number[];
   revealedHintKeys: string[];
   resolvedAt?: string | null;
+  updatedAt?: string | null;
 }
 
 const hintPriorityOrder = [
@@ -155,6 +158,7 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
     completionRecorded: false,
     firstLetterRevealed: false,
     gaveUp: false,
+    guessCount: 0,
     guessedCharacterIds: [],
     revealedHintKeys: [],
   };
@@ -185,6 +189,9 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
         completionRecorded: parsedValue.completionRecorded === true,
         firstLetterRevealed: parsedValue.firstLetterRevealed === true,
         gaveUp: parsedValue.gaveUp === true,
+        guessCount: typeof parsedValue.guessCount === 'number' && parsedValue.guessCount >= 0
+          ? Math.max(parsedValue.guessCount, parsedValue.guessedCharacterIds?.length ?? 0)
+          : parsedValue.guessedCharacterIds?.length ?? 0,
         guessedCharacterIds: Array.isArray(parsedValue.guessedCharacterIds)
           ? parsedValue.guessedCharacterIds
             .filter((characterId) => typeof characterId === 'number' && allowedCharacterIds.has(characterId))
@@ -194,6 +201,9 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
             .filter((key) => typeof key === 'string' && allowedHintKeys.has(key))
           : [],
         resolvedAt,
+        updatedAt: typeof parsedValue.updatedAt === 'string' && !Number.isNaN(Date.parse(parsedValue.updatedAt))
+          ? parsedValue.updatedAt
+          : null,
       };
     } catch {
       return null;
@@ -228,7 +238,66 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
   return defaultState;
 }
 
-export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundState<CharacterGameRow> {
+function resolveStoredState(
+  game: CurrentUniverseGame,
+  persistedResult: PersistedGameResult | null,
+): StoredCharacterGameState {
+  const localState = readStoredState(game);
+
+  if (!persistedResult || persistedResult.mode !== 'character') {
+    return localState;
+  }
+
+  if (persistedResult.status === 'lost' && hasExpiredGiveUp(persistedResult.completedAt)) {
+    return localState;
+  }
+
+  const allowedCharacterIds = new Set(game.characters.map((character) => character.id));
+  const allowedHintKeys = new Set(game.attributeDefinitions.map((definition) => definition.key));
+  const remoteGuessedCharacterIds = persistedResult.guessedCharacterIds.filter(
+    (characterId) => allowedCharacterIds.has(characterId),
+  );
+  const remoteFirstLetterRevealed = persistedResult.revealedHintKeys.includes('first-letter');
+  const remoteState: StoredCharacterGameState = {
+    completionRecorded: persistedResult.status === 'won',
+    firstLetterRevealed: remoteFirstLetterRevealed,
+    gaveUp: persistedResult.status === 'lost',
+    guessCount: Math.max(persistedResult.guessCount, remoteGuessedCharacterIds.length),
+    guessedCharacterIds: remoteGuessedCharacterIds,
+    revealedHintKeys: persistedResult.revealedHintKeys.filter((key) => allowedHintKeys.has(key)),
+    resolvedAt: persistedResult.completedAt,
+    updatedAt: persistedResult.updatedAt,
+  };
+  const localIsComplete = localState.completionRecorded || localState.gaveUp;
+  const remoteIsComplete = remoteState.completionRecorded || remoteState.gaveUp;
+
+  if (localIsComplete !== remoteIsComplete) {
+    return remoteIsComplete ? remoteState : localState;
+  }
+
+  const localProgress = localState.guessCount
+    + localState.revealedHintKeys.length
+    + (localState.firstLetterRevealed ? 1 : 0);
+  const remoteProgress = remoteState.guessCount
+    + remoteState.revealedHintKeys.length
+    + (remoteState.firstLetterRevealed ? 1 : 0);
+
+  if (remoteProgress !== localProgress) {
+    return remoteProgress > localProgress ? remoteState : localState;
+  }
+
+  if (localState.updatedAt && Date.parse(remoteState.updatedAt ?? '') > Date.parse(localState.updatedAt)) {
+    return remoteState;
+  }
+
+  return localState;
+}
+
+export function useCharacterGame(
+  game: CurrentUniverseGame | null,
+  persistedResult: PersistedGameResult | null = null,
+): GameRoundState<CharacterGameRow> {
+  const [totalGuessCount, setTotalGuessCount] = useState(0);
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [completionRecorded, setCompletionRecorded] = useState(false);
@@ -248,13 +317,15 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
       setIsAggregateUpdateEligible(false);
       setFirstLetterRevealed(false);
       setGaveUp(false);
+      setTotalGuessCount(0);
       setRevealedHintKeys([]);
       setCompletedGameStats(createEmptyCompletedGameStats());
       return;
     }
 
-    const storedState = readStoredState(game);
+    const storedState = resolveStoredState(game, persistedResult);
     const storedActivity = hasStoredActivity(storedState);
+    setTotalGuessCount(storedState.guessCount);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
     setCompletionRecorded(storedState.completionRecorded);
     setHasRecordedPlay(storedActivity);
@@ -264,7 +335,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
     setRevealedHintKeys(storedState.revealedHintKeys);
     setCompletedGameStats(cloneCompletedGameStats(game.characterStats));
     setMessage(null);
-  }, [game]);
+  }, [game, persistedResult]);
 
   useEffect(() => {
     if (!game || typeof window === 'undefined') {
@@ -275,6 +346,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
       completionRecorded,
       firstLetterRevealed,
       gaveUp,
+      guessCount: totalGuessCount,
       guessedCharacterIds,
       revealedHintKeys,
       resolvedAt: completionRecorded || gaveUp
@@ -296,13 +368,14 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
           return new Date().toISOString();
         })()
         : null,
+      updatedAt: new Date().toISOString(),
     };
 
     window.localStorage.setItem(
       getSessionStorageKey(game.universeId, game.id),
       JSON.stringify(storedState),
     );
-  }, [completionRecorded, firstLetterRevealed, game, gaveUp, guessedCharacterIds, revealedHintKeys]);
+  }, [completionRecorded, firstLetterRevealed, game, gaveUp, guessedCharacterIds, revealedHintKeys, totalGuessCount]);
 
   const guessedCharacters = game
     ? guessedCharacterIds
@@ -338,7 +411,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
   const status: CharacterGameStatus = isSolved ? 'won' : gaveUp ? 'lost' : 'playing';
   const hintActionLabel = firstLetterRevealed ? 'Give Up' : 'Hint';
   const isStatsEligible = hintCount === 0;
-  const hasMeaningfulActivity = guessedCharacterIds.length > 0 || hintCount > 0 || status !== 'playing';
+  const hasMeaningfulActivity = totalGuessCount > 0 || hintCount > 0 || status !== 'playing';
 
   useEffect(() => {
     if (!game || hasRecordedPlay || !hasMeaningfulActivity) {
@@ -355,12 +428,12 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
     }
 
     if (isStatsEligible && isAggregateUpdateEligible) {
-      setCompletedGameStats((currentStats) => recordQualifiedWin(currentStats, guessedCharacterIds.length));
+      setCompletedGameStats((currentStats) => recordQualifiedWin(currentStats, totalGuessCount));
     }
 
     setIsAggregateUpdateEligible(false);
     setCompletionRecorded(true);
-  }, [completionRecorded, game, guessedCharacterIds.length, isAggregateUpdateEligible, isSolved, isStatsEligible]);
+  }, [completionRecorded, game, isAggregateUpdateEligible, isSolved, isStatsEligible, totalGuessCount]);
 
   function submitGuess(query: string): SubmitGuessResult {
     if (!game) {
@@ -407,6 +480,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
     const wasCorrect = match.character.id === game.answerCharacter.id;
 
     setGuessedCharacterIds(nextGuessedCharacterIds);
+    setTotalGuessCount((currentCount) => currentCount + 1);
     setMessage(
       wasCorrect
         ? 'Correct.'
@@ -454,6 +528,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
     setIsAggregateUpdateEligible(true);
     setFirstLetterRevealed(false);
     setGaveUp(false);
+    setTotalGuessCount(0);
     setRevealedHintKeys([]);
     setCompletedGameStats(cloneCompletedGameStats(game?.characterStats));
 
@@ -470,7 +545,7 @@ export function useCharacterGame(game: CurrentUniverseGame | null): GameRoundSta
     hintActionLabel,
     hintCount,
     completedGameStats,
-    guessCount: guessedCharacterIds.length,
+    guessCount: totalGuessCount,
     guessedCharacterIds,
     isSolved,
     message,

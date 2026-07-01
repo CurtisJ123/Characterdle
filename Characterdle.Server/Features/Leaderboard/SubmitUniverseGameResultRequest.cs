@@ -5,4 +5,6 @@ public sealed record SubmitUniverseGameResultRequest(
     int GuessCount,
     int HintCount,
     string Mode,
-    string Status);
+    string Status,
+    IReadOnlyList<long> GuessedCharacterIds,
+    IReadOnlyList<string> RevealedHintKeys);

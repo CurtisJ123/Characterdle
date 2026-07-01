@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useUniverse } from '../hooks/useUniverse';
@@ -40,65 +39,17 @@ function formatStatus(status: string) {
 }
 
 export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
-  const { isAuthenticated, session, signOut, updateAccount, user } = useAuth();
+  const { isAuthenticated, session, user } = useAuth();
   const { selectedUniverse } = useUniverse();
-  const { data, error, isLoading, reload } = useProfile(session?.access_token ?? null, selectedUniverse.id);
-  const [displayName, setDisplayName] = useState('');
-  const [formError, setFormError] = useState<string>();
-  const [formMessage, setFormMessage] = useState<string>();
-  const [isSaving, setIsSaving] = useState(false);
+  const { data, error, isLoading } = useProfile(session?.access_token ?? null, selectedUniverse.id);
   const hasProfileData = Boolean(data);
   const isInitialLoad = isLoading && !hasProfileData;
-  const memberSince = useMemo(() => (
-    data?.memberSince
-      ? new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-      }).format(new Date(data.memberSince))
-      : user?.createdAt
-        ? new Intl.DateTimeFormat(undefined, {
-          dateStyle: 'medium',
-        }).format(new Date(user.createdAt))
-      : 'Recently joined'
-  ), [data?.memberSince, user?.createdAt]);
-
-  useEffect(() => {
-    setDisplayName(user?.displayName ?? '');
-  }, [user?.displayName, user?.id]);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(undefined);
-    setFormMessage(undefined);
-
-    if (!displayName.trim()) {
-      setFormError('Username is required.');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const result = await updateAccount({
-        displayName,
-      });
-
-      await reload();
-      setFormMessage(result.message);
-    } catch (saveError) {
-      setFormError(saveError instanceof Error ? saveError.message : 'Unable to update your profile.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleSignOut() {
-    try {
-      await signOut();
-      onAuthNavigate('login');
-    } catch (signOutError) {
-      setFormError(signOutError instanceof Error ? signOutError.message : 'Unable to log out right now.');
-    }
-  }
+  const memberSinceValue = data?.memberSince ?? user?.createdAt;
+  const memberSince = memberSinceValue
+    ? new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+    }).format(new Date(memberSinceValue))
+    : 'Recently joined';
 
   if (!isAuthenticated) {
     return (
@@ -127,13 +78,13 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
             <img className="profile-hero-avatar" src={data.avatarUrl} alt="" />
           ) : (
             <span className="profile-hero-avatar is-fallback" aria-hidden="true">
-              {getInitials(data?.displayName ?? user?.displayName)}
+              {getInitials(user?.displayName ?? data?.displayName)}
             </span>
           )}
 
           <div className="profile-hero-copy">
             <p className="eyebrow">{selectedUniverse.title}</p>
-            <h1>{data?.displayName ?? user?.displayName ?? 'Profile'}</h1>
+            <h1>{user?.displayName ?? data?.displayName ?? 'Profile'}</h1>
             <div className="profile-meta-row">
               <span className="pill">Member since {memberSince}</span>
               <span className="pill">Overall rank {formatRank(data?.overallRank ?? null)}</span>
@@ -247,41 +198,6 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
           </section>
         </div>
 
-        <aside className="profile-column">
-          <section className="glass-card profile-panel">
-            <div className="profile-panel-header">
-              <div>
-                <p className="card-kicker">Profile</p>
-                <h2>Username</h2>
-              </div>
-            </div>
-
-            <form className="profile-settings-form" onSubmit={handleSubmit}>
-              <label>
-                Username
-                <input
-                  autoComplete="nickname"
-                  name="displayName"
-                  type="text"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                />
-              </label>
-
-              {formMessage && <p className="auth-feedback is-success">{formMessage}</p>}
-              {formError && <p className="auth-feedback is-error">{formError}</p>}
-
-              <div className="profile-settings-actions">
-                <button className="primary-button" disabled={isSaving} type="submit">
-                  {isSaving ? 'Saving...' : 'Save username'}
-                </button>
-                <button className="secondary-button" disabled={isSaving} type="button" onClick={handleSignOut}>
-                  Log out
-                </button>
-              </div>
-            </form>
-          </section>
-        </aside>
       </section>
     </main>
   );

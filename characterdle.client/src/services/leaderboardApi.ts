@@ -5,6 +5,7 @@ import type {
 import { buildApiUrl } from '../lib/runtimeConfig';
 
 const leaderboardRequests = new Map<string, Promise<UniverseLeaderboard>>();
+const MAX_PERSISTED_GUESSES = 50;
 
 function createLeaderboardCacheKey(universeId: string, currentUserId: string | null): string {
   return `${universeId}:${currentUserId ?? 'guest'}`;
@@ -54,8 +55,10 @@ export async function submitUniverseGameResult(
     body: JSON.stringify({
       gameId: payload.gameId,
       guessCount: payload.guessCount,
+      guessedCharacterIds: retainGuessesForPersistence(payload.guessedCharacterIds),
       hintCount: payload.hintCount,
       mode: payload.mode,
+      revealedHintKeys: payload.revealedHintKeys,
       status: payload.status,
     }),
   });
@@ -65,6 +68,15 @@ export async function submitUniverseGameResult(
   }
 
   clearLeaderboardCache(payload.universeId);
+}
+
+export function retainGuessesForPersistence(guessedCharacterIds: readonly number[]): number[] {
+  if (guessedCharacterIds.length <= MAX_PERSISTED_GUESSES) {
+    return [...guessedCharacterIds];
+  }
+
+  const firstGuess = guessedCharacterIds[guessedCharacterIds.length - 1];
+  return [...guessedCharacterIds.slice(0, MAX_PERSISTED_GUESSES - 1), firstGuess];
 }
 
 async function fetchLeaderboard(universeId: string, currentUserId: string | null): Promise<UniverseLeaderboard> {

@@ -115,9 +115,13 @@ export function hasExpiredGiveUp(resolvedAt: string | null | undefined): boolean
 }
 
 export function getRemoteGameOutcome(
-  status: 'lost' | 'won',
-  completedAt: string,
+  status: 'playing' | 'lost' | 'won',
+  completedAt: string | null,
 ): StoredGameOutcome {
+  if (status === 'playing') {
+    return 'pending';
+  }
+
   return status === 'lost' && hasExpiredGiveUp(completedAt)
     ? 'pending'
     : status;

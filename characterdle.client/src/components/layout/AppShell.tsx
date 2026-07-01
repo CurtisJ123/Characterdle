@@ -31,7 +31,7 @@ export function AppShell({
   onOpenGame,
   onOpenHistory,
 }: AppShellProps) {
-  const { authError, isAuthenticated, isLoading, signOut, user } = useAuth();
+  const { authError, isAuthenticated, isLoading, signOut, updateAccount, user } = useAuth();
 
   async function handleSignOut() {
     try {
@@ -42,6 +42,11 @@ export function AppShell({
     }
   }
 
+  async function handleSaveDisplayName(displayName: string) {
+    const result = await updateAccount({ displayName });
+    return result.message;
+  }
+
   return (
     <div className="app-shell">
       <SiteHeader
@@ -50,6 +55,7 @@ export function AppShell({
         isUserLoading={isLoading}
         onAuthNavigate={onAuthNavigate}
         onNavigate={onNavigate}
+        onSaveDisplayName={handleSaveDisplayName}
         onSignOut={handleSignOut}
         userDisplayName={user?.displayName}
       />

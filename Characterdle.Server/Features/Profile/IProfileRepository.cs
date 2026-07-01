@@ -9,7 +9,7 @@ public interface IProfileRepository
         Guid userId,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<ProfileRecentResultResponse>> GetGameResultsAsync(
+    Task<IReadOnlyList<UniverseGameResultResponse>> GetGameResultsAsync(
         string universeId,
         Guid userId,
         CancellationToken cancellationToken);

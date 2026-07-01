@@ -56,11 +56,52 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             recentResults);
     }
 
-    public Task<IReadOnlyList<ProfileRecentResultResponse>> GetGameResultsAsync(
+    public async Task<IReadOnlyList<UniverseGameResultResponse>> GetGameResultsAsync(
         string universeId,
         Guid userId,
-        CancellationToken cancellationToken) =>
-        LoadResultsAsync(universeId, userId, limit: null, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            select
+              game_id,
+              mode,
+              status,
+              guess_count,
+              hint_count,
+              guessed_character_ids,
+              revealed_hint_keys,
+              completed_at,
+              updated_at
+            from public."UniverseGameResults"
+            where universe_id = @universeId
+              and user_id = @userId
+            order by updated_at desc;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("userId", userId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        var results = new List<UniverseGameResultResponse>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(new UniverseGameResultResponse(
+                reader.GetInt64(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetInt32(3),
+                reader.GetInt32(4),
+                reader.GetFieldValue<long[]>(5),
+                reader.GetFieldValue<string[]>(6),
+                reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
+                reader.GetFieldValue<DateTimeOffset>(8)));
+        }
+
+        return results;
+    }
 
     public async Task UpdateDisplayNameAsync(
         Guid userId,
@@ -183,7 +224,8 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               ) as quote_completion_rate
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
-              and results.user_id = @userId;
+              and results.user_id = @userId
+              and results.status in ('won', 'lost');
             """;
 
         await using var command = dataSource.CreateCommand(sql);
@@ -237,6 +279,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.status in ('won', 'lost')
                 and results.hint_count = 0
               group by profiles.user_id, profiles.display_name
             ),
@@ -301,9 +344,9 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         string universeId,
         Guid userId,
         CancellationToken cancellationToken) =>
-        LoadResultsAsync(universeId, userId, limit: 10, cancellationToken);
+        LoadCompletedResultsAsync(universeId, userId, limit: 10, cancellationToken);
 
-    private async Task<IReadOnlyList<ProfileRecentResultResponse>> LoadResultsAsync(
+    private async Task<IReadOnlyList<ProfileRecentResultResponse>> LoadCompletedResultsAsync(
         string universeId,
         Guid userId,
         int? limit,
@@ -321,6 +364,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             from public."UniverseGameResults"
             where universe_id = @universeId
               and user_id = @userId
+              and status in ('won', 'lost')
             order by completed_at desc
             """;
 

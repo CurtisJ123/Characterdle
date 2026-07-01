@@ -20,8 +20,20 @@ export interface ProfileRecentResult {
   completedAt: string;
 }
 
+export interface PersistedGameResult {
+  gameId: number;
+  mode: GameMode;
+  status: 'playing' | 'won' | 'lost';
+  guessCount: number;
+  guessedCharacterIds: number[];
+  hintCount: number;
+  revealedHintKeys: string[];
+  completedAt: string | null;
+  updatedAt: string;
+}
+
 export interface ProfileGameResultsState {
-  data: ProfileRecentResult[];
+  data: PersistedGameResult[];
   error: Error | null;
   isLoading: boolean;
 }
