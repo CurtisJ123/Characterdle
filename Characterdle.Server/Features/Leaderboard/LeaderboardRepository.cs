@@ -54,9 +54,9 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task UpsertUniverseGameResultAsync(
+    public async Task<UniverseStreakResponse> UpsertUniverseGameResultAsync(
         Guid userId,
-        string universeId,
+        UniverseDefinition universe,
         long gameId,
         int guessCount,
         int hintCount,
@@ -142,9 +142,11 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             );
             """;
 
-        await using var command = dataSource.CreateCommand(sql);
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("userId", userId);
-        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("gameId", gameId);
         command.Parameters.AddWithValue("mode", mode);
         command.Parameters.AddWithValue("status", status);
@@ -153,6 +155,184 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         command.Parameters.AddWithValue("guessedCharacterIds", guessedCharacterIds.ToArray());
         command.Parameters.AddWithValue("revealedHintKeys", revealedHintKeys.ToArray());
         await command.ExecuteNonQueryAsync(cancellationToken);
+
+        if (mode == "character" && status is "won" or "lost")
+        {
+            var creditDate = await TryInsertDailyStreakCreditAsync(
+                connection,
+                transaction,
+                userId,
+                universe,
+                gameId,
+                cancellationToken);
+
+            if (creditDate.HasValue)
+            {
+                await UpdateStreakSummaryAsync(
+                    connection,
+                    transaction,
+                    userId,
+                    universe.Id,
+                    creditDate.Value,
+                    cancellationToken);
+            }
+        }
+
+        var streak = await LoadStreakAsync(
+            connection,
+            transaction,
+            userId,
+            universe,
+            cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return streak;
+    }
+
+    private static async Task<DateOnly?> TryInsertDailyStreakCreditAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid userId,
+        UniverseDefinition universe,
+        long gameId,
+        CancellationToken cancellationToken)
+    {
+        var sql =
+            $"""
+            insert into public."UniverseStreakCredits" (
+              user_id,
+              universe_id,
+              game_id,
+              result_id,
+              credit_date,
+              credit_type
+            )
+            select
+              results.user_id,
+              results.universe_id,
+              results.game_id,
+              results.id,
+              (games.datetime at time zone @scheduleTimeZoneId)::date,
+              'daily_completion'
+            from public."UniverseGameResults" as results
+            join {universe.GameTableName} as games
+              on games.id = results.game_id
+            where results.user_id = @userId
+              and results.universe_id = @universeId
+              and results.game_id = @gameId
+              and results.mode = 'character'
+              and results.status in ('won', 'lost')
+              and (games.datetime at time zone @scheduleTimeZoneId)::date
+                = (now() at time zone @scheduleTimeZoneId)::date
+            on conflict do nothing
+            returning credit_date;
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("gameId", gameId);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is DateOnly creditDate ? creditDate : null;
+    }
+
+    private static async Task UpdateStreakSummaryAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid userId,
+        string universeId,
+        DateOnly creditDate,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            insert into public."UniverseStreaks" (
+              user_id,
+              universe_id,
+              current_streak,
+              longest_streak,
+              last_credit_date,
+              updated_at
+            )
+            values (
+              @userId,
+              @universeId,
+              1,
+              1,
+              @creditDate,
+              timezone('utc', now())
+            )
+            on conflict (user_id, universe_id) do update
+            set
+              current_streak = case
+                when public."UniverseStreaks".last_credit_date = excluded.last_credit_date
+                  then public."UniverseStreaks".current_streak
+                when public."UniverseStreaks".last_credit_date = excluded.last_credit_date - 1
+                  then public."UniverseStreaks".current_streak + 1
+                else 1
+              end,
+              longest_streak = greatest(
+                public."UniverseStreaks".longest_streak,
+                case
+                  when public."UniverseStreaks".last_credit_date = excluded.last_credit_date
+                    then public."UniverseStreaks".current_streak
+                  when public."UniverseStreaks".last_credit_date = excluded.last_credit_date - 1
+                    then public."UniverseStreaks".current_streak + 1
+                  else 1
+                end
+              ),
+              last_credit_date = greatest(
+                public."UniverseStreaks".last_credit_date,
+                excluded.last_credit_date
+              ),
+              updated_at = excluded.updated_at;
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("creditDate", creditDate);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task<UniverseStreakResponse> LoadStreakAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid userId,
+        UniverseDefinition universe,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            select
+              case
+                when streaks.last_credit_date
+                  >= (now() at time zone @scheduleTimeZoneId)::date - 1
+                  then streaks.current_streak
+                else 0
+              end as current_streak,
+              streaks.longest_streak,
+              streaks.last_credit_date
+            from public."UniverseStreaks" as streaks
+            where streaks.user_id = @userId
+              and streaks.universe_id = @universeId;
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return new UniverseStreakResponse(0, 0, null);
+        }
+
+        return new UniverseStreakResponse(
+            reader.GetInt32(0),
+            reader.GetInt32(1),
+            reader.IsDBNull(2) ? null : reader.GetFieldValue<DateOnly>(2));
     }
 
     public async Task<UniverseLeaderboardResponse> GetLeaderboardAsync(
@@ -167,6 +347,10 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         var currentUser = currentUserId.HasValue
             ? await LoadCurrentUserAsync(universe.Id, currentUserId.Value, cancellationToken)
             : null;
+        var streakRows = await LoadStreakRowsAsync(universe, currentUserId, normalizedLimit, cancellationToken);
+        var currentUserStreak = currentUserId.HasValue
+            ? await LoadCurrentUserStreakAsync(universe, currentUserId.Value, cancellationToken)
+            : null;
 
         return new UniverseLeaderboardResponse(
             universe.Id,
@@ -175,7 +359,9 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             leaderboardOverview.Character,
             leaderboardOverview.Quote,
             currentUser,
-            rows);
+            rows,
+            currentUserStreak,
+            streakRows);
     }
 
     private async Task<(LeaderboardOverviewResponse Overall, LeaderboardModeOverviewResponse Character, LeaderboardModeOverviewResponse Quote)> LoadOverviewAsync(
@@ -427,6 +613,141 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         }
 
         return MapEntry(reader, currentUserId);
+    }
+
+    private async Task<IReadOnlyList<StreakLeaderboardEntryResponse>> LoadStreakRowsAsync(
+        UniverseDefinition universe,
+        Guid? currentUserId,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            with effective as (
+              select
+                profiles.user_id,
+                profiles.display_name,
+                profiles.avatar_url,
+                case
+                  when streaks.last_credit_date
+                    >= (now() at time zone @scheduleTimeZoneId)::date - 1
+                    then streaks.current_streak
+                  else 0
+                end as current_streak,
+                streaks.longest_streak,
+                streaks.last_credit_date
+              from public."UniverseStreaks" as streaks
+              join public."PlayerProfiles" as profiles
+                on profiles.user_id = streaks.user_id
+              where streaks.universe_id = @universeId
+                and streaks.longest_streak > 0
+            ),
+            ranked as (
+              select
+                dense_rank() over (
+                  order by effective.current_streak desc, effective.longest_streak desc
+                )::int as rank,
+                effective.*
+              from effective
+            )
+            select
+              ranked.rank,
+              ranked.user_id,
+              ranked.display_name,
+              ranked.avatar_url,
+              ranked.current_streak,
+              ranked.longest_streak
+            from ranked
+            order by
+              ranked.rank,
+              ranked.last_credit_date desc,
+              ranked.display_name
+            limit @limit;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
+        command.Parameters.AddWithValue("limit", limit);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var rows = new List<StreakLeaderboardEntryResponse>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            rows.Add(MapStreakEntry(reader, currentUserId));
+        }
+
+        return rows;
+    }
+
+    private async Task<StreakLeaderboardEntryResponse?> LoadCurrentUserStreakAsync(
+        UniverseDefinition universe,
+        Guid currentUserId,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            with effective as (
+              select
+                profiles.user_id,
+                profiles.display_name,
+                profiles.avatar_url,
+                case
+                  when streaks.last_credit_date
+                    >= (now() at time zone @scheduleTimeZoneId)::date - 1
+                    then streaks.current_streak
+                  else 0
+                end as current_streak,
+                streaks.longest_streak
+              from public."UniverseStreaks" as streaks
+              join public."PlayerProfiles" as profiles
+                on profiles.user_id = streaks.user_id
+              where streaks.universe_id = @universeId
+                and streaks.longest_streak > 0
+            ),
+            ranked as (
+              select
+                dense_rank() over (
+                  order by effective.current_streak desc, effective.longest_streak desc
+                )::int as rank,
+                effective.*
+              from effective
+            )
+            select
+              ranked.rank,
+              ranked.user_id,
+              ranked.display_name,
+              ranked.avatar_url,
+              ranked.current_streak,
+              ranked.longest_streak
+            from ranked
+            where ranked.user_id = @currentUserId;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
+        command.Parameters.AddWithValue("currentUserId", currentUserId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken)
+            ? MapStreakEntry(reader, currentUserId)
+            : null;
+    }
+
+    private static StreakLeaderboardEntryResponse MapStreakEntry(
+        NpgsqlDataReader reader,
+        Guid? currentUserId)
+    {
+        var userId = reader.GetGuid(1);
+
+        return new StreakLeaderboardEntryResponse(
+            reader.GetInt32(0),
+            userId,
+            reader.GetString(2),
+            reader.IsDBNull(3) ? null : reader.GetString(3),
+            reader.GetInt32(4),
+            reader.GetInt32(5),
+            currentUserId.HasValue && currentUserId.Value == userId);
     }
 
     private static LeaderboardEntryResponse MapEntry(

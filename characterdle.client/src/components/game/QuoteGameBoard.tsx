@@ -11,6 +11,7 @@ interface QuoteGameBoardProps {
   answerName: string;
   answerPortraitUrl?: string | null;
   completedGameStats: CompletedGameStats;
+  currentStreak: number;
   episodeLabel?: string | null;
   gameId: number;
   guessCount: number;
@@ -42,6 +43,7 @@ export function QuoteGameBoard({
   answerName,
   answerPortraitUrl = null,
   completedGameStats,
+  currentStreak,
   episodeLabel = null,
   gameId,
   guessCount,
@@ -156,6 +158,7 @@ export function QuoteGameBoard({
                 hintCount,
                 mode: 'quote',
                 rows,
+                streak: currentStreak,
                 status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
                 universeId,
                 universeName,

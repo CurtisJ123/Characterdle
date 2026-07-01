@@ -17,20 +17,36 @@ const QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX = 'quote-game-stats';
 const QUOTE_GAME_STATE_STORAGE_KEY_PREFIX = 'quote-game-state';
 const GIVE_UP_RESET_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-export function getCharacterGameStorageKey(universeId: string, gameId: number): string {
-  return `${GAME_STATE_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
+export function getGameProgressOwnerKey(userId: string | null | undefined): string {
+  return userId ? `user:${userId}` : 'guest';
 }
 
-export function getLegacyCharacterGameSessionStorageKey(universeId: string, gameId: number): string {
-  return `${LEGACY_SESSION_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
+export function getCharacterGameStorageKey(
+  ownerKey: string,
+  universeId: string,
+  gameId: number,
+): string {
+  return `${GAME_STATE_STORAGE_KEY_PREFIX}:${ownerKey}:${universeId}:${gameId}`;
+}
+
+export function getLegacyCharacterGameSessionStorageKey(
+  ownerKey: string,
+  universeId: string,
+  gameId: number,
+): string {
+  return `${LEGACY_SESSION_STORAGE_KEY_PREFIX}:${ownerKey}:${universeId}:${gameId}`;
 }
 
 export function getCharacterGameStatsStorageKey(universeId: string, gameId: number): string {
   return `${PLAY_STATS_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
 }
 
-export function getQuoteGameStorageKey(universeId: string, gameId: number): string {
-  return `${QUOTE_GAME_STATE_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
+export function getQuoteGameStorageKey(
+  ownerKey: string,
+  universeId: string,
+  gameId: number,
+): string {
+  return `${QUOTE_GAME_STATE_STORAGE_KEY_PREFIX}:${ownerKey}:${universeId}:${gameId}`;
 }
 
 export function getQuoteGameStatsStorageKey(universeId: string, gameId: number): string {
@@ -127,10 +143,14 @@ export function getRemoteGameOutcome(
     : status;
 }
 
-export function getCharacterGameOutcome(universeId: string, gameId: number): StoredGameOutcome {
+export function getCharacterGameOutcome(
+  ownerKey: string,
+  universeId: string,
+  gameId: number,
+): StoredGameOutcome {
   const storedState = readCompletionState(
-    getCharacterGameStorageKey(universeId, gameId),
-    getLegacyCharacterGameSessionStorageKey(universeId, gameId),
+    getCharacterGameStorageKey(ownerKey, universeId, gameId),
+    getLegacyCharacterGameSessionStorageKey(ownerKey, universeId, gameId),
   );
 
   if (storedState?.completionRecorded === true) {
@@ -144,8 +164,12 @@ export function getCharacterGameOutcome(universeId: string, gameId: number): Sto
   return 'pending';
 }
 
-export function getQuoteGameOutcome(universeId: string, gameId: number): StoredGameOutcome {
-  const storedState = readCompletionState(getQuoteGameStorageKey(universeId, gameId));
+export function getQuoteGameOutcome(
+  ownerKey: string,
+  universeId: string,
+  gameId: number,
+): StoredGameOutcome {
+  const storedState = readCompletionState(getQuoteGameStorageKey(ownerKey, universeId, gameId));
 
   if (storedState?.completionRecorded === true) {
     return 'won';

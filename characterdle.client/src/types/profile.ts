@@ -52,6 +52,8 @@ export interface UniverseProfile {
   totalCompletionRate: number;
   averageGuesses: number | null;
   overallRank: number | null;
+  currentStreak: number;
+  longestStreak: number;
   character: ProfileModeStats;
   quote: ProfileModeStats;
   recentResults: ProfileRecentResult[];

@@ -126,7 +126,7 @@ function hasStoredActivity(state: StoredQuoteGameState): boolean {
     || state.revealedHintKeys.length > 0;
 }
 
-function readStoredState(game: QuoteGameData): StoredQuoteGameState {
+function readStoredState(game: QuoteGameData, ownerKey: string): StoredQuoteGameState {
   if (typeof window === 'undefined') {
     return {
       completionRecorded: false,
@@ -146,7 +146,9 @@ function readStoredState(game: QuoteGameData): StoredQuoteGameState {
   ]);
 
   try {
-    const rawValue = window.localStorage.getItem(getQuoteGameStorageKey(game.universeId, game.gameId));
+    const rawValue = window.localStorage.getItem(
+      getQuoteGameStorageKey(ownerKey, game.universeId, game.gameId),
+    );
 
     if (!rawValue) {
       return {
@@ -210,8 +212,9 @@ function readStoredState(game: QuoteGameData): StoredQuoteGameState {
 function resolveStoredState(
   game: QuoteGameData,
   persistedResult: PersistedGameResult | null,
+  ownerKey: string,
 ): StoredQuoteGameState {
-  const localState = readStoredState(game);
+  const localState = readStoredState(game, ownerKey);
 
   if (!persistedResult || persistedResult.mode !== 'quote') {
     return localState;
@@ -267,6 +270,7 @@ function resolveStoredState(
 export function useQuoteGame(
   game: QuoteGameData | null,
   persistedResult: PersistedGameResult | null = null,
+  ownerKey = 'guest',
 ): GameRoundState<QuoteGameRow> {
   const [totalGuessCount, setTotalGuessCount] = useState(0);
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
@@ -294,7 +298,7 @@ export function useQuoteGame(
       return;
     }
 
-    const storedState = resolveStoredState(game, persistedResult);
+    const storedState = resolveStoredState(game, persistedResult, ownerKey);
     const storedActivity = hasStoredActivity(storedState);
     setTotalGuessCount(storedState.guessCount);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
@@ -306,7 +310,7 @@ export function useQuoteGame(
     setRevealedHintKeys(storedState.revealedHintKeys);
     setCompletedGameStats(cloneCompletedGameStats(game.completedGameStats));
     setMessage(null);
-  }, [game, persistedResult]);
+  }, [game, ownerKey, persistedResult]);
 
   useEffect(() => {
     if (!game || typeof window === 'undefined') {
@@ -322,7 +326,9 @@ export function useQuoteGame(
       revealedHintKeys,
       resolvedAt: completionRecorded || gaveUp
         ? (() => {
-          const existingRawValue = window.localStorage.getItem(getQuoteGameStorageKey(game.universeId, game.gameId));
+          const existingRawValue = window.localStorage.getItem(
+            getQuoteGameStorageKey(ownerKey, game.universeId, game.gameId),
+          );
 
           if (existingRawValue) {
             try {
@@ -343,10 +349,19 @@ export function useQuoteGame(
     };
 
     window.localStorage.setItem(
-      getQuoteGameStorageKey(game.universeId, game.gameId),
+      getQuoteGameStorageKey(ownerKey, game.universeId, game.gameId),
       JSON.stringify(storedState),
     );
-  }, [completionRecorded, firstLetterRevealed, game, gaveUp, guessedCharacterIds, revealedHintKeys, totalGuessCount]);
+  }, [
+    completionRecorded,
+    firstLetterRevealed,
+    game,
+    gaveUp,
+    guessedCharacterIds,
+    ownerKey,
+    revealedHintKeys,
+    totalGuessCount,
+  ]);
 
   const guessedCharacters = game
     ? guessedCharacterIds
@@ -519,7 +534,7 @@ export function useQuoteGame(
       return;
     }
 
-    window.localStorage.removeItem(getQuoteGameStorageKey(game.universeId, game.gameId));
+    window.localStorage.removeItem(getQuoteGameStorageKey(ownerKey, game.universeId, game.gameId));
   }
 
   return {

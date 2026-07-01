@@ -36,4 +36,5 @@
 @import './components/leaderboard/LeaderboardTable.css';
 @import './components/ui/MetricRow.css';
 @import './components/ui/GameShareButton.css';
+@import './components/ui/StreakEmblem.css';
 @import './components/ui/LoadingOverlay.css';

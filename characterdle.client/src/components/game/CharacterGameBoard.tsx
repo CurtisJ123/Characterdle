@@ -19,6 +19,7 @@ interface CharacterGameBoardProps {
   answerPortraitUrl?: string | null;
   attributeDefinitions: UniverseAttributeDefinition[];
   completedGameStats: CompletedGameStats;
+  currentStreak: number;
   gameId: number;
   gridStyle: CSSProperties;
   guessCount: number;
@@ -41,6 +42,7 @@ export function CharacterGameBoard({
   answerPortraitUrl = null,
   attributeDefinitions,
   completedGameStats,
+  currentStreak,
   gameId,
   gridStyle,
   guessCount,
@@ -117,6 +119,7 @@ export function CharacterGameBoard({
             hintCount,
             mode: 'character',
             rows,
+            streak: currentStreak,
             status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
             universeId,
             universeName,

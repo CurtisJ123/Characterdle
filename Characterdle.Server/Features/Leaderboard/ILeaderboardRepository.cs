@@ -19,9 +19,9 @@ public interface ILeaderboardRepository
         VerifiedSupabaseUser user,
         CancellationToken cancellationToken);
 
-    Task UpsertUniverseGameResultAsync(
+    Task<UniverseStreakResponse> UpsertUniverseGameResultAsync(
         Guid userId,
-        string universeId,
+        UniverseDefinition universe,
         long gameId,
         int guessCount,
         int hintCount,

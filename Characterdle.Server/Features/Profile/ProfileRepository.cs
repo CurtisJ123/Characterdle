@@ -19,6 +19,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
 
         var stats = await LoadStatsAsync(universe, userId, cancellationToken);
         var ranks = await LoadRanksAsync(universe.Id, userId, cancellationToken);
+        var streak = await LoadStreakAsync(universe, userId, cancellationToken);
         var recentResults = await LoadRecentResultsAsync(universe.Id, userId, cancellationToken);
 
         return new UserUniverseProfileResponse(
@@ -35,6 +36,8 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             stats.TotalCompletionRate,
             stats.AverageGuesses,
             ranks.OverallRank,
+            streak.CurrentStreak,
+            streak.LongestStreak,
             new ProfileModeStatsResponse(
                 "character",
                 stats.CharacterWins,
@@ -54,6 +57,37 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
                 stats.QuoteCompletionRate,
                 ranks.QuoteRank),
             recentResults);
+    }
+
+    private async Task<StreakRecord> LoadStreakAsync(
+        UniverseDefinition universe,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            select
+              case
+                when streaks.last_credit_date
+                  >= (now() at time zone @scheduleTimeZoneId)::date - 1
+                  then streaks.current_streak
+                else 0
+              end as current_streak,
+              streaks.longest_streak
+            from public."UniverseStreaks" as streaks
+            where streaks.user_id = @userId
+              and streaks.universe_id = @universeId;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken)
+            ? new StreakRecord(reader.GetInt32(0), reader.GetInt32(1))
+            : new StreakRecord(0, 0);
     }
 
     public async Task<IReadOnlyList<UniverseGameResultResponse>> GetGameResultsAsync(
@@ -458,4 +492,8 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         int? OverallRank,
         int? CharacterRank,
         int? QuoteRank);
+
+    private sealed record StreakRecord(
+        int CurrentStreak,
+        int LongestStreak);
 }

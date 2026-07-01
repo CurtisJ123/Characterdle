@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
+import { StreakEmblem } from '../ui/StreakEmblem';
 import { AccountSettingsOverlay } from './AccountSettingsOverlay';
 import { BrandButton } from './BrandButton';
 
 interface SiteHeaderProps {
+  currentStreak: number;
   currentPage: Page;
   isAuthenticated: boolean;
   isUserLoading: boolean;
@@ -16,6 +18,7 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({
+  currentStreak,
   currentPage,
   isAuthenticated,
   isUserLoading,
@@ -103,6 +106,20 @@ export function SiteHeader({
           </nav>
 
           <div className="header-actions" aria-label="Account actions">
+            {isAuthenticated && (
+              <button
+                className="streak-badge"
+                type="button"
+                aria-label={`${currentStreak} day current streak. View profile.`}
+                title={`${currentStreak} day current streak`}
+                onClick={handleProfileNavigation}
+              >
+                <StreakEmblem streak={currentStreak} size="compact" />
+                <span className="streak-badge-copy">
+                  <strong>Day streak</strong>
+                </span>
+              </button>
+            )}
             <div className="profile-menu-wrap" ref={profileMenuRef}>
               <button
                 className="profile-button"

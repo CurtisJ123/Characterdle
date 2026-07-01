@@ -16,6 +16,7 @@ interface BaseSharePayload {
   gameId: number;
   guessCount: number;
   hintCount: number;
+  streak: number;
   status: ShareableStatus;
   universeId: string;
   universeName: string;
@@ -63,6 +64,10 @@ function getHintSummary(hintCount: number): string {
   return `💡 ${hintCount} ${hintCount === 1 ? 'hint' : 'hints'}`;
 }
 
+function getStreakSummary(streak: number): string {
+  return `\u{1F525} ${streak} day streak`;
+}
+
 function mapAttributeToneToEmoji(attribute: CharacterAttribute): string {
   switch (attribute.tone) {
     case 'correct':
@@ -106,6 +111,10 @@ function buildShareText(
 
   if (options.includeHintLine) {
     sections.push(getHintSummary(payload.hintCount));
+  }
+
+  if (payload.streak > 0) {
+    sections.push(getStreakSummary(payload.streak));
   }
 
   if (rows.length > 0) {

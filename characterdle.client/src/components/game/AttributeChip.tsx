@@ -18,6 +18,26 @@ function getSizeClass(label: string): string {
   return '';
 }
 
+interface DirectionArrowGlyphProps {
+  direction: 'up' | 'down';
+}
+
+function DirectionArrowGlyph({ direction }: DirectionArrowGlyphProps) {
+  return (
+    <svg
+      className={`attribute-chip-arrow-glyph is-${direction}`}
+      viewBox="0 0 96 96"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        className="attribute-chip-arrow-fill"
+        d="M48 20L72 44H58V74H38V44H24L48 20Z"
+      />
+    </svg>
+  );
+}
+
 export function AttributeChip({ displayVariant, indicator, label, tone }: CharacterAttribute) {
   const sizeClass = getSizeClass(label);
   const variantClass = displayVariant === 'numeric' ? 'is-numeric' : '';
@@ -29,10 +49,7 @@ export function AttributeChip({ displayVariant, indicator, label, tone }: Charac
         aria-label={label}
         title={label}
       >
-        <span className={`attribute-chip-arrow is-${indicator.direction}`} aria-hidden="true">
-          <span className="attribute-chip-arrow-head" />
-          <span className="attribute-chip-arrow-shaft" />
-        </span>
+        <DirectionArrowGlyph direction={indicator.direction} />
         <span className="attribute-chip-direction-value">{indicator.value}</span>
       </span>
     );

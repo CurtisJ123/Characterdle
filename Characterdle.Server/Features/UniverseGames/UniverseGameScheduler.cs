@@ -31,6 +31,7 @@ public sealed class UniverseGameScheduler(
         {
             var timeZone = UniverseGameTimeZoneResolver.Resolve(universe.ScheduleTimeZoneId);
             var todayLocalDate = ConvertUtcToLocalDate(nowUtc.UtcDateTime, timeZone);
+            await ExpireMissedStreaksAsync(universe.Id, todayLocalDate, cancellationToken);
             var latestGameUtc = await repository.GetMostRecentGameDateTimeUtcAsync(universe, cancellationToken);
             var latestLocalDate = latestGameUtc.HasValue
                 ? ConvertUtcToLocalDate(latestGameUtc.Value, timeZone)
@@ -95,6 +96,36 @@ public sealed class UniverseGameScheduler(
                     universe.Id,
                     todayLocalDate);
             }
+        }
+    }
+
+    private async Task ExpireMissedStreaksAsync(
+        string universeId,
+        DateOnly todayLocalDate,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            update public."UniverseStreaks"
+            set
+              current_streak = 0,
+              updated_at = timezone('utc', now())
+            where universe_id = @universeId
+              and current_streak > 0
+              and last_credit_date < @minimumActiveDate;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("minimumActiveDate", todayLocalDate.AddDays(-1));
+        var expiredCount = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        if (expiredCount > 0)
+        {
+            logger.LogInformation(
+                "Expired {ExpiredStreaks} missed streak(s) for universe {UniverseId}.",
+                expiredCount,
+                universeId);
         }
     }
 

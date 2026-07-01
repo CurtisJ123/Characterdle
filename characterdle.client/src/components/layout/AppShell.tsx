@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { useAuth } from '../../hooks/useAuth';
+import { useProfile } from '../../hooks/useProfile';
+import { useUniverse } from '../../hooks/useUniverse';
 import { AuthPage } from '../../pages/AuthPage';
 import { CharacterGamePage } from '../../pages/CharacterGamePage';
 import { LauncherPage } from '../../pages/LauncherPage';
@@ -8,7 +11,13 @@ import { LeaderboardPage } from '../../pages/LeaderboardPage';
 import { PreviousGamesPage } from '../../pages/PreviousGamesPage';
 import { ProfilePage } from '../../pages/ProfilePage';
 import type { GameMode } from '../../types/game';
+import type { UniverseStreak } from '../../types/leaderboard';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
+
+interface LiveStreakState {
+  scope: string;
+  streak: UniverseStreak;
+}
 
 interface AppShellProps {
   authMode: AuthMode;
@@ -31,7 +40,21 @@ export function AppShell({
   onOpenGame,
   onOpenHistory,
 }: AppShellProps) {
-  const { authError, isAuthenticated, isLoading, signOut, updateAccount, user } = useAuth();
+  const { authError, isAuthenticated, isLoading, session, signOut, updateAccount, user } = useAuth();
+  const { selectedUniverse } = useUniverse();
+  const { data: profile } = useProfile(session?.access_token ?? null, selectedUniverse.id);
+  const [liveStreak, setLiveStreak] = useState<LiveStreakState | null>(null);
+  const streakScope = `${user?.id ?? 'guest'}:${selectedUniverse.id}`;
+  const currentStreak = liveStreak?.scope === streakScope
+    ? liveStreak.streak.currentStreak
+    : profile?.currentStreak ?? 0;
+
+  function handleStreakUpdated(streak: UniverseStreak) {
+    setLiveStreak({
+      scope: streakScope,
+      streak,
+    });
+  }
 
   async function handleSignOut() {
     try {
@@ -57,6 +80,7 @@ export function AppShell({
         onNavigate={onNavigate}
         onSaveDisplayName={handleSaveDisplayName}
         onSignOut={handleSignOut}
+        currentStreak={currentStreak}
         userDisplayName={user?.displayName}
       />
       {currentPage === 'auth' && (
@@ -77,9 +101,12 @@ export function AppShell({
       )}
       {currentPage === 'game' && (
         <CharacterGamePage
+          key={user?.id ?? 'guest'}
           onNavigate={onNavigate}
           onOpenGame={onOpenGame}
           onOpenHistory={onOpenHistory}
+          currentStreak={currentStreak}
+          onStreakUpdated={handleStreakUpdated}
           selectedGameId={currentGameId}
           selectedGameMode={currentGameMode}
         />

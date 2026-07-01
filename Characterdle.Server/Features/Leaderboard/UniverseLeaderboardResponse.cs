@@ -7,4 +7,6 @@ public sealed record UniverseLeaderboardResponse(
     LeaderboardModeOverviewResponse CharacterOverview,
     LeaderboardModeOverviewResponse QuoteOverview,
     LeaderboardEntryResponse? CurrentUser,
-    IReadOnlyList<LeaderboardEntryResponse> Rows);
+    IReadOnlyList<LeaderboardEntryResponse> Rows,
+    StreakLeaderboardEntryResponse? CurrentUserStreak,
+    IReadOnlyList<StreakLeaderboardEntryResponse> StreakRows);

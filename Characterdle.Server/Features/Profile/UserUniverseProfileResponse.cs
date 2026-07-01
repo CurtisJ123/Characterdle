@@ -14,6 +14,8 @@ public sealed record UserUniverseProfileResponse(
     double TotalCompletionRate,
     double? AverageGuesses,
     int? OverallRank,
+    int CurrentStreak,
+    int LongestStreak,
     ProfileModeStatsResponse Character,
     ProfileModeStatsResponse Quote,
     IReadOnlyList<ProfileRecentResultResponse> RecentResults);

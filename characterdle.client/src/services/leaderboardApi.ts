@@ -1,6 +1,7 @@
 import type {
   SubmitUniverseGameResultPayload,
   UniverseLeaderboard,
+  UniverseStreak,
 } from '../types/leaderboard';
 import { buildApiUrl } from '../lib/runtimeConfig';
 
@@ -44,7 +45,7 @@ export function getLeaderboard(universeId: string, currentUserId: string | null)
 export async function submitUniverseGameResult(
   accessToken: string,
   payload: SubmitUniverseGameResultPayload,
-): Promise<void> {
+): Promise<UniverseStreak> {
   const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(payload.universeId)}/leaderboard/results`), {
     method: 'POST',
     headers: {
@@ -68,6 +69,7 @@ export async function submitUniverseGameResult(
   }
 
   clearLeaderboardCache(payload.universeId);
+  return await response.json() as UniverseStreak;
 }
 
 export function retainGuessesForPersistence(guessedCharacterIds: readonly number[]): number[] {

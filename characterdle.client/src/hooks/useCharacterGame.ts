@@ -101,12 +101,12 @@ function sortHintDefinitions(definitions: readonly UniverseAttributeDefinition[]
   });
 }
 
-function getSessionStorageKey(universeId: string, gameId: number): string {
-  return getCharacterGameStorageKey(universeId, gameId);
+function getSessionStorageKey(ownerKey: string, universeId: string, gameId: number): string {
+  return getCharacterGameStorageKey(ownerKey, universeId, gameId);
 }
 
-function getLegacySessionStorageKey(universeId: string, gameId: number): string {
-  return getLegacyCharacterGameSessionStorageKey(universeId, gameId);
+function getLegacySessionStorageKey(ownerKey: string, universeId: string, gameId: number): string {
+  return getLegacyCharacterGameSessionStorageKey(ownerKey, universeId, gameId);
 }
 
 function createEmptyCompletedGameStats(): CompletedGameStats {
@@ -153,7 +153,7 @@ function hasStoredActivity(state: StoredCharacterGameState): boolean {
     || state.revealedHintKeys.length > 0;
 }
 
-function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
+function readStoredState(game: CurrentUniverseGame, ownerKey: string): StoredCharacterGameState {
   const defaultState: StoredCharacterGameState = {
     completionRecorded: false,
     firstLetterRevealed: false,
@@ -211,7 +211,7 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
   }
 
   const localStorageValue = parseStoredState(
-    window.localStorage.getItem(getSessionStorageKey(game.universeId, game.id)),
+    window.localStorage.getItem(getSessionStorageKey(ownerKey, game.universeId, game.id)),
   );
 
   if (localStorageValue) {
@@ -219,13 +219,13 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
   }
 
   const legacySessionValue = parseStoredState(
-    window.sessionStorage.getItem(getLegacySessionStorageKey(game.universeId, game.id)),
+    window.sessionStorage.getItem(getLegacySessionStorageKey(ownerKey, game.universeId, game.id)),
   );
 
   if (legacySessionValue) {
     try {
       window.localStorage.setItem(
-        getSessionStorageKey(game.universeId, game.id),
+        getSessionStorageKey(ownerKey, game.universeId, game.id),
         JSON.stringify(legacySessionValue),
       );
     } catch {
@@ -241,8 +241,9 @@ function readStoredState(game: CurrentUniverseGame): StoredCharacterGameState {
 function resolveStoredState(
   game: CurrentUniverseGame,
   persistedResult: PersistedGameResult | null,
+  ownerKey: string,
 ): StoredCharacterGameState {
-  const localState = readStoredState(game);
+  const localState = readStoredState(game, ownerKey);
 
   if (!persistedResult || persistedResult.mode !== 'character') {
     return localState;
@@ -296,6 +297,7 @@ function resolveStoredState(
 export function useCharacterGame(
   game: CurrentUniverseGame | null,
   persistedResult: PersistedGameResult | null = null,
+  ownerKey = 'guest',
 ): GameRoundState<CharacterGameRow> {
   const [totalGuessCount, setTotalGuessCount] = useState(0);
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
@@ -323,7 +325,7 @@ export function useCharacterGame(
       return;
     }
 
-    const storedState = resolveStoredState(game, persistedResult);
+    const storedState = resolveStoredState(game, persistedResult, ownerKey);
     const storedActivity = hasStoredActivity(storedState);
     setTotalGuessCount(storedState.guessCount);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
@@ -335,7 +337,7 @@ export function useCharacterGame(
     setRevealedHintKeys(storedState.revealedHintKeys);
     setCompletedGameStats(cloneCompletedGameStats(game.characterStats));
     setMessage(null);
-  }, [game, persistedResult]);
+  }, [game, ownerKey, persistedResult]);
 
   useEffect(() => {
     if (!game || typeof window === 'undefined') {
@@ -351,7 +353,9 @@ export function useCharacterGame(
       revealedHintKeys,
       resolvedAt: completionRecorded || gaveUp
         ? (() => {
-          const existingRawValue = window.localStorage.getItem(getSessionStorageKey(game.universeId, game.id));
+          const existingRawValue = window.localStorage.getItem(
+            getSessionStorageKey(ownerKey, game.universeId, game.id),
+          );
 
           if (existingRawValue) {
             try {
@@ -372,10 +376,19 @@ export function useCharacterGame(
     };
 
     window.localStorage.setItem(
-      getSessionStorageKey(game.universeId, game.id),
+      getSessionStorageKey(ownerKey, game.universeId, game.id),
       JSON.stringify(storedState),
     );
-  }, [completionRecorded, firstLetterRevealed, game, gaveUp, guessedCharacterIds, revealedHintKeys, totalGuessCount]);
+  }, [
+    completionRecorded,
+    firstLetterRevealed,
+    game,
+    gaveUp,
+    guessedCharacterIds,
+    ownerKey,
+    revealedHintKeys,
+    totalGuessCount,
+  ]);
 
   const guessedCharacters = game
     ? guessedCharacterIds
@@ -536,8 +549,8 @@ export function useCharacterGame(
       return;
     }
 
-    window.localStorage.removeItem(getSessionStorageKey(game.universeId, game.id));
-    window.sessionStorage.removeItem(getLegacySessionStorageKey(game.universeId, game.id));
+    window.localStorage.removeItem(getSessionStorageKey(ownerKey, game.universeId, game.id));
+    window.sessionStorage.removeItem(getLegacySessionStorageKey(ownerKey, game.universeId, game.id));
   }
 
   return {

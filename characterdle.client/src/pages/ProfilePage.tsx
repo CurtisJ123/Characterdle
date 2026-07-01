@@ -1,6 +1,7 @@
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { useUniverse } from '../hooks/useUniverse';
+import { StreakEmblem } from '../components/ui/StreakEmblem';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 
 interface ProfilePageProps {
@@ -36,6 +37,10 @@ function formatMode(mode: string) {
 
 function formatStatus(status: string) {
   return status === 'won' ? 'Won' : 'Lost';
+}
+
+function formatDays(value: number) {
+  return `${value} ${value === 1 ? 'day' : 'days'}`;
 }
 
 export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
@@ -90,6 +95,23 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
               <span className="pill">Overall rank {formatRank(data?.overallRank ?? null)}</span>
             </div>
           </div>
+        </div>
+
+        <div className="profile-streak-grid" aria-label="Streak statistics">
+          <article className="profile-streak-card is-current">
+            <StreakEmblem showCount={false} streak={data?.currentStreak ?? 0} size="regular" />
+            <div className="profile-streak-copy">
+              <span>Current Streak</span>
+              <strong>{formatDays(data?.currentStreak ?? 0)}</strong>
+            </div>
+          </article>
+          <article className="profile-streak-card">
+            <span className="profile-streak-icon is-trophy" aria-hidden="true" />
+            <div className="profile-streak-copy">
+              <span>Longest Streak</span>
+              <strong>{formatDays(data?.longestStreak ?? 0)}</strong>
+            </div>
+          </article>
         </div>
 
         <div className="profile-stat-grid">

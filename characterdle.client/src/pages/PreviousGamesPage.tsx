@@ -5,6 +5,7 @@ import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverse } from '../hooks/useUniverse';
 import {
   getCharacterGameOutcome,
+  getGameProgressOwnerKey,
   getQuoteGameOutcome,
   getRemoteGameOutcome,
 } from '../lib/characterGameProgress';
@@ -25,15 +26,16 @@ export function PreviousGamesPage({
   selectedGameMode,
 }: PreviousGamesPageProps) {
   const { selectedUniverse } = useUniverse();
-  const { session } = useAuth();
+  const { session, user } = useAuth();
+  const progressOwnerKey = getGameProgressOwnerKey(user?.id);
   const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id);
   const { data: gameResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
   const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
   const gameOutcomes = new Map(
     (data?.games ?? []).map((game) => {
       const localOutcome = selectedGameMode === 'quote'
-        ? getQuoteGameOutcome(selectedUniverse.id, game.id)
-        : getCharacterGameOutcome(selectedUniverse.id, game.id);
+        ? getQuoteGameOutcome(progressOwnerKey, selectedUniverse.id, game.id)
+        : getCharacterGameOutcome(progressOwnerKey, selectedUniverse.id, game.id);
       const remoteResult = gameResults.find((result) => result.mode === selectedGameMode && result.gameId === game.id);
       const remoteOutcome = remoteResult
         ? getRemoteGameOutcome(remoteResult.status, remoteResult.completedAt)

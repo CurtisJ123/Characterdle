@@ -16,7 +16,7 @@ import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverseGame } from '../hooks/useUniverseGame';
 import { useUniverse } from '../hooks/useUniverse';
 import { getAnonymousParticipantKey } from '../lib/anonymousParticipant';
-import { getRemoteGameOutcome } from '../lib/characterGameProgress';
+import { getGameProgressOwnerKey, getRemoteGameOutcome } from '../lib/characterGameProgress';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
@@ -24,21 +24,26 @@ import { compareAttributeValue } from '../lib/universeAttributes';
 import { trackUniverseGamePlay } from '../services/gamePlayTrackingApi';
 import { submitUniverseGameResult } from '../services/leaderboardApi';
 import type { GameMode } from '../types/game';
+import type { UniverseStreak } from '../types/leaderboard';
 import type { NavigateToPage } from '../types/routes';
 import type { CharacterGameRow, CurrentUniverseGame, QuoteGameRow } from '../types/universeGame';
 
 interface CharacterGamePageProps {
+  currentStreak: number;
   onNavigate: NavigateToPage;
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
+  onStreakUpdated: (streak: UniverseStreak) => void;
   selectedGameId: number | null;
   selectedGameMode: GameMode;
 }
 
 export function CharacterGamePage({
+  currentStreak,
   onNavigate,
   onOpenGame,
   onOpenHistory,
+  onStreakUpdated,
   selectedGameId,
   selectedGameMode,
 }: CharacterGamePageProps) {
@@ -53,6 +58,7 @@ export function CharacterGamePage({
   const syncedPlayTrackingKeysRef = useRef(new Set<string>());
   const wasCompleteRef = useRef(false);
   const { isAuthenticated, isLoading: isAuthLoading, session, user } = useAuth();
+  const progressOwnerKey = getGameProgressOwnerKey(user?.id);
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = useUniverseGame(selectedUniverse.id, selectedGameId);
   const { data: persistedResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
@@ -69,8 +75,8 @@ export function CharacterGamePage({
       : null,
     [persistedResults, quoteGameData],
   );
-  const characterGame = useCharacterGame(data, characterResult);
-  const quoteGame = useQuoteGame(quoteGameData, quoteResult);
+  const characterGame = useCharacterGame(data, characterResult, progressOwnerKey);
+  const quoteGame = useQuoteGame(quoteGameData, quoteResult, progressOwnerKey);
   const isQuoteMode = selectedGameMode === 'quote';
   const isGameLoading = isLoading && !data && !error;
 
@@ -319,7 +325,7 @@ export function CharacterGamePage({
 
     async function syncResult() {
       try {
-        await submitUniverseGameResult(accessToken, {
+        const streak = await submitUniverseGameResult(accessToken, {
           gameId: currentGame.id,
           guessCount: characterGame.guessCount,
           guessedCharacterIds: characterGame.guessedCharacterIds,
@@ -329,6 +335,7 @@ export function CharacterGamePage({
           status: finalizedStatus,
           universeId: currentGame.universeId,
         });
+        onStreakUpdated(streak);
         syncedSubmissionKeysRef.current.add(submissionKey);
       } catch (submissionError) {
         console.error(submissionError);
@@ -345,6 +352,7 @@ export function CharacterGamePage({
     characterGame.revealedHints,
     characterGame.status,
     data,
+    onStreakUpdated,
     session?.access_token,
     user,
   ]);
@@ -449,7 +457,7 @@ export function CharacterGamePage({
 
     async function syncResult() {
       try {
-        await submitUniverseGameResult(accessToken, {
+        const streak = await submitUniverseGameResult(accessToken, {
           gameId: currentQuoteGame.gameId,
           guessCount: quoteGame.guessCount,
           guessedCharacterIds: quoteGame.guessedCharacterIds,
@@ -459,6 +467,7 @@ export function CharacterGamePage({
           status: finalizedStatus,
           universeId: currentQuoteGame.universeId,
         });
+        onStreakUpdated(streak);
         syncedSubmissionKeysRef.current.add(submissionKey);
       } catch (submissionError) {
         console.error(submissionError);
@@ -475,6 +484,7 @@ export function CharacterGamePage({
     quoteGame.revealedHints,
     quoteGame.status,
     quoteGameData,
+    onStreakUpdated,
     session?.access_token,
     user,
   ]);
@@ -708,6 +718,7 @@ export function CharacterGamePage({
               answerName={quoteGameData.answerCharacter.displayName}
               answerPortraitUrl={quoteGameData.answerCharacter.portraitUrl ?? null}
               completedGameStats={quoteGame.completedGameStats}
+              currentStreak={currentStreak}
               episodeLabel={formatQuoteEpisodeLabel(quoteGameData.prompt)}
               gameId={quoteGameData.gameId}
               guessCount={displayedQuoteGuessCount}
@@ -760,6 +771,7 @@ export function CharacterGamePage({
               answerPortraitUrl={data?.answerCharacter.portraitUrl ?? null}
               attributeDefinitions={data?.attributeDefinitions ?? []}
               completedGameStats={characterGame.completedGameStats}
+              currentStreak={currentStreak}
               gameId={data?.id ?? 0}
               gridStyle={tableGridStyle}
               guessCount={displayedCharacterGuessCount}

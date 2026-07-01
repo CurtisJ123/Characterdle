@@ -16,7 +16,7 @@ public static class LeaderboardEndpoints
 
         leaderboard.MapPost("/results", SubmitResultAsync)
             .WithName("SubmitUniverseLeaderboardResult")
-            .Produces(StatusCodes.Status204NoContent)
+            .Produces<UniverseStreakResponse>()
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound)
@@ -117,9 +117,9 @@ public static class LeaderboardEndpoints
             }
 
             await repository.EnsurePlayerProfileAsync(user, cancellationToken);
-            await repository.UpsertUniverseGameResultAsync(
+            var streak = await repository.UpsertUniverseGameResultAsync(
                 user.UserId,
-                universe.Id,
+                universe,
                 request.GameId,
                 request.GuessCount,
                 request.HintCount,
@@ -129,7 +129,7 @@ public static class LeaderboardEndpoints
                 request.RevealedHintKeys,
                 cancellationToken);
 
-            return Results.NoContent();
+            return Results.Ok(streak);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

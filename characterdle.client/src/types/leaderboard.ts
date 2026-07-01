@@ -42,6 +42,24 @@ export interface UniverseLeaderboard {
   quoteOverview: LeaderboardModeOverview;
   currentUser: LeaderboardEntry | null;
   rows: LeaderboardEntry[];
+  currentUserStreak: StreakLeaderboardEntry | null;
+  streakRows: StreakLeaderboardEntry[];
+}
+
+export interface StreakLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  currentStreak: number;
+  longestStreak: number;
+  isCurrentUser: boolean;
+}
+
+export interface UniverseStreak {
+  currentStreak: number;
+  longestStreak: number;
+  lastCreditDate: string | null;
 }
 
 export interface UniverseLeaderboardState {

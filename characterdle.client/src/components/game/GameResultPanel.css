@@ -22,7 +22,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: center;
 }
 
 .result-answer-copy {

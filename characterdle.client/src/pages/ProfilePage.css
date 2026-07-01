@@ -88,6 +88,71 @@
   gap: 14px;
 }
 
+.profile-streak-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-streak-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: var(--radius-soft);
+  padding: 18px 20px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface-container-lowest));
+}
+
+.profile-streak-card.is-current {
+  background:
+    radial-gradient(circle at 18% 24%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 34%),
+    color-mix(in srgb, var(--primary) 7%, var(--surface-container-lowest));
+}
+
+.profile-streak-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  color: var(--primary);
+  background: currentColor;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.profile-streak-icon.is-fire {
+  -webkit-mask-image: url('../assets/fire-heroicons.svg');
+  mask-image: url('../assets/fire-heroicons.svg');
+}
+
+.profile-streak-icon.is-trophy {
+  -webkit-mask-image: url('../assets/trophy-heroicons.svg');
+  mask-image: url('../assets/trophy-heroicons.svg');
+}
+
+.profile-streak-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.profile-streak-copy span {
+  color: var(--outline);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-streak-copy strong {
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1.4rem;
+}
+
 .profile-stat-card {
   display: grid;
   gap: 10px;
@@ -310,6 +375,7 @@
 
 @media (max-width: 620px) {
   .profile-stat-grid,
+  .profile-streak-grid,
   .profile-mode-grid,
   .profile-mode-stats {
     grid-template-columns: 1fr;

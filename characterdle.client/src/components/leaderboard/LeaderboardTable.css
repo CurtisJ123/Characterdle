@@ -19,6 +19,14 @@
   border-top: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent);
 }
 
+.table-row.streak-table-row {
+  grid-template-columns:
+    84px
+    minmax(220px, 1.55fr)
+    minmax(150px, 0.8fr)
+    minmax(150px, 0.8fr);
+}
+
 .table-row.is-current-user {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
