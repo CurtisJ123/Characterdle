@@ -1,3 +1,11 @@
+import streakFlame01 from '../../assets/streak-flames/streak-flame-01.svg';
+import streakFlame02 from '../../assets/streak-flames/streak-flame-02.svg';
+import streakFlame07 from '../../assets/streak-flames/streak-flame-07.svg';
+import streakFlame14 from '../../assets/streak-flames/streak-flame-14.svg';
+import streakFlame30 from '../../assets/streak-flames/streak-flame-30.svg';
+import streakFlame100 from '../../assets/streak-flames/streak-flame-100.svg';
+import streakFlame365 from '../../assets/streak-flames/streak-flame-365.svg';
+
 interface StreakEmblemProps {
   className?: string;
   showCount?: boolean;
@@ -5,26 +13,25 @@ interface StreakEmblemProps {
   streak: number;
 }
 
-type StreakIntensityTier = 'ember' | 'kindled' | 'rising' | 'blazing' | 'legendary';
+interface StreakFlameVariant {
+  assetUrl: string;
+  key: 'starter' | 'building' | 'weekly' | 'forged' | 'masterwork' | 'centurion' | 'mythic';
+  threshold: number;
+}
 
-function getStreakIntensityTier(streak: number): StreakIntensityTier {
-  if (streak >= 30) {
-    return 'legendary';
-  }
+const STREAK_FLAME_VARIANTS: readonly StreakFlameVariant[] = [
+  { assetUrl: streakFlame365, key: 'mythic', threshold: 365 },
+  { assetUrl: streakFlame100, key: 'centurion', threshold: 100 },
+  { assetUrl: streakFlame30, key: 'masterwork', threshold: 30 },
+  { assetUrl: streakFlame14, key: 'forged', threshold: 14 },
+  { assetUrl: streakFlame07, key: 'weekly', threshold: 7 },
+  { assetUrl: streakFlame02, key: 'building', threshold: 2 },
+  { assetUrl: streakFlame01, key: 'starter', threshold: 1 },
+];
 
-  if (streak >= 14) {
-    return 'blazing';
-  }
-
-  if (streak >= 7) {
-    return 'rising';
-  }
-
-  if (streak >= 3) {
-    return 'kindled';
-  }
-
-  return 'ember';
+function getStreakFlameVariant(streak: number): StreakFlameVariant {
+  return STREAK_FLAME_VARIANTS.find((variant) => streak >= variant.threshold)
+    ?? STREAK_FLAME_VARIANTS[STREAK_FLAME_VARIANTS.length - 1];
 }
 
 export function StreakEmblem({
@@ -34,6 +41,7 @@ export function StreakEmblem({
   streak,
 }: StreakEmblemProps) {
   const normalizedStreak = Math.max(0, Math.trunc(streak));
+  const variant = getStreakFlameVariant(normalizedStreak);
   const classes = className
     ? `streak-emblem streak-emblem--${size} ${className}`
     : `streak-emblem streak-emblem--${size}`;
@@ -41,17 +49,14 @@ export function StreakEmblem({
   return (
     <span
       className={classes}
-      data-intensity={getStreakIntensityTier(normalizedStreak)}
+      data-empty={normalizedStreak === 0 ? 'true' : 'false'}
+      data-variant={variant.key}
       aria-hidden="true"
     >
       <span className="streak-emblem__mark">
-        <span className="streak-emblem__glow" />
-        <span className="streak-emblem__flame">
-          <span className="streak-emblem__flame-outer" />
-          <span className="streak-emblem__flame-inner" />
-        </span>
+        <img className="streak-emblem__flame-image" src={variant.assetUrl} alt="" />
+        {showCount && <span className="streak-emblem__count">{normalizedStreak}</span>}
       </span>
-      {showCount && <span className="streak-emblem__count">{normalizedStreak}</span>}
     </span>
   );
 }

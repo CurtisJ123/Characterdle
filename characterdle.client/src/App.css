@@ -4,6 +4,7 @@
 @import './components/layout/BrandButton.css';
 @import './components/layout/SiteHeader.css';
 @import './components/layout/AccountSettingsOverlay.css';
+@import './components/layout/AccountAvatarPicker.css';
 @import './components/layout/SiteHelpOverlay.css';
 @import './components/layout/SiteFooter.css';
 @import './pages/LandingPage.css';
@@ -37,4 +38,5 @@
 @import './components/ui/MetricRow.css';
 @import './components/ui/GameShareButton.css';
 @import './components/ui/StreakEmblem.css';
+@import './components/ui/UserAvatar.css';
 @import './components/ui/LoadingOverlay.css';

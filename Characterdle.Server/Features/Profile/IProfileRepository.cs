@@ -14,9 +14,15 @@ public interface IProfileRepository
         Guid userId,
         CancellationToken cancellationToken);
 
-    Task UpdateDisplayNameAsync(
+    Task<bool> IsAvatarUrlAvailableAsync(
+        UniverseDefinition universe,
+        string avatarUrl,
+        CancellationToken cancellationToken);
+
+    Task UpdateProfileAsync(
         Guid userId,
         string email,
         string displayName,
+        string? avatarUrl,
         CancellationToken cancellationToken);
 }

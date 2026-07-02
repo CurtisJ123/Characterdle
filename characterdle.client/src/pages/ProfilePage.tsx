@@ -1,12 +1,15 @@
 import { useAuth } from '../hooks/useAuth';
-import { useProfile } from '../hooks/useProfile';
 import { useUniverse } from '../hooks/useUniverse';
 import { StreakEmblem } from '../components/ui/StreakEmblem';
+import type { UniverseProfile } from '../types/profile';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 
 interface ProfilePageProps {
+  isProfileLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onNavigate: NavigateToPage;
+  profile: UniverseProfile | null;
+  profileError: Error | null;
 }
 
 function getInitials(displayName: string | undefined) {
@@ -43,10 +46,18 @@ function formatDays(value: number) {
   return `${value} ${value === 1 ? 'day' : 'days'}`;
 }
 
-export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
+export function ProfilePage({
+  isProfileLoading,
+  onAuthNavigate,
+  onNavigate,
+  profile,
+  profileError,
+}: ProfilePageProps) {
   const { isAuthenticated, session, user } = useAuth();
   const { selectedUniverse } = useUniverse();
-  const { data, error, isLoading } = useProfile(session?.access_token ?? null, selectedUniverse.id);
+  const data = profile;
+  const error = profileError;
+  const isLoading = isProfileLoading && Boolean(session?.access_token);
   const hasProfileData = Boolean(data);
   const isInitialLoad = isLoading && !hasProfileData;
   const memberSinceValue = data?.memberSince ?? user?.createdAt;
@@ -55,6 +66,7 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
       dateStyle: 'medium',
     }).format(new Date(memberSinceValue))
     : 'Recently joined';
+  const resolvedAvatarUrl = user?.avatarUrl ?? data?.avatarUrl ?? null;
 
   if (!isAuthenticated) {
     return (
@@ -79,8 +91,8 @@ export function ProfilePage({ onAuthNavigate, onNavigate }: ProfilePageProps) {
     <main className="page profile-page">
       <section className={`profile-hero glass-card${isInitialLoad ? ' is-loading' : ''}`}>
         <div className="profile-hero-main">
-          {data?.avatarUrl ? (
-            <img className="profile-hero-avatar" src={data.avatarUrl} alt="" />
+          {resolvedAvatarUrl ? (
+            <img className="profile-hero-avatar" src={resolvedAvatarUrl} alt="" />
           ) : (
             <span className="profile-hero-avatar is-fallback" aria-hidden="true">
               {getInitials(user?.displayName ?? data?.displayName)}

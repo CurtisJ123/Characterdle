@@ -48,12 +48,62 @@ function buildRow(character: UniverseCharacter, answer: UniverseCharacter, game:
   return {
     name: character.displayName || 'ERROR',
     portraitUrl: character.portraitUrl ?? null,
-    cells: game.attributeDefinitions.map((definition) => compareAttributeValue(
-      definition,
-      character.attributes[definition.key],
-      answer.attributes[definition.key],
-    )),
+    cells: game.attributeDefinitions.map((definition, index) => {
+      const attribute = compareAttributeValue(
+        definition,
+        character.attributes[definition.key],
+        answer.attributes[definition.key],
+      );
+
+      return {
+        ...attribute,
+        revealOrder: index,
+      };
+    }),
   };
+}
+
+function buildRows(
+  game: CurrentUniverseGame,
+  guessedCharacters: UniverseCharacter[],
+  lastSubmittedCharacterId: number | null,
+): CharacterGameRow[] {
+  const rowsFromOldestToNewest: CharacterGameRow[] = [];
+  const discoveredCorrectKeys = new Set<string>();
+
+  for (const character of [...guessedCharacters].reverse()) {
+    const baseRow = buildRow(character, game.answerCharacter, game);
+    const isNewestSubmittedRow = character.id === lastSubmittedCharacterId;
+
+    rowsFromOldestToNewest.push({
+      ...baseRow,
+      cells: baseRow.cells.map((cell, index) => {
+        const definition = game.attributeDefinitions[index];
+
+        if (!definition || cell.tone !== 'correct') {
+          return cell;
+        }
+
+        const isNewlyDiscovered = !discoveredCorrectKeys.has(definition.key);
+        discoveredCorrectKeys.add(definition.key);
+
+        if (!isNewestSubmittedRow || !isNewlyDiscovered) {
+          return {
+            ...cell,
+            isRevealing: isNewestSubmittedRow,
+          };
+        }
+
+        return {
+          ...cell,
+          isNewlyDiscovered: true,
+          isRevealing: true,
+        };
+      }),
+    });
+  }
+
+  return rowsFromOldestToNewest.reverse();
 }
 
 function getCorrectAttributeKeys(
@@ -299,6 +349,7 @@ export function useCharacterGame(
   persistedResult: PersistedGameResult | null = null,
   ownerKey = 'guest',
 ): GameRoundState<CharacterGameRow> {
+  const [lastSubmittedCharacterId, setLastSubmittedCharacterId] = useState<number | null>(null);
   const [totalGuessCount, setTotalGuessCount] = useState(0);
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -312,6 +363,7 @@ export function useCharacterGame(
 
   useEffect(() => {
     if (!game) {
+      setLastSubmittedCharacterId(null);
       setGuessedCharacterIds([]);
       setMessage(null);
       setCompletionRecorded(false);
@@ -327,6 +379,7 @@ export function useCharacterGame(
 
     const storedState = resolveStoredState(game, persistedResult, ownerKey);
     const storedActivity = hasStoredActivity(storedState);
+    setLastSubmittedCharacterId(null);
     setTotalGuessCount(storedState.guessCount);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
     setCompletionRecorded(storedState.completionRecorded);
@@ -492,6 +545,7 @@ export function useCharacterGame(
     const nextGuessedCharacterIds = [match.character.id, ...guessedCharacterIds];
     const wasCorrect = match.character.id === game.answerCharacter.id;
 
+    setLastSubmittedCharacterId(match.character.id);
     setGuessedCharacterIds(nextGuessedCharacterIds);
     setTotalGuessCount((currentCount) => currentCount + 1);
     setMessage(
@@ -534,6 +588,7 @@ export function useCharacterGame(
   }
 
   function resetGame() {
+    setLastSubmittedCharacterId(null);
     setGuessedCharacterIds([]);
     setMessage(null);
     setCompletionRecorded(false);
@@ -564,7 +619,7 @@ export function useCharacterGame(
     message,
     revealedHints,
     resetGame,
-    rows: game ? guessedCharacters.map((character) => buildRow(character, game.answerCharacter, game)) : [],
+    rows: game ? buildRows(game, guessedCharacters, lastSubmittedCharacterId) : [],
     status,
     submitGuess,
   };

@@ -97,6 +97,7 @@ public static class ProfileEndpoints
         UpdateProfileRequest request,
         HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
+        UniverseCatalog universeCatalog,
         SupabaseAuthClient authClient,
         IProfileRepository profileRepository,
         ILoggerFactory loggerFactory,
@@ -109,6 +110,14 @@ public static class ProfileEndpoints
             if (validationErrors.Count > 0)
             {
                 return Results.ValidationProblem(validationErrors);
+            }
+
+            if (!universeCatalog.TryGet("got", out var avatarUniverse))
+            {
+                return Results.Problem(
+                    title: "Unable to update profile data.",
+                    detail: "The avatar character universe is not configured.",
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
             var accessToken = ReadBearerToken(httpRequest);
@@ -125,10 +134,31 @@ public static class ProfileEndpoints
                 return Results.Unauthorized();
             }
 
-            await profileRepository.UpdateDisplayNameAsync(
+            var normalizedAvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl)
+                ? null
+                : request.AvatarUrl.Trim();
+
+            if (normalizedAvatarUrl is not null)
+            {
+                var isAvailable = await profileRepository.IsAvatarUrlAvailableAsync(
+                    avatarUniverse,
+                    normalizedAvatarUrl,
+                    cancellationToken);
+
+                if (!isAvailable)
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["avatarUrl"] = ["Select one of the available Game of Thrones character portraits."],
+                    });
+                }
+            }
+
+            await profileRepository.UpdateProfileAsync(
                 user.UserId,
                 user.Email,
                 request.DisplayName.Trim(),
+                normalizedAvatarUrl,
                 cancellationToken);
 
             return Results.NoContent();
@@ -223,6 +253,11 @@ public static class ProfileEndpoints
         if (string.IsNullOrWhiteSpace(request.DisplayName))
         {
             errors["displayName"] = ["Display name is required."];
+        }
+
+        if (request.AvatarUrl is not null && request.AvatarUrl.Trim().Length > 512)
+        {
+            errors["avatarUrl"] = ["Avatar url is too long."];
         }
 
         return errors;

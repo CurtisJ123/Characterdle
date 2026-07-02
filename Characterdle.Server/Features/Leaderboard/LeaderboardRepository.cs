@@ -343,9 +343,9 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
     {
         var normalizedLimit = Math.Clamp(limit, 1, 100);
         var leaderboardOverview = await LoadOverviewAsync(universe.Id, cancellationToken);
-        var rows = await LoadRowsAsync(universe.Id, currentUserId, normalizedLimit, cancellationToken);
+        var rows = await LoadRowsAsync(universe, currentUserId, normalizedLimit, cancellationToken);
         var currentUser = currentUserId.HasValue
-            ? await LoadCurrentUserAsync(universe.Id, currentUserId.Value, cancellationToken)
+            ? await LoadCurrentUserAsync(universe, currentUserId.Value, cancellationToken)
             : null;
         var streakRows = await LoadStreakRowsAsync(universe, currentUserId, normalizedLimit, cancellationToken);
         var currentUserStreak = currentUserId.HasValue
@@ -422,7 +422,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
     }
 
     private async Task<IReadOnlyList<LeaderboardEntryResponse>> LoadRowsAsync(
-        string universeId,
+        UniverseDefinition universe,
         Guid? currentUserId,
         int limit,
         CancellationToken cancellationToken)
@@ -452,6 +452,18 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 and results.hint_count = 0
               group by profiles.user_id, profiles.display_name, profiles.avatar_url
             ),
+            effective_streaks as (
+              select
+                streaks.user_id,
+                case
+                  when streaks.last_credit_date
+                    >= (now() at time zone @scheduleTimeZoneId)::date - 1
+                    then streaks.current_streak
+                  else 0
+                end as current_streak
+              from public."UniverseStreaks" as streaks
+              where streaks.universe_id = @universeId
+            ),
             ranked as (
               select
                 dense_rank() over (
@@ -476,6 +488,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 aggregated.average_guesses,
                 aggregated.character_average_guesses,
                 aggregated.quote_average_guesses,
+                coalesce(effective_streaks.current_streak, 0)::int as current_streak,
                 round(
                   case
                     when aggregated.total_plays = 0 then 0
@@ -484,6 +497,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                   1
                 ) as win_rate
               from aggregated
+              left join effective_streaks
+                on effective_streaks.user_id = aggregated.user_id
             )
             select
               ranked.rank,
@@ -499,6 +514,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               ranked.average_guesses,
               ranked.character_average_guesses,
               ranked.quote_average_guesses,
+              ranked.current_streak,
               ranked.win_rate
             from ranked
             order by ranked.rank, ranked.display_name
@@ -506,7 +522,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             """;
 
         await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("limit", limit);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -521,7 +538,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
     }
 
     private async Task<LeaderboardEntryResponse?> LoadCurrentUserAsync(
-        string universeId,
+        UniverseDefinition universe,
         Guid currentUserId,
         CancellationToken cancellationToken)
     {
@@ -550,6 +567,18 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 and results.hint_count = 0
               group by profiles.user_id, profiles.display_name, profiles.avatar_url
             ),
+            effective_streaks as (
+              select
+                streaks.user_id,
+                case
+                  when streaks.last_credit_date
+                    >= (now() at time zone @scheduleTimeZoneId)::date - 1
+                    then streaks.current_streak
+                  else 0
+                end as current_streak
+              from public."UniverseStreaks" as streaks
+              where streaks.universe_id = @universeId
+            ),
             ranked as (
               select
                 dense_rank() over (
@@ -574,6 +603,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 aggregated.average_guesses,
                 aggregated.character_average_guesses,
                 aggregated.quote_average_guesses,
+                coalesce(effective_streaks.current_streak, 0)::int as current_streak,
                 round(
                   case
                     when aggregated.total_plays = 0 then 0
@@ -582,6 +612,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                   1
                 ) as win_rate
               from aggregated
+              left join effective_streaks
+                on effective_streaks.user_id = aggregated.user_id
             )
             select
               ranked.rank,
@@ -597,13 +629,15 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               ranked.average_guesses,
               ranked.character_average_guesses,
               ranked.quote_average_guesses,
+              ranked.current_streak,
               ranked.win_rate
             from ranked
             where ranked.user_id = @currentUserId;
             """;
 
         await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("universeId", universeId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("currentUserId", currentUserId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -770,7 +804,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             GetNullableDouble(reader, 10),
             GetNullableDouble(reader, 11),
             GetNullableDouble(reader, 12),
-            GetRequiredDouble(reader, 13),
+            GetRequiredDouble(reader, 14),
+            reader.GetInt32(13),
             currentUserId.HasValue && currentUserId.Value == userId);
     }
 

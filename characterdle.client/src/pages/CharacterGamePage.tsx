@@ -38,6 +38,18 @@ interface CharacterGamePageProps {
   selectedGameMode: GameMode;
 }
 
+const CHARACTER_ATTRIBUTE_REVEAL_DELAY_MS = 95;
+const CHARACTER_ATTRIBUTE_NEW_CORRECT_DURATION_MS = 1040;
+const RESULT_SCROLL_FALLBACK_DELAY_MS = 120;
+const RESULT_SCROLL_ANIMATION_BUFFER_MS = 120;
+const GUEST_SIGNUP_POPUP_EXTRA_DELAY_MS = 1800;
+
+function getCharacterResultScrollDelay(attributeCount: number): number {
+  const lastRevealDelay = Math.max(attributeCount - 1, 0) * CHARACTER_ATTRIBUTE_REVEAL_DELAY_MS;
+
+  return lastRevealDelay + CHARACTER_ATTRIBUTE_NEW_CORRECT_DURATION_MS + RESULT_SCROLL_ANIMATION_BUFFER_MS;
+}
+
 export function CharacterGamePage({
   currentStreak,
   onNavigate,
@@ -49,6 +61,7 @@ export function CharacterGamePage({
 }: CharacterGamePageProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+  const [showDelayedGuestSignupPrompt, setShowDelayedGuestSignupPrompt] = useState(false);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const resultPanelRef = useRef<HTMLDivElement | null>(null);
@@ -177,9 +190,34 @@ export function CharacterGamePage({
   const isComplete = isQuoteMode
     ? displayedQuoteStatus !== 'playing'
     : displayedCharacterStatus !== 'playing';
+  const shouldWaitForCharacterRevealBeforeScroll = !isQuoteMode
+    && displayedCharacterStatus === 'won'
+    && displayedCharacterRows.some((row) => row.cells.some((cell) => cell.isRevealing));
+  const resultScrollDelay = shouldWaitForCharacterRevealBeforeScroll
+    ? getCharacterResultScrollDelay(data?.attributeDefinitions.length ?? 0)
+    : RESULT_SCROLL_FALLBACK_DELAY_MS;
   const shouldOfferQuoteFollowUp = displayedCharacterStatus === 'won' && !!quoteGameData && !hasPlayedQuoteGame;
   const shouldOfferCharacterFollowUp = displayedQuoteStatus === 'won' && !!data && !hasWonCharacterGame;
   const shouldShowGuestSignupPrompt = !isAuthLoading && !isAuthenticated;
+  const shouldShowGuestVictorySignup = shouldShowGuestSignupPrompt && (
+    isQuoteMode ? displayedQuoteStatus === 'won' : displayedCharacterStatus === 'won'
+  );
+  const guestSignupPromptDelay = resultScrollDelay + GUEST_SIGNUP_POPUP_EXTRA_DELAY_MS;
+
+  useEffect(() => {
+    if (!shouldShowGuestVictorySignup) {
+      setShowDelayedGuestSignupPrompt(false);
+      return;
+    }
+
+    const overlayTimer = window.setTimeout(() => {
+      setShowDelayedGuestSignupPrompt(true);
+    }, guestSignupPromptDelay);
+
+    return () => {
+      window.clearTimeout(overlayTimer);
+    };
+  }, [guestSignupPromptDelay, shouldShowGuestVictorySignup]);
 
   useEffect(() => {
     if (!isComplete) {
@@ -218,12 +256,12 @@ export function CharacterGamePage({
         top: document.documentElement.scrollHeight,
         behavior: 'smooth',
       });
-    }, 120);
+    }, resultScrollDelay);
 
     return () => {
       window.clearTimeout(scrollTimer);
     };
-  }, [isComplete]);
+  }, [isComplete, resultScrollDelay]);
 
   useEffect(() => {
     if (!data) {
@@ -730,7 +768,7 @@ export function CharacterGamePage({
               rows={displayedQuoteRows}
               secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={usesRemoteQuoteResult}
-              showGuestSignupPrompt={shouldShowGuestSignupPrompt && displayedQuoteStatus === 'won'}
+              showGuestSignupPrompt={showDelayedGuestSignupPrompt && displayedQuoteStatus === 'won'}
               status={displayedQuoteStatus}
               universeId={quoteGameData.universeId}
               universeName={quoteGameData.universeName}
@@ -783,7 +821,7 @@ export function CharacterGamePage({
               rows={displayedCharacterRows}
               secondaryActionLabel={characterSecondaryActionLabel}
               showHintCount={usesRemoteCharacterResult}
-              showGuestSignupPrompt={shouldShowGuestSignupPrompt && displayedCharacterStatus === 'won'}
+              showGuestSignupPrompt={showDelayedGuestSignupPrompt && displayedCharacterStatus === 'won'}
               status={displayedCharacterStatus}
               universeId={data?.universeId ?? selectedUniverse.id}
               universeName={data?.universeName ?? selectedUniverse.title}

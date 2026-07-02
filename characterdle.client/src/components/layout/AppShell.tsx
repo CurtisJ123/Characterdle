@@ -12,6 +12,7 @@ import { PreviousGamesPage } from '../../pages/PreviousGamesPage';
 import { ProfilePage } from '../../pages/ProfilePage';
 import type { GameMode } from '../../types/game';
 import type { UniverseStreak } from '../../types/leaderboard';
+import type { UniverseProfile } from '../../types/profile';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 
 interface LiveStreakState {
@@ -42,12 +43,25 @@ export function AppShell({
 }: AppShellProps) {
   const { authError, isAuthenticated, isLoading, session, signOut, updateAccount, user } = useAuth();
   const { selectedUniverse } = useUniverse();
-  const { data: profile } = useProfile(session?.access_token ?? null, selectedUniverse.id);
+  const {
+    data: profile,
+    error: profileError,
+    isLoading: isProfileLoading,
+    reload: reloadProfile,
+  } = useProfile(session?.access_token ?? null, selectedUniverse.id);
   const [liveStreak, setLiveStreak] = useState<LiveStreakState | null>(null);
   const streakScope = `${user?.id ?? 'guest'}:${selectedUniverse.id}`;
-  const currentStreak = liveStreak?.scope === streakScope
-    ? liveStreak.streak.currentStreak
-    : profile?.currentStreak ?? 0;
+  const liveStreakForScope = liveStreak?.scope === streakScope
+    ? liveStreak.streak
+    : null;
+  const resolvedProfile: UniverseProfile | null = profile
+    ? {
+      ...profile,
+      currentStreak: liveStreakForScope?.currentStreak ?? profile.currentStreak,
+      longestStreak: liveStreakForScope?.longestStreak ?? profile.longestStreak,
+    }
+    : null;
+  const currentStreak = liveStreakForScope?.currentStreak ?? resolvedProfile?.currentStreak ?? 0;
 
   function handleStreakUpdated(streak: UniverseStreak) {
     setLiveStreak({
@@ -65,8 +79,9 @@ export function AppShell({
     }
   }
 
-  async function handleSaveDisplayName(displayName: string) {
-    const result = await updateAccount({ displayName });
+  async function handleSaveSettings(values: { displayName: string; avatarUrl: string | null }) {
+    const result = await updateAccount(values);
+    await reloadProfile();
     return result.message;
   }
 
@@ -78,9 +93,10 @@ export function AppShell({
         isUserLoading={isLoading}
         onAuthNavigate={onAuthNavigate}
         onNavigate={onNavigate}
-        onSaveDisplayName={handleSaveDisplayName}
+        onSaveSettings={handleSaveSettings}
         onSignOut={handleSignOut}
         currentStreak={currentStreak}
+        userAvatarUrl={user?.avatarUrl}
         userDisplayName={user?.displayName}
       />
       {currentPage === 'auth' && (
@@ -120,7 +136,15 @@ export function AppShell({
         />
       )}
       {currentPage === 'leaderboard' && <LeaderboardPage />}
-      {currentPage === 'profile' && <ProfilePage onAuthNavigate={onAuthNavigate} onNavigate={onNavigate} />}
+      {currentPage === 'profile' && (
+        <ProfilePage
+          isProfileLoading={isProfileLoading}
+          onAuthNavigate={onAuthNavigate}
+          onNavigate={onNavigate}
+          profile={resolvedProfile}
+          profileError={profileError}
+        />
+      )}
       <SiteFooter />
     </div>
   );

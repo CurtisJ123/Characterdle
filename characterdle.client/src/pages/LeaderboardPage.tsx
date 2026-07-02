@@ -55,6 +55,8 @@ export function LeaderboardPage() {
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = useLeaderboard(selectedUniverse.id, user?.id ?? null);
   const rows = data?.rows ?? [];
+  const streakRows = data?.streakRows ?? [];
+  const streakMap = useMemo(() => new Map(streakRows.map((row) => [row.userId, row.currentStreak])), [streakRows]);
   const modeLabel = selectedMode === 'quote' ? 'Quote' : 'Character';
   const overview = useMemo<LeaderboardModeOverview>(() => {
     if (!data) {
@@ -106,6 +108,9 @@ export function LeaderboardPage() {
       .map((row, index) => ({
         averageGuesses: getModeAverageGuesses(row, selectedMode),
         avatarUrl: row.avatarUrl,
+        currentStreak: typeof row.currentStreak === 'number'
+          ? row.currentStreak
+          : (streakMap.get(row.userId) ?? 0),
         displayName: row.displayName,
         isCurrentUser: row.isCurrentUser,
         plays: getModePlays(row, selectedMode),
@@ -114,10 +119,9 @@ export function LeaderboardPage() {
         userId: row.userId,
         wins: getModeWins(row, selectedMode),
       }))
-  ), [rows, selectedMode]);
+  ), [rows, selectedMode, streakMap]);
   const topPlayer = rankedRows[0] ?? null;
   const currentUser = rankedRows.find((row) => row.isCurrentUser) ?? null;
-  const streakRows = data?.streakRows ?? [];
   const topStreakPlayer = streakRows[0] ?? null;
   const currentUserStreak = data?.currentUserStreak ?? null;
   const featuredDisplayName = selectedView === 'streak'

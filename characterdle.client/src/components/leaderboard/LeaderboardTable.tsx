@@ -1,5 +1,6 @@
 import type { GameMode } from '../../types/game';
 import type { ModeLeaderboardEntry } from '../../types/leaderboard';
+import { UserAvatar } from '../ui/UserAvatar';
 
 interface LeaderboardTableProps {
   mode: GameMode;
@@ -14,16 +15,6 @@ function formatAverageGuesses(value: number | null) {
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(1);
-}
-
-function getInitials(displayName: string) {
-  return displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 }
 
 export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
@@ -42,8 +33,8 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
         <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} key={row.userId}>
           <span className="rank-medal">{row.rank}</span>
           <div className="player-cell">
-            <span className="avatar">{getInitials(row.displayName)}</span>
-            <div>
+            <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} size="leaderboard" className="avatar" />
+            <div className="player-copy">
               <strong>{row.displayName}</strong>
               <small>{row.isCurrentUser ? 'You' : 'Ranked player'}</small>
             </div>

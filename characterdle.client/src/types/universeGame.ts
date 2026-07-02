@@ -22,6 +22,12 @@ export interface UniverseCharacter {
   portraitUrl?: string | null;
 }
 
+export interface UniverseCharacterOption {
+  id: number;
+  displayName: string;
+  portraitUrl: string;
+}
+
 export interface CurrentUniverseGame {
   id: number;
   dateTime: string;

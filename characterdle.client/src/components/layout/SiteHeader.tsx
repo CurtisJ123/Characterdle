@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
+import type { AccountSettingsValues } from '../../types/auth';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 import { StreakEmblem } from '../ui/StreakEmblem';
+import { UserAvatar } from '../ui/UserAvatar';
 import { AccountSettingsOverlay } from './AccountSettingsOverlay';
 import { BrandButton } from './BrandButton';
 
@@ -12,8 +14,9 @@ interface SiteHeaderProps {
   isUserLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onNavigate: NavigateToPage;
-  onSaveDisplayName: (displayName: string) => Promise<string>;
+  onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
   onSignOut: () => Promise<void> | void;
+  userAvatarUrl?: string | null;
   userDisplayName?: string;
 }
 
@@ -24,8 +27,9 @@ export function SiteHeader({
   isUserLoading,
   onAuthNavigate,
   onNavigate,
-  onSaveDisplayName,
+  onSaveSettings,
   onSignOut,
+  userAvatarUrl,
   userDisplayName,
 }: SiteHeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -33,7 +37,6 @@ export function SiteHeader({
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const activeNav = currentPage === 'game' ? 'launcher' : currentPage;
   const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
-  const profileInitials = getProfileInitials(profileLabel, isAuthenticated);
 
   useEffect(() => {
     if (!isProfileMenuOpen) {
@@ -114,7 +117,8 @@ export function SiteHeader({
                 title={`${currentStreak} day current streak`}
                 onClick={handleProfileNavigation}
               >
-                <StreakEmblem streak={currentStreak} size="compact" />
+                <StreakEmblem showCount={false} streak={currentStreak} size="compact" />
+                <span className="streak-badge-value">{currentStreak}</span>
                 <span className="streak-badge-copy">
                   <strong>Day streak</strong>
                 </span>
@@ -123,12 +127,12 @@ export function SiteHeader({
             <div className="profile-menu-wrap" ref={profileMenuRef}>
               <button
                 className="profile-button"
-                data-initials={profileInitials}
                 type="button"
                 aria-expanded={isAuthenticated ? isProfileMenuOpen : undefined}
                 aria-haspopup={isAuthenticated ? 'menu' : undefined}
                 onClick={handleProfileClick}
               >
+                <UserAvatar avatarUrl={userAvatarUrl} displayName={profileLabel} size="header" />
                 <span>{profileLabel}</span>
               </button>
               {isAuthenticated && isProfileMenuOpen && (
@@ -160,32 +164,12 @@ export function SiteHeader({
       </header>
       {isSettingsOpen && (
         <AccountSettingsOverlay
+          currentAvatarUrl={userAvatarUrl ?? null}
           currentDisplayName={userDisplayName ?? ''}
           onClose={() => setIsSettingsOpen(false)}
-          onSaveDisplayName={onSaveDisplayName}
+          onSaveSettings={onSaveSettings}
         />
       )}
     </>
   );
-}
-
-function getProfileInitials(label: string, isAuthenticated: boolean): string {
-  if (!isAuthenticated) {
-    return 'In';
-  }
-
-  const words = label
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (words.length === 0) {
-    return 'Me';
-  }
-
-  if (words.length === 1) {
-    return words[0].slice(0, 2);
-  }
-
-  return `${words[0][0] ?? ''}${words[1][0] ?? ''}`;
 }

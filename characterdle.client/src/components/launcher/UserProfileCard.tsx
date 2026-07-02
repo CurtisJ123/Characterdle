@@ -1,23 +1,10 @@
 import type { UserProfile } from '../../types/user';
+import { UserAvatar } from '../ui/UserAvatar';
 
 interface UserProfileCardProps {
   error: Error | null;
   isLoading: boolean;
   user: UserProfile | null;
-}
-
-function getInitials(displayName: string | undefined) {
-  if (!displayName) {
-    return '??';
-  }
-
-  return displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 }
 
 export function UserProfileCard({ error, isLoading, user }: UserProfileCardProps) {
@@ -28,7 +15,7 @@ export function UserProfileCard({ error, isLoading, user }: UserProfileCardProps
     <article className="glass-card user-profile-card">
       <p className="card-kicker">{user ? 'Account' : 'Guest'}</p>
       <div className="profile-card-main">
-        <span className="profile-avatar" aria-hidden="true">{getInitials(user?.displayName)}</span>
+        <UserAvatar avatarUrl={user?.avatarUrl} displayName={user?.displayName} size="card" className="profile-avatar" />
         <div>
           <h2>{displayName}</h2>
           {supportingText && <p>{supportingText}</p>}

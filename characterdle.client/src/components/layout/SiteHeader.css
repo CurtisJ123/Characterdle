@@ -67,10 +67,12 @@
 }
 
 .streak-badge {
+  min-width: 152px;
   min-height: 42px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  justify-content: center;
   border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
   border-radius: var(--radius-control);
   padding: 0 10px 0 8px;
@@ -87,6 +89,15 @@
   border-color: color-mix(in srgb, var(--primary) 48%, transparent);
   background: color-mix(in srgb, var(--primary) 12%, var(--surface-container-lowest));
   transform: translateY(-1px);
+}
+
+.streak-badge-value {
+  color: var(--on-surface);
+  font-size: 0.88rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .streak-badge-copy {
@@ -127,22 +138,6 @@
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.profile-button::before {
-  width: 24px;
-  height: 24px;
-  display: inline-grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: var(--radius-pill);
-  color: var(--on-primary-button);
-  background: var(--primary);
-  content: attr(data-initials);
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -240,7 +235,7 @@
   }
 
   .streak-badge {
-    min-width: 42px;
+    min-width: 92px;
     justify-content: center;
     padding-inline: 6px;
   }

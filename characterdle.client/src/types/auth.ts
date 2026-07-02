@@ -10,6 +10,7 @@ export interface AuthFormValues {
 }
 
 export interface AccountSettingsValues {
+  avatarUrl: string | null;
   displayName: string;
 }
 

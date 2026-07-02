@@ -1,4 +1,5 @@
 import type { LeaderboardEntry } from '../../types/leaderboard';
+import { UserAvatar } from '../ui/UserAvatar';
 
 const HOME_LEADERBOARD_LIMIT = 10;
 
@@ -7,16 +8,6 @@ interface MiniLeaderboardCardProps {
   isLoading: boolean;
   rows: LeaderboardEntry[];
   onViewAll: () => void;
-}
-
-function getInitials(displayName: string) {
-  return displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 }
 
 export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniLeaderboardCardProps) {
@@ -34,7 +25,7 @@ export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniL
       {!error && rows.slice(0, HOME_LEADERBOARD_LIMIT).map((row) => (
         <div className="mini-rank" key={row.userId}>
           <span className="rank-number">{row.rank}</span>
-          <span className="avatar">{getInitials(row.displayName)}</span>
+          <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} size="leaderboard" className="avatar" />
           <strong>{row.displayName}</strong>
           <span>{row.totalWins}</span>
         </div>

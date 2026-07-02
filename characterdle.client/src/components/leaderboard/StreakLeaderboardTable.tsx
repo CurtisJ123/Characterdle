@@ -1,17 +1,9 @@
 import type { StreakLeaderboardEntry } from '../../types/leaderboard';
+import { StreakEmblem } from '../ui/StreakEmblem';
+import { UserAvatar } from '../ui/UserAvatar';
 
 interface StreakLeaderboardTableProps {
   rows: StreakLeaderboardEntry[];
-}
-
-function getInitials(displayName: string) {
-  return displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 }
 
 export function StreakLeaderboardTable({ rows }: StreakLeaderboardTableProps) {
@@ -30,14 +22,25 @@ export function StreakLeaderboardTable({ rows }: StreakLeaderboardTableProps) {
         >
           <span className="rank-medal">{row.rank}</span>
           <div className="player-cell">
-            <span className="avatar">{getInitials(row.displayName)}</span>
-            <div>
+            <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} size="leaderboard" className="avatar" />
+            <div className="player-copy">
               <strong>{row.displayName}</strong>
               <small>{row.isCurrentUser ? 'You' : 'Daily player'}</small>
             </div>
           </div>
-          <strong>{row.currentStreak} days</strong>
-          <strong>{row.longestStreak} days</strong>
+          <div className="streak-value-cell">
+            <StreakEmblem className="streak-value-icon" showCount={false} streak={row.currentStreak} />
+            <span className="streak-value-copy">
+              <strong>{row.currentStreak}</strong>
+              <small>days</small>
+            </span>
+          </div>
+          <div className="streak-value-cell">
+            <span className="streak-value-copy">
+              <strong>{row.longestStreak}</strong>
+              <small>days</small>
+            </span>
+          </div>
         </div>
       ))}
     </section>

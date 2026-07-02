@@ -3,6 +3,7 @@ import type {
   CurrentUniverseGame,
   PreviousUniverseGames,
   UniverseAttributeDefinition,
+  UniverseCharacterOption,
   UniverseAttributeValue,
   UniverseCharacter,
 } from '../types/universeGame';
@@ -10,6 +11,7 @@ import { buildApiUrl } from '../lib/runtimeConfig';
 
 const universeGameRequests = new Map<string, Promise<CurrentUniverseGame>>();
 const previousUniverseGamesRequests = new Map<string, Promise<PreviousUniverseGames>>();
+const universeCharacterOptionsRequests = new Map<string, Promise<UniverseCharacterOption[]>>();
 const debugGameLoadDelayMs = import.meta.env.DEV
   ? parseDebugGameLoadDelay(import.meta.env.VITE_DEBUG_GAME_LOAD_DELAY_MS)
   : 0;
@@ -20,6 +22,12 @@ interface UniverseCharacterPayload {
   aliases: string[];
   attributes: Record<string, UniverseAttributeValue>;
   portraitUrl?: string | null;
+}
+
+interface UniverseCharacterOptionPayload {
+  id: number;
+  displayName: string;
+  portraitUrl: string;
 }
 
 interface UniverseAttributeDefinitionPayload {
@@ -95,6 +103,23 @@ export function getPreviousUniverseGames(universeId: string): Promise<PreviousUn
   });
 
   previousUniverseGamesRequests.set(universeId, request);
+
+  return request;
+}
+
+export function getUniverseCharacterAvatarOptions(universeId: string): Promise<UniverseCharacterOption[]> {
+  const cachedRequest = universeCharacterOptionsRequests.get(universeId);
+
+  if (cachedRequest) {
+    return cachedRequest;
+  }
+
+  const request = fetchUniverseCharacterAvatarOptions(universeId).catch((error: unknown) => {
+    universeCharacterOptionsRequests.delete(universeId);
+    throw error;
+  });
+
+  universeCharacterOptionsRequests.set(universeId, request);
 
   return request;
 }
@@ -185,6 +210,26 @@ async function fetchPreviousUniverseGames(universeId: string): Promise<PreviousU
     attributeDefinitions: payload.attributeDefinitions.map(mapAttributeDefinition),
     games: payload.games,
   };
+}
+
+async function fetchUniverseCharacterAvatarOptions(universeId: string): Promise<UniverseCharacterOption[]> {
+  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/characters`), {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Character avatar options request failed with ${response.status}.`);
+  }
+
+  const payload = await response.json() as UniverseCharacterOptionPayload[];
+
+  return payload.map((option) => ({
+    displayName: option.displayName,
+    id: option.id,
+    portraitUrl: option.portraitUrl,
+  }));
 }
 
 function mapAttributeDefinition(payload: UniverseAttributeDefinitionPayload): UniverseAttributeDefinition {

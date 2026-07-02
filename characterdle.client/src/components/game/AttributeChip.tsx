@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { CharacterAttribute } from '../../types/game';
 
 function getSizeClass(label: string): string {
@@ -38,15 +39,29 @@ function DirectionArrowGlyph({ direction }: DirectionArrowGlyphProps) {
   );
 }
 
-export function AttributeChip({ displayVariant, indicator, label, tone }: CharacterAttribute) {
+export function AttributeChip({
+  displayVariant,
+  indicator,
+  isNewlyDiscovered,
+  isRevealing,
+  label,
+  revealOrder,
+  tone,
+}: CharacterAttribute) {
   const sizeClass = getSizeClass(label);
   const variantClass = displayVariant === 'numeric' ? 'is-numeric' : '';
+  const revealClass = isRevealing ? 'is-revealing' : '';
+  const newCorrectRevealClass = isNewlyDiscovered ? 'is-new-correct' : '';
+  const revealStyle = isRevealing
+    ? { '--attribute-reveal-delay': `${(revealOrder ?? 0) * 95}ms` } as CSSProperties
+    : undefined;
 
   if (indicator) {
     return (
       <span
-        className={`attribute-chip ${tone} ${variantClass} is-directional ${sizeClass}`.trim()}
+        className={`attribute-chip ${tone} ${variantClass} is-directional ${sizeClass} ${revealClass} ${newCorrectRevealClass}`.trim()}
         aria-label={label}
+        style={revealStyle}
         title={label}
       >
         <DirectionArrowGlyph direction={indicator.direction} />
@@ -56,7 +71,11 @@ export function AttributeChip({ displayVariant, indicator, label, tone }: Charac
   }
 
   return (
-    <span className={`attribute-chip ${tone} ${variantClass} ${sizeClass}`.trim()} title={label}>
+    <span
+      className={`attribute-chip ${tone} ${variantClass} ${sizeClass} ${revealClass} ${newCorrectRevealClass}`.trim()}
+      style={revealStyle}
+      title={label}
+    >
       <span className="attribute-chip-label">{label}</span>
     </span>
   );

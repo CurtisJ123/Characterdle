@@ -31,6 +31,7 @@ export interface LeaderboardEntry {
   characterAverageGuesses: number | null;
   quoteAverageGuesses: number | null;
   winRate: number;
+  currentStreak: number;
   isCurrentUser: boolean;
 }
 
@@ -82,6 +83,7 @@ export interface SubmitUniverseGameResultPayload {
 export interface ModeLeaderboardEntry {
   averageGuesses: number | null;
   avatarUrl: string | null;
+  currentStreak: number;
   displayName: string;
   isCurrentUser: boolean;
   plays: number;

@@ -137,10 +137,30 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         return results;
     }
 
-    public async Task UpdateDisplayNameAsync(
+    public async Task<bool> IsAvatarUrlAvailableAsync(
+        UniverseDefinition universe,
+        string avatarUrl,
+        CancellationToken cancellationToken)
+    {
+        var sql =
+            $"""
+            select exists(
+              select 1
+              from {universe.CharacterTableName} as characters
+              where characters.portrait_url = @avatarUrl
+            );
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("avatarUrl", avatarUrl);
+        return await command.ExecuteScalarAsync(cancellationToken) is true;
+    }
+
+    public async Task UpdateProfileAsync(
         Guid userId,
         string email,
         string displayName,
+        string? avatarUrl,
         CancellationToken cancellationToken)
     {
         const string sql =
@@ -155,11 +175,12 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               @userId,
               @displayName,
               @email,
-              null
+              @avatarUrl
             )
             on conflict (user_id) do update
             set
               display_name = excluded.display_name,
+              avatar_url = excluded.avatar_url,
               updated_at = timezone('utc', now());
             """;
 
@@ -167,6 +188,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         command.Parameters.AddWithValue("userId", userId);
         command.Parameters.AddWithValue("displayName", displayName);
         command.Parameters.AddWithValue("email", email);
+        command.Parameters.AddWithValue("avatarUrl", (object?)avatarUrl ?? DBNull.Value);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

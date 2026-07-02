@@ -24,7 +24,10 @@ export interface Universe {
 
 export interface CharacterAttribute {
   displayVariant?: 'default' | 'numeric';
+  isNewlyDiscovered?: boolean;
+  isRevealing?: boolean;
   label: string;
+  revealOrder?: number;
   tone: AttributeTone;
   indicator?: {
     direction: 'up' | 'down';

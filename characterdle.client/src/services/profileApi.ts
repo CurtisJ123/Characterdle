@@ -38,9 +38,10 @@ export async function getGameResults(
   return await response.json() as PersistedGameResult[];
 }
 
-export async function updateProfileDisplayName(
+export async function updateProfileSettings(
   accessToken: string,
   displayName: string,
+  avatarUrl: string | null,
 ): Promise<void> {
   const response = await fetch(buildApiUrl('/api/profile'), {
     method: 'PATCH',
@@ -50,6 +51,7 @@ export async function updateProfileDisplayName(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
+      avatarUrl,
       displayName,
     }),
   });

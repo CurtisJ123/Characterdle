@@ -6,6 +6,12 @@ public static class UniverseGameEndpoints
     {
         var games = app.MapGroup("/api/universes/{universeId}/games").WithTags("UniverseGames");
 
+        games.MapGet("/characters", GetCharactersAsync)
+            .WithName("GetUniverseCharacterAvatarOptions")
+            .Produces<IReadOnlyList<UniverseCharacterAvatarOptionResponse>>()
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         games.MapGet("/current", GetCurrentGameAsync)
             .WithName("GetCurrentUniverseGame")
             .Produces<CurrentUniverseGameResponse>()
@@ -31,6 +37,40 @@ public static class UniverseGameEndpoints
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return app;
+    }
+
+    private static async Task<IResult> GetCharactersAsync(
+        string universeId,
+        IHostEnvironment hostEnvironment,
+        UniverseCatalog universeCatalog,
+        IUniverseGameRepository repository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        if (!universeCatalog.TryGet(universeId, out var universe))
+        {
+            return Results.NotFound(new { message = $"No universe named '{universeId}' is registered." });
+        }
+
+        try
+        {
+            var characters = await repository.GetCharacterAvatarOptionsAsync(universe, cancellationToken);
+            return Results.Ok(characters);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(UniverseGameEndpoints).FullName!);
+            logger.LogError(exception, "Unable to load universe character avatar options from Supabase for {UniverseId}.", universeId);
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The database request failed while loading avatar options.";
+
+            return Results.Problem(
+                title: "Unable to load universe character avatar options.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
     }
 
     private static async Task<IResult> GetCurrentGameAsync(

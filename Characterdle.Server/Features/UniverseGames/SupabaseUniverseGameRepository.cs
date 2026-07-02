@@ -5,6 +5,37 @@ namespace Characterdle.Server.Features.UniverseGames;
 
 public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) : IUniverseGameRepository
 {
+    public async Task<IReadOnlyList<UniverseCharacterAvatarOptionResponse>> GetCharacterAvatarOptionsAsync(
+        UniverseDefinition universe,
+        CancellationToken cancellationToken)
+    {
+        var sql =
+            $"""
+            select
+              characters.id,
+              characters.display_name,
+              characters.portrait_url
+            from {universe.CharacterTableName} as characters
+            where characters.portrait_url is not null
+              and btrim(characters.portrait_url) <> ''
+            order by characters.display_name;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var characters = new List<UniverseCharacterAvatarOptionResponse>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            characters.Add(new UniverseCharacterAvatarOptionResponse(
+                reader.GetInt64(0),
+                reader.GetString(1),
+                reader.GetString(2)));
+        }
+
+        return characters;
+    }
+
     public async Task<DateTime?> GetMostRecentGameDateTimeUtcAsync(
         UniverseDefinition universe,
         CancellationToken cancellationToken)

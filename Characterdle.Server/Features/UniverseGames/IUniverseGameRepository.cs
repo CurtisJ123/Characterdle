@@ -2,6 +2,10 @@ namespace Characterdle.Server.Features.UniverseGames;
 
 public interface IUniverseGameRepository
 {
+    Task<IReadOnlyList<UniverseCharacterAvatarOptionResponse>> GetCharacterAvatarOptionsAsync(
+        UniverseDefinition universe,
+        CancellationToken cancellationToken);
+
     Task<CurrentUniverseGameResponse?> GetCurrentGameAsync(
         UniverseDefinition universe,
         CancellationToken cancellationToken);

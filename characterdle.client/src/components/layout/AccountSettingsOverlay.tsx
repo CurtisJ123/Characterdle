@@ -1,16 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import type { AccountSettingsValues } from '../../types/auth';
+import { AccountAvatarPicker } from './AccountAvatarPicker';
 
 interface AccountSettingsOverlayProps {
+  currentAvatarUrl: string | null;
   currentDisplayName: string;
   onClose: () => void;
-  onSaveDisplayName: (displayName: string) => Promise<string>;
+  onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
 }
 
 export function AccountSettingsOverlay({
+  currentAvatarUrl,
   currentDisplayName,
   onClose,
-  onSaveDisplayName,
+  onSaveSettings,
 }: AccountSettingsOverlayProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl);
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [message, setMessage] = useState<string>();
@@ -44,7 +49,10 @@ export function AccountSettingsOverlay({
     setIsSaving(true);
 
     try {
-      const resultMessage = await onSaveDisplayName(normalizedDisplayName);
+      const resultMessage = await onSaveSettings({
+        avatarUrl,
+        displayName: normalizedDisplayName,
+      });
       setMessage(resultMessage);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to update your profile.');
@@ -91,11 +99,17 @@ export function AccountSettingsOverlay({
             />
           </label>
 
+          <AccountAvatarPicker
+            selectedAvatarUrl={avatarUrl}
+            universeId="got"
+            onChange={setAvatarUrl}
+          />
+
           {message && <p className="auth-feedback is-success">{message}</p>}
           {errorMessage && <p className="auth-feedback is-error">{errorMessage}</p>}
 
           <button className="primary-button" disabled={isSaveDisabled} type="submit">
-            {isSaving ? 'Saving...' : 'Save username'}
+            {isSaving ? 'Saving...' : 'Save changes'}
           </button>
         </form>
       </section>

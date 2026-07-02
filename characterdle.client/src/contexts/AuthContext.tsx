@@ -12,7 +12,7 @@ import type {
 } from '../types/auth';
 import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../lib/authValidation';
 import type { UserProfile } from '../types/user';
-import { updateProfileDisplayName } from '../services/profileApi';
+import { updateProfileSettings } from '../services/profileApi';
 
 interface AuthContextValue {
   authError: Error | null;
@@ -294,15 +294,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const normalizedDisplayName = values.displayName.trim();
+    const normalizedAvatarUrl = values.avatarUrl?.trim() || null;
     const updatePayload: UserAttributes = {};
 
     if (!normalizedDisplayName) {
       throw new Error('Display name is required.');
     }
 
-    if (normalizedDisplayName !== user?.displayName) {
+    if (normalizedDisplayName !== user?.displayName || normalizedAvatarUrl !== user?.avatarUrl) {
       updatePayload.data = {
         display_name: normalizedDisplayName,
+        avatar_url: normalizedAvatarUrl,
       };
     }
 
@@ -319,7 +321,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       throw normalizeError(error, 'Unable to update your profile.');
     }
 
-    await updateProfileDisplayName(session.access_token, normalizedDisplayName);
+    await updateProfileSettings(session.access_token, normalizedDisplayName, normalizedAvatarUrl);
 
     await refreshUser();
 
