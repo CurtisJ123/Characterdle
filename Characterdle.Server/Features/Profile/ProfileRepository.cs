@@ -192,6 +192,27 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task DeleteAccountDataAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            delete from public."UniverseGameResults"
+            where user_id = @userId;
+
+            delete from public."UniverseStreaks"
+            where user_id = @userId;
+
+            delete from public."PlayerProfiles"
+            where user_id = @userId;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("userId", userId);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private async Task<AccountRecord?> LoadAccountAsync(
         Guid userId,
         CancellationToken cancellationToken)

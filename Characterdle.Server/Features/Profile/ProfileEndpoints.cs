@@ -31,6 +31,21 @@ public static class ProfileEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        app.MapGet("/api/profile/account-deletion", GetAccountDeletionStatusAsync)
+            .WithTags("Profile")
+            .WithName("GetAccountDeletionStatus")
+            .Produces<AccountDeletionStatusResponse>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        app.MapDelete("/api/profile", DeleteAccountAsync)
+            .WithTags("Profile")
+            .WithName("DeleteAccount")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<AccountDeletionStatusResponse>(StatusCodes.Status409Conflict)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return app;
     }
 
@@ -179,6 +194,99 @@ public static class ProfileEndpoints
         }
     }
 
+    private static async Task<IResult> GetAccountDeletionStatusAsync(
+        HttpRequest httpRequest,
+        SupabaseAuthClient authClient,
+        SupabaseAdminAuthClient adminAuthClient,
+        IAccountDeletionGuard accountDeletionGuard,
+        CancellationToken cancellationToken)
+    {
+        var accessToken = ReadBearerToken(httpRequest);
+
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+
+        if (user is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var status = await BuildAccountDeletionStatusAsync(
+            user.UserId,
+            adminAuthClient,
+            accountDeletionGuard,
+            cancellationToken);
+
+        return Results.Ok(status);
+    }
+
+    private static async Task<IResult> DeleteAccountAsync(
+        HttpRequest httpRequest,
+        IHostEnvironment hostEnvironment,
+        SupabaseAuthClient authClient,
+        SupabaseAdminAuthClient adminAuthClient,
+        IAccountDeletionGuard accountDeletionGuard,
+        IProfileRepository profileRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var accessToken = ReadBearerToken(httpRequest);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var status = await BuildAccountDeletionStatusAsync(
+                user.UserId,
+                adminAuthClient,
+                accountDeletionGuard,
+                cancellationToken);
+
+            if (!status.CanDelete)
+            {
+                return status.HasActiveSubscription
+                    ? Results.Json(status, statusCode: StatusCodes.Status409Conflict)
+                    : Results.Problem(
+                        title: "Account deletion unavailable.",
+                        detail: status.Message,
+                        statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
+            await profileRepository.DeleteAccountDataAsync(user.UserId, cancellationToken);
+            await adminAuthClient.DeleteUserAsync(user.UserId, cancellationToken);
+
+            return Results.NoContent();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(ProfileEndpoints).FullName!);
+            logger.LogError(exception, "Unable to delete account.");
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The account deletion request failed.";
+
+            return Results.Problem(
+                title: "Unable to delete account.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+
     private static async Task<IResult> GetGameResultsAsync(
         string universeId,
         HttpRequest httpRequest,
@@ -227,6 +335,38 @@ public static class ProfileEndpoints
                 detail: detail,
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }
+    }
+
+    private static async Task<AccountDeletionStatusResponse> BuildAccountDeletionStatusAsync(
+        Guid userId,
+        SupabaseAdminAuthClient adminAuthClient,
+        IAccountDeletionGuard accountDeletionGuard,
+        CancellationToken cancellationToken)
+    {
+        if (!adminAuthClient.IsConfigured)
+        {
+            return new AccountDeletionStatusResponse(
+                false,
+                false,
+                "Account deletion is unavailable right now. Please contact support.");
+        }
+
+        var eligibility = await accountDeletionGuard.GetEligibilityAsync(userId, cancellationToken);
+
+        if (!eligibility.CanDelete)
+        {
+            return new AccountDeletionStatusResponse(
+                false,
+                eligibility.HasActiveSubscription,
+                eligibility.Message
+                ?? "Account deletion is blocked until the account is eligible again.");
+        }
+
+        return new AccountDeletionStatusResponse(
+            true,
+            false,
+            eligibility.Message
+            ?? "Deleting your account permanently removes your profile, streaks, and leaderboard history.");
     }
 
     private static string? ReadBearerToken(HttpRequest request)

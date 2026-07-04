@@ -1,15 +1,19 @@
 .site-footer {
   width: min(1200px, calc(100% - 32px));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
   margin-top: auto;
   margin-inline: auto;
   border-top: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
   padding-block: 40px 30px;
   color: var(--on-surface-variant);
   text-align: center;
+}
+
+.site-footer-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .site-footer strong {
@@ -21,52 +25,56 @@
   text-transform: uppercase;
 }
 
-.site-footer > div {
-  position: relative;
-  width: 100%;
-  display: flex;
+.site-footer-links {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 18px;
 }
 
-.site-footer-github {
-  position: absolute;
-  left: 0;
+.site-footer-link {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  border: 0;
+  padding: 0;
   color: var(--primary);
+  background: transparent;
   font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
   transition: color 160ms ease;
 }
 
-.site-footer-github svg {
+.site-footer-link svg {
   width: 18px;
   height: 18px;
   display: block;
   fill: currentColor;
 }
 
-.site-footer-github:hover {
+.site-footer-link:hover {
   color: var(--primary-soft);
 }
 
-.site-footer-github:focus-visible {
+.site-footer-link:focus-visible {
   border-radius: var(--radius-control);
   outline: 2px solid var(--primary);
   outline-offset: 4px;
 }
 
 @media (max-width: 760px) {
-  .site-footer {
-    justify-content: center;
+  .site-footer-inner {
+    flex-direction: column-reverse;
   }
 }
 
 @media (max-width: 520px) {
   .site-footer {
     width: min(100% - 24px, 1200px);
+  }
+
+  .site-footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }

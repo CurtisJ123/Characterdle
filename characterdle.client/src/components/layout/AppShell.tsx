@@ -10,6 +10,7 @@ import { LauncherPage } from '../../pages/LauncherPage';
 import { LeaderboardPage } from '../../pages/LeaderboardPage';
 import { PreviousGamesPage } from '../../pages/PreviousGamesPage';
 import { ProfilePage } from '../../pages/ProfilePage';
+import { SupportPage } from '../../pages/SupportPage';
 import type { GameMode } from '../../types/game';
 import type { UniverseStreak } from '../../types/leaderboard';
 import type { UniverseProfile } from '../../types/profile';
@@ -41,7 +42,17 @@ export function AppShell({
   onOpenGame,
   onOpenHistory,
 }: AppShellProps) {
-  const { authError, isAuthenticated, isLoading, session, signOut, updateAccount, user } = useAuth();
+  const {
+    authError,
+    deleteAccount,
+    getAccountDeletionStatus,
+    isAuthenticated,
+    isLoading,
+    session,
+    signOut,
+    updateAccount,
+    user,
+  } = useAuth();
   const { selectedUniverse } = useUniverse();
   const {
     data: profile,
@@ -85,6 +96,13 @@ export function AppShell({
     return result.message;
   }
 
+  async function handleDeleteAccount() {
+    const result = await deleteAccount();
+    setLiveStreak(null);
+    onNavigate('launcher');
+    return result.message;
+  }
+
   return (
     <div className="app-shell">
       <SiteHeader
@@ -92,6 +110,8 @@ export function AppShell({
         isAuthenticated={isAuthenticated}
         isUserLoading={isLoading}
         onAuthNavigate={onAuthNavigate}
+        onDeleteAccount={handleDeleteAccount}
+        onLoadAccountDeletionStatus={getAccountDeletionStatus}
         onNavigate={onNavigate}
         onSaveSettings={handleSaveSettings}
         onSignOut={handleSignOut}
@@ -145,7 +165,8 @@ export function AppShell({
           profileError={profileError}
         />
       )}
-      <SiteFooter />
+      {currentPage === 'support' && <SupportPage onNavigate={onNavigate} />}
+      <SiteFooter onNavigate={onNavigate} />
     </div>
   );
 }

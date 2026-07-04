@@ -176,6 +176,13 @@ function readRouteFromSegments(segments: string[]): AppRoute | null {
         gameMode: 'character',
         page: 'profile',
       }, explicitUniverseId);
+    case 'support':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'support',
+      }, explicitUniverseId);
     default:
       return null;
   }
@@ -250,6 +257,10 @@ function buildBrowserUrl(route: AppRoute): string {
       return `${universePrefix}/leaderboard`;
     case 'profile':
       return `${universePrefix}/profile`;
+    case 'support':
+      return route.universeId
+        ? `${universePrefix}/support`
+        : '/support';
     default:
       return '/';
   }

@@ -25,4 +25,8 @@ public interface IProfileRepository
         string displayName,
         string? avatarUrl,
         CancellationToken cancellationToken);
+
+    Task DeleteAccountDataAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
 }

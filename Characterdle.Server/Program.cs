@@ -72,12 +72,22 @@ builder.Services.AddSingleton(UniverseCatalog.CreateDefault());
 builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameRepository>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+builder.Services.AddSingleton<IAccountDeletionGuard, DefaultAccountDeletionGuard>();
 builder.Services.AddSingleton<UniverseGameScheduler>();
 builder.Services.AddHttpClient<SupabaseAuthClient>(client =>
 {
     client.BaseAddress = new Uri(supabaseOptions.Url);
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     client.DefaultRequestHeaders.Add("apikey", supabaseOptions.PublishableKey);
+});
+builder.Services.AddHttpClient<SupabaseAdminAuthClient>(client =>
+{
+    client.BaseAddress = new Uri(supabaseOptions.Url);
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    if (!string.IsNullOrWhiteSpace(supabaseOptions.ServiceRoleKey))
+    {
+        client.DefaultRequestHeaders.Add("apikey", supabaseOptions.ServiceRoleKey);
+    }
 });
 builder.Services.AddHostedService<UniverseGameScheduleService>();
 

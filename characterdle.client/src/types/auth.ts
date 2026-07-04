@@ -14,6 +14,12 @@ export interface AccountSettingsValues {
   displayName: string;
 }
 
+export interface AccountDeletionStatus {
+  canDelete: boolean;
+  hasActiveSubscription: boolean;
+  message: string;
+}
+
 export interface PasswordResetRequestValues {
   email: string;
 }

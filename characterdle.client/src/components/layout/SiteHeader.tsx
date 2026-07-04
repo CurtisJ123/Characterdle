@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
-import type { AccountSettingsValues } from '../../types/auth';
+import type { AccountDeletionStatus, AccountSettingsValues } from '../../types/auth';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 import { StreakEmblem } from '../ui/StreakEmblem';
 import { UserAvatar } from '../ui/UserAvatar';
@@ -13,6 +13,8 @@ interface SiteHeaderProps {
   isAuthenticated: boolean;
   isUserLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
+  onDeleteAccount: () => Promise<string>;
+  onLoadAccountDeletionStatus: () => Promise<AccountDeletionStatus>;
   onNavigate: NavigateToPage;
   onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
   onSignOut: () => Promise<void> | void;
@@ -26,6 +28,8 @@ export function SiteHeader({
   isAuthenticated,
   isUserLoading,
   onAuthNavigate,
+  onDeleteAccount,
+  onLoadAccountDeletionStatus,
   onNavigate,
   onSaveSettings,
   onSignOut,
@@ -167,6 +171,8 @@ export function SiteHeader({
           currentAvatarUrl={userAvatarUrl ?? null}
           currentDisplayName={userDisplayName ?? ''}
           onClose={() => setIsSettingsOpen(false)}
+          onDeleteAccount={onDeleteAccount}
+          onLoadAccountDeletionStatus={onLoadAccountDeletionStatus}
           onSaveSettings={onSaveSettings}
         />
       )}

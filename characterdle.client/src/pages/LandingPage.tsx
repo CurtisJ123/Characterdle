@@ -48,7 +48,7 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
         </aside>
       </section>
 
-      <SiteFooter />
+      <SiteFooter onNavigate={onNavigate} />
     </main>
   );
 }

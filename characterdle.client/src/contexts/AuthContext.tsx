@@ -3,6 +3,7 @@ import type { PropsWithChildren } from 'react';
 import type { Session, User, UserAttributes } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type {
+  AccountDeletionStatus,
   AccountSettingsValues,
   AuthActionResult,
   AuthFormValues,
@@ -12,11 +13,17 @@ import type {
 } from '../types/auth';
 import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../lib/authValidation';
 import type { UserProfile } from '../types/user';
-import { updateProfileSettings } from '../services/profileApi';
+import {
+  deleteProfileAccount,
+  getAccountDeletionStatus as getAccountDeletionStatusRequest,
+  updateProfileSettings,
+} from '../services/profileApi';
 
 interface AuthContextValue {
   authError: Error | null;
   completePasswordReset: (values: PasswordUpdateValues) => Promise<AuthActionResult>;
+  deleteAccount: () => Promise<AuthActionResult>;
+  getAccountDeletionStatus: () => Promise<AccountDeletionStatus>;
   isAuthenticated: boolean;
   isLoading: boolean;
   isPasswordRecovery: boolean;
@@ -331,11 +338,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }
 
+  async function getAccountDeletionStatus(): Promise<AccountDeletionStatus> {
+    if (!session) {
+      throw new Error('You must be signed in to manage account deletion.');
+    }
+
+    return await getAccountDeletionStatusRequest(session.access_token);
+  }
+
+  async function deleteAccount(): Promise<AuthActionResult> {
+    if (!session) {
+      throw new Error('You must be signed in to delete your account.');
+    }
+
+    await deleteProfileAccount(session.access_token);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.warn('Sign-out after account deletion reported an error.', error);
+    }
+
+    applySession(null);
+    setIsPasswordRecovery(false);
+
+    return {
+      message: 'Account deleted.',
+      requiresEmailConfirmation: false,
+    };
+  }
+
   return (
     <AuthContext.Provider
       value={{
         authError,
         completePasswordReset,
+        deleteAccount,
+        getAccountDeletionStatus,
         isAuthenticated: Boolean(session),
         isLoading,
         isPasswordRecovery,

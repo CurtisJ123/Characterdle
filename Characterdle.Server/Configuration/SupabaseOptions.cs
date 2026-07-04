@@ -6,5 +6,7 @@ public sealed class SupabaseOptions
 
     public string PublishableKey { get; set; } = string.Empty;
 
+    public string ServiceRoleKey { get; set; } = string.Empty;
+
     public string Url { get; set; } = string.Empty;
 }

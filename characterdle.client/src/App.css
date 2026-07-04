@@ -34,6 +34,7 @@
 @import './components/history/PreviousGamesGrid.css';
 @import './pages/LeaderboardPage.css';
 @import './pages/ProfilePage.css';
+@import './pages/SupportPage.css';
 @import './components/leaderboard/LeaderboardTable.css';
 @import './components/ui/MetricRow.css';
 @import './components/ui/GameShareButton.css';
