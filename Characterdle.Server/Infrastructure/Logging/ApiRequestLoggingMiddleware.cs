@@ -8,7 +8,8 @@ public sealed class ApiRequestLoggingMiddleware(
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+        if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
+            || context.Request.Path.StartsWithSegments("/api/status", StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
             return;
