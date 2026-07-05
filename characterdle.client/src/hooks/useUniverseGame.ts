@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { getUniverseGame } from '../services/universeGameApi';
 import type { CurrentUniverseGameState } from '../types/universeGame';
 
-export function useUniverseGame(universeId: string, gameId: number | null): CurrentUniverseGameState {
+export function useUniverseGame(
+  universeId: string,
+  gameId: number | null,
+  accessToken: string | null,
+  requestScope: string,
+): CurrentUniverseGameState {
   const [state, setState] = useState<CurrentUniverseGameState>({
     data: null,
     error: null,
@@ -20,7 +25,7 @@ export function useUniverseGame(universeId: string, gameId: number | null): Curr
 
     async function loadGame() {
       try {
-        const data = await getUniverseGame(universeId, gameId);
+        const data = await getUniverseGame(universeId, gameId, accessToken, requestScope);
 
         if (!isMounted) {
           return;
@@ -49,7 +54,7 @@ export function useUniverseGame(universeId: string, gameId: number | null): Curr
     return () => {
       isMounted = false;
     };
-  }, [gameId, universeId]);
+  }, [accessToken, gameId, requestScope, universeId]);
 
   return state;
 }

@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using Characterdle.Server.Configuration;
+using Characterdle.Server.Features.Billing;
 using Characterdle.Server.Features.Leaderboard;
+using Characterdle.Server.Features.Premium;
 using Characterdle.Server.Features.Profile;
 using Characterdle.Server.Features.UniverseGames;
 using Characterdle.Server.Infrastructure.Logging;
@@ -28,6 +30,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ClientAppOptions>(builder.Configuration.GetSection(ClientAppOptions.SectionName));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection(SchedulingOptions.SectionName));
+builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
 builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection(SupabaseOptions.SectionName));
 
 var clientAppOptions = builder.Configuration.GetSection(ClientAppOptions.SectionName).Get<ClientAppOptions>() ?? new();
@@ -71,8 +74,11 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(supabaseConnectionStr
 builder.Services.AddSingleton(UniverseCatalog.CreateDefault());
 builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameRepository>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+builder.Services.AddScoped<IBillingRepository, BillingRepository>();
+builder.Services.AddScoped<IPremiumRepository, PremiumRepository>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
-builder.Services.AddSingleton<IAccountDeletionGuard, DefaultAccountDeletionGuard>();
+builder.Services.AddScoped<IAccountDeletionGuard, DefaultAccountDeletionGuard>();
+builder.Services.AddSingleton<StripeBillingService>();
 builder.Services.AddSingleton<UniverseGameScheduler>();
 builder.Services.AddHttpClient<SupabaseAuthClient>(client =>
 {
@@ -136,6 +142,8 @@ app.MapGet("/api/client-config", (HttpContext httpContext, IOptions<SupabaseOpti
     .ExcludeFromDescription();
 app.MapUniverseGameEndpoints();
 app.MapLeaderboardEndpoints();
+app.MapBillingEndpoints();
+app.MapPremiumEndpoints();
 app.MapProfileEndpoints();
 
 app.MapFallbackToFile("/index.html");

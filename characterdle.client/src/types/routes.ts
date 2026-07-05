@@ -1,6 +1,16 @@
 import type { GameMode } from './game';
 
-export type Page = 'landing' | 'auth' | 'launcher' | 'game' | 'history' | 'leaderboard' | 'profile' | 'support';
+export type Page =
+  | 'landing'
+  | 'auth'
+  | 'launcher'
+  | 'game'
+  | 'history'
+  | 'leaderboard'
+  | 'profile'
+  | 'support'
+  | 'privacyPolicy'
+  | 'termsOfService';
 
 export type NavigateToPage = (page: Page) => void;
 

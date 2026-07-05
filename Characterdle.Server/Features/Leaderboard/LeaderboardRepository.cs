@@ -434,6 +434,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 profiles.user_id,
                 profiles.display_name,
                 profiles.avatar_url,
+                coalesce(premium_status.is_premium, false) as show_supporter_badge,
                 count(*) filter (where results.status = 'won')::int as total_wins,
                 count(*) filter (where results.status = 'won' and results.mode = 'character')::int as character_wins,
                 count(*) filter (where results.status = 'won' and results.mode = 'quote')::int as quote_wins,
@@ -447,10 +448,16 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               from public."PlayerProfiles" as profiles
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
+              left join public."UserPremiumStatus" as premium_status
+                on premium_status.user_id = profiles.user_id
               where results.universe_id = @universeId
                 and results.status in ('won', 'lost')
                 and results.hint_count = 0
-              group by profiles.user_id, profiles.display_name, profiles.avatar_url
+              group by
+                profiles.user_id,
+                profiles.display_name,
+                profiles.avatar_url,
+                premium_status.is_premium
             ),
             effective_streaks as (
               select
@@ -479,6 +486,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 aggregated.user_id,
                 aggregated.display_name,
                 aggregated.avatar_url,
+                aggregated.show_supporter_badge,
                 aggregated.total_wins,
                 aggregated.character_wins,
                 aggregated.quote_wins,
@@ -505,6 +513,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               ranked.user_id,
               ranked.display_name,
               ranked.avatar_url,
+              ranked.show_supporter_badge,
               ranked.total_wins,
               ranked.character_wins,
               ranked.quote_wins,
@@ -549,6 +558,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 profiles.user_id,
                 profiles.display_name,
                 profiles.avatar_url,
+                coalesce(premium_status.is_premium, false) as show_supporter_badge,
                 count(*) filter (where results.status = 'won')::int as total_wins,
                 count(*) filter (where results.status = 'won' and results.mode = 'character')::int as character_wins,
                 count(*) filter (where results.status = 'won' and results.mode = 'quote')::int as quote_wins,
@@ -562,10 +572,16 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               from public."PlayerProfiles" as profiles
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
+              left join public."UserPremiumStatus" as premium_status
+                on premium_status.user_id = profiles.user_id
               where results.universe_id = @universeId
                 and results.status in ('won', 'lost')
                 and results.hint_count = 0
-              group by profiles.user_id, profiles.display_name, profiles.avatar_url
+              group by
+                profiles.user_id,
+                profiles.display_name,
+                profiles.avatar_url,
+                premium_status.is_premium
             ),
             effective_streaks as (
               select
@@ -594,6 +610,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 aggregated.user_id,
                 aggregated.display_name,
                 aggregated.avatar_url,
+                aggregated.show_supporter_badge,
                 aggregated.total_wins,
                 aggregated.character_wins,
                 aggregated.quote_wins,
@@ -620,6 +637,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               ranked.user_id,
               ranked.display_name,
               ranked.avatar_url,
+              ranked.show_supporter_badge,
               ranked.total_wins,
               ranked.character_wins,
               ranked.quote_wins,
@@ -662,6 +680,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 profiles.user_id,
                 profiles.display_name,
                 profiles.avatar_url,
+                coalesce(premium_status.is_premium, false) as show_supporter_badge,
                 case
                   when streaks.last_credit_date
                     >= (now() at time zone @scheduleTimeZoneId)::date - 1
@@ -673,6 +692,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               from public."UniverseStreaks" as streaks
               join public."PlayerProfiles" as profiles
                 on profiles.user_id = streaks.user_id
+              left join public."UserPremiumStatus" as premium_status
+                on premium_status.user_id = profiles.user_id
               where streaks.universe_id = @universeId
                 and streaks.longest_streak > 0
             ),
@@ -689,6 +710,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               ranked.user_id,
               ranked.display_name,
               ranked.avatar_url,
+              ranked.show_supporter_badge,
               ranked.current_streak,
               ranked.longest_streak
             from ranked
@@ -726,6 +748,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 profiles.user_id,
                 profiles.display_name,
                 profiles.avatar_url,
+                coalesce(premium_status.is_premium, false) as show_supporter_badge,
                 case
                   when streaks.last_credit_date
                     >= (now() at time zone @scheduleTimeZoneId)::date - 1
@@ -736,6 +759,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               from public."UniverseStreaks" as streaks
               join public."PlayerProfiles" as profiles
                 on profiles.user_id = streaks.user_id
+              left join public."UserPremiumStatus" as premium_status
+                on premium_status.user_id = profiles.user_id
               where streaks.universe_id = @universeId
                 and streaks.longest_streak > 0
             ),
@@ -752,6 +777,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               ranked.user_id,
               ranked.display_name,
               ranked.avatar_url,
+              ranked.show_supporter_badge,
               ranked.current_streak,
               ranked.longest_streak
             from ranked
@@ -779,8 +805,9 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             userId,
             reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetString(3),
-            reader.GetInt32(4),
+            !reader.IsDBNull(4) && reader.GetBoolean(4),
             reader.GetInt32(5),
+            reader.GetInt32(6),
             currentUserId.HasValue && currentUserId.Value == userId);
     }
 
@@ -795,17 +822,18 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             userId,
             reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetString(3),
-            reader.GetInt32(4),
             reader.GetInt32(5),
             reader.GetInt32(6),
             reader.GetInt32(7),
             reader.GetInt32(8),
             reader.GetInt32(9),
-            GetNullableDouble(reader, 10),
+            reader.GetInt32(10),
             GetNullableDouble(reader, 11),
             GetNullableDouble(reader, 12),
-            GetRequiredDouble(reader, 14),
-            reader.GetInt32(13),
+            GetNullableDouble(reader, 13),
+            !reader.IsDBNull(4) && reader.GetBoolean(4),
+            GetRequiredDouble(reader, 15),
+            reader.GetInt32(14),
             currentUserId.HasValue && currentUserId.Value == userId);
     }
 

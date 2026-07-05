@@ -1,0 +1,53 @@
+.supporter-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 0.34rem 0.72rem;
+  color: var(--primary);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--primary) 15%, transparent),
+      color-mix(in srgb, var(--surface-panel-strong) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--white) 5%, transparent),
+    0 0 18px color-mix(in srgb, var(--primary) 10%, transparent);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.supporter-badge__label {
+  position: relative;
+  z-index: 1;
+}
+
+.supporter-badge.is-compact {
+  padding: 0.26rem 0.56rem;
+  font-size: 0.58rem;
+}
+
+.supporter-badge.is-animated-frame {
+  border-color: #ffd54a;
+  color: #ffe27a;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--white) 6%, transparent),
+    0 0 6px color-mix(in srgb, #ffd54a 48%, transparent),
+    0 0 14px color-mix(in srgb, #ffd54a 18%, transparent);
+}
+
+.supporter-badge.is-animated-frame::before {
+  content: none;
+}
+
+.supporter-badge.is-animated-frame::after {
+  content: none;
+}

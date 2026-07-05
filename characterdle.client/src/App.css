@@ -3,6 +3,7 @@
 @import './components/layout/AppShell.css';
 @import './components/layout/BrandButton.css';
 @import './components/layout/SiteHeader.css';
+@import './components/layout/StreakProgressDropdown.css';
 @import './components/layout/AccountSettingsOverlay.css';
 @import './components/layout/AccountAvatarPicker.css';
 @import './components/layout/SiteHelpOverlay.css';
@@ -30,14 +31,17 @@
 @import './components/game/GameResultPanel.css';
 @import './components/game/GuestVictorySignupPrompt.css';
 @import './components/game/GuestVictorySignupOverlay.css';
+@import './components/game/PremiumArchiveGateOverlay.css';
 @import './pages/PreviousGamesPage.css';
 @import './components/history/PreviousGamesGrid.css';
 @import './pages/LeaderboardPage.css';
 @import './pages/ProfilePage.css';
+@import './pages/LegalDocumentPage.css';
 @import './pages/SupportPage.css';
 @import './components/leaderboard/LeaderboardTable.css';
 @import './components/ui/MetricRow.css';
 @import './components/ui/GameShareButton.css';
 @import './components/ui/StreakEmblem.css';
+@import './components/ui/SupporterBadge.css';
 @import './components/ui/UserAvatar.css';
 @import './components/ui/LoadingOverlay.css';

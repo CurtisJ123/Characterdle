@@ -16,6 +16,16 @@ const debugGameLoadDelayMs = import.meta.env.DEV
   ? parseDebugGameLoadDelay(import.meta.env.VITE_DEBUG_GAME_LOAD_DELAY_MS)
   : 0;
 
+export class UniverseGameApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'UniverseGameApiError';
+    this.status = status;
+  }
+}
+
 interface UniverseCharacterPayload {
   id: number;
   displayName: string;
@@ -50,6 +60,10 @@ function createUniverseGameCacheKey(universeId: string, gameId: number | null): 
   return `${universeId}:${gameId ?? 'current'}`;
 }
 
+function createScopedCacheKey(baseCacheKey: string, requestScope: string): string {
+  return `${baseCacheKey}:${requestScope}`;
+}
+
 function parseDebugGameLoadDelay(value: string | undefined): number {
   if (!value) {
     return 0;
@@ -69,18 +83,23 @@ function delay(milliseconds: number): Promise<void> {
 }
 
 export function getCurrentUniverseGame(universeId: string): Promise<CurrentUniverseGame> {
-  return getUniverseGame(universeId, null);
+  return getUniverseGame(universeId, null, null, 'guest');
 }
 
-export function getUniverseGame(universeId: string, gameId: number | null): Promise<CurrentUniverseGame> {
-  const cacheKey = createUniverseGameCacheKey(universeId, gameId);
+export function getUniverseGame(
+  universeId: string,
+  gameId: number | null,
+  accessToken: string | null = null,
+  requestScope = 'guest',
+): Promise<CurrentUniverseGame> {
+  const cacheKey = createScopedCacheKey(createUniverseGameCacheKey(universeId, gameId), requestScope);
   const cachedRequest = universeGameRequests.get(cacheKey);
 
   if (cachedRequest) {
     return cachedRequest;
   }
 
-  const request = fetchUniverseGame(universeId, gameId).catch((error: unknown) => {
+  const request = fetchUniverseGame(universeId, gameId, accessToken).catch((error: unknown) => {
     universeGameRequests.delete(cacheKey);
     throw error;
   });
@@ -90,19 +109,24 @@ export function getUniverseGame(universeId: string, gameId: number | null): Prom
   return request;
 }
 
-export function getPreviousUniverseGames(universeId: string): Promise<PreviousUniverseGames> {
-  const cachedRequest = previousUniverseGamesRequests.get(universeId);
+export function getPreviousUniverseGames(
+  universeId: string,
+  accessToken: string | null = null,
+  requestScope = 'guest',
+): Promise<PreviousUniverseGames> {
+  const cacheKey = createScopedCacheKey(universeId, requestScope);
+  const cachedRequest = previousUniverseGamesRequests.get(cacheKey);
 
   if (cachedRequest) {
     return cachedRequest;
   }
 
-  const request = fetchPreviousUniverseGames(universeId).catch((error: unknown) => {
-    previousUniverseGamesRequests.delete(universeId);
+  const request = fetchPreviousUniverseGames(universeId, accessToken).catch((error: unknown) => {
+    previousUniverseGamesRequests.delete(cacheKey);
     throw error;
   });
 
-  previousUniverseGamesRequests.set(universeId, request);
+  previousUniverseGamesRequests.set(cacheKey, request);
 
   return request;
 }
@@ -124,20 +148,57 @@ export function getUniverseCharacterAvatarOptions(universeId: string): Promise<U
   return request;
 }
 
-async function fetchUniverseGame(universeId: string, gameId: number | null): Promise<CurrentUniverseGame> {
+function createApiHeaders(accessToken: string | null): HeadersInit {
+  return accessToken
+    ? {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    }
+    : {
+      Accept: 'application/json',
+    };
+}
+
+async function throwUniverseGameApiError(response: Response, fallbackMessage: string): Promise<never> {
+  let message = fallbackMessage;
+
+  try {
+    const payload = await response.json() as {
+      detail?: string;
+      message?: string;
+      title?: string;
+    };
+
+    if (typeof payload.detail === 'string' && payload.detail.trim()) {
+      message = payload.detail.trim();
+    } else if (typeof payload.message === 'string' && payload.message.trim()) {
+      message = payload.message.trim();
+    } else if (typeof payload.title === 'string' && payload.title.trim()) {
+      message = payload.title.trim();
+    }
+  } catch {
+    // Fall back to the default message when the response is not JSON.
+  }
+
+  throw new UniverseGameApiError(message, response.status);
+}
+
+async function fetchUniverseGame(
+  universeId: string,
+  gameId: number | null,
+  accessToken: string | null,
+): Promise<CurrentUniverseGame> {
   if (debugGameLoadDelayMs > 0) {
     await delay(debugGameLoadDelayMs);
   }
 
   const gamePath = gameId === null ? 'current' : String(gameId);
   const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/${gamePath}`), {
-    headers: {
-      Accept: 'application/json',
-    },
+    headers: createApiHeaders(accessToken),
   });
 
   if (!response.ok) {
-    throw new Error(`Game request failed with ${response.status}.`);
+    await throwUniverseGameApiError(response, `Game request failed with ${response.status}.`);
   }
 
   const payload = await response.json() as {
@@ -183,15 +244,13 @@ async function fetchUniverseGame(universeId: string, gameId: number | null): Pro
   };
 }
 
-async function fetchPreviousUniverseGames(universeId: string): Promise<PreviousUniverseGames> {
+async function fetchPreviousUniverseGames(universeId: string, accessToken: string | null): Promise<PreviousUniverseGames> {
   const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/previous`), {
-    headers: {
-      Accept: 'application/json',
-    },
+    headers: createApiHeaders(accessToken),
   });
 
   if (!response.ok) {
-    throw new Error(`Previous games request failed with ${response.status}.`);
+    await throwUniverseGameApiError(response, `Previous games request failed with ${response.status}.`);
   }
 
   const payload = await response.json() as {

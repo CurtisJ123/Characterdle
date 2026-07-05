@@ -21,6 +21,7 @@ export interface LeaderboardEntry {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  showSupporterBadge: boolean;
   totalWins: number;
   characterWins: number;
   quoteWins: number;
@@ -52,6 +53,7 @@ export interface StreakLeaderboardEntry {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  showSupporterBadge: boolean;
   currentStreak: number;
   longestStreak: number;
   isCurrentUser: boolean;
@@ -88,6 +90,7 @@ export interface ModeLeaderboardEntry {
   isCurrentUser: boolean;
   plays: number;
   rank: number;
+  showSupporterBadge: boolean;
   totalWins: number;
   userId: string;
   wins: number;

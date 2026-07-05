@@ -30,6 +30,24 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
               Support
             </a>
           )}
+          {onNavigate ? (
+            <button className="site-footer-link" type="button" onClick={() => onNavigate('privacyPolicy')}>
+              Privacy
+            </button>
+          ) : (
+            <a className="site-footer-link" href="/privacy-policy">
+              Privacy
+            </a>
+          )}
+          {onNavigate ? (
+            <button className="site-footer-link" type="button" onClick={() => onNavigate('termsOfService')}>
+              Terms
+            </button>
+          ) : (
+            <a className="site-footer-link" href="/terms">
+              Terms
+            </a>
+          )}
         </div>
         <strong>Characterdle</strong>
       </div>

@@ -16,6 +16,7 @@
       <Version>10.*-*</Version>
     </PackageReference>
     <PackageReference Include="Npgsql" Version="10.0.2" />
+    <PackageReference Include="Stripe.net" Version="52.1.0" />
   </ItemGroup>
 
 </Project>

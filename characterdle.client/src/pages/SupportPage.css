@@ -63,6 +63,15 @@
   gap: 16px;
 }
 
+.support-policy-links {
+  display: grid;
+  gap: 12px;
+}
+
+.support-policy-button {
+  justify-content: center;
+}
+
 .support-card h2 {
   font-size: 1.9rem;
   line-height: 1;

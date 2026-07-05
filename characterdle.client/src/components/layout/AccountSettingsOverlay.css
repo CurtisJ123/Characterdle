@@ -98,6 +98,35 @@
   width: 100%;
 }
 
+.account-billing-zone {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  padding-top: 24px;
+}
+
+.account-billing-zone-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.account-billing-zone-heading h3 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1.3rem;
+}
+
+.account-billing-zone-heading .muted-copy {
+  margin: 0;
+}
+
+.account-billing-actions {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .account-danger-zone {
   display: grid;
   gap: 16px;
@@ -223,6 +252,10 @@
   }
 
   .account-delete-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .account-billing-actions {
     grid-template-columns: 1fr;
   }
 }

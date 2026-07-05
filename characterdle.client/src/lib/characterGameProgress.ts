@@ -1,3 +1,5 @@
+import type { PersistedGameResult } from '../types/profile';
+
 interface StoredGameStats {
   guessCounts: number[];
 }
@@ -15,6 +17,7 @@ const GAME_STATE_STORAGE_KEY_PREFIX = 'character-game-state';
 const LEGACY_SESSION_STORAGE_KEY_PREFIX = 'character-game';
 const QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX = 'quote-game-stats';
 const QUOTE_GAME_STATE_STORAGE_KEY_PREFIX = 'quote-game-state';
+const UNIVERSE_GAME_RESULTS_CACHE_KEY_PREFIX = 'universe-game-results';
 const GIVE_UP_RESET_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function getGameProgressOwnerKey(userId: string | null | undefined): string {
@@ -51,6 +54,10 @@ export function getQuoteGameStorageKey(
 
 export function getQuoteGameStatsStorageKey(universeId: string, gameId: number): string {
   return `${QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX}:${universeId}:${gameId}`;
+}
+
+export function getUniverseGameResultsCacheKey(ownerKey: string, universeId: string): string {
+  return `${UNIVERSE_GAME_RESULTS_CACHE_KEY_PREFIX}:${ownerKey}:${universeId}`;
 }
 
 function readGuessCounts(storageKey: string): number[] {
@@ -180,4 +187,150 @@ export function getQuoteGameOutcome(
   }
 
   return 'pending';
+}
+
+function isPersistedGameStatus(value: unknown): value is PersistedGameResult['status'] {
+  return value === 'playing' || value === 'won' || value === 'lost';
+}
+
+function readResolvedTimestamp(result: Pick<PersistedGameResult, 'completedAt' | 'updatedAt'>): string | null {
+  const completedAt = typeof result.completedAt === 'string' && !Number.isNaN(Date.parse(result.completedAt))
+    ? result.completedAt
+    : null;
+
+  if (completedAt) {
+    return completedAt;
+  }
+
+  return typeof result.updatedAt === 'string' && !Number.isNaN(Date.parse(result.updatedAt))
+    ? result.updatedAt
+    : null;
+}
+
+function normalizePersistedGameResult(value: unknown): PersistedGameResult | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<PersistedGameResult>;
+
+  if (
+    typeof candidate.gameId !== 'number'
+    || (candidate.mode !== 'character' && candidate.mode !== 'quote')
+    || !isPersistedGameStatus(candidate.status)
+  ) {
+    return null;
+  }
+
+  const guessedCharacterIds = Array.isArray(candidate.guessedCharacterIds)
+    ? candidate.guessedCharacterIds.filter((entry): entry is number => typeof entry === 'number')
+    : [];
+  const revealedHintKeys = Array.isArray(candidate.revealedHintKeys)
+    ? candidate.revealedHintKeys.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const completedAt = typeof candidate.completedAt === 'string' && !Number.isNaN(Date.parse(candidate.completedAt))
+    ? candidate.completedAt
+    : null;
+  const updatedAt = typeof candidate.updatedAt === 'string' && !Number.isNaN(Date.parse(candidate.updatedAt))
+    ? candidate.updatedAt
+    : new Date(0).toISOString();
+
+  return {
+    completedAt,
+    gameId: candidate.gameId,
+    guessCount: typeof candidate.guessCount === 'number' && candidate.guessCount >= 0
+      ? Math.max(candidate.guessCount, guessedCharacterIds.length)
+      : guessedCharacterIds.length,
+    guessedCharacterIds,
+    hintCount: typeof candidate.hintCount === 'number' && candidate.hintCount >= 0
+      ? candidate.hintCount
+      : 0,
+    mode: candidate.mode,
+    revealedHintKeys,
+    status: candidate.status,
+    updatedAt,
+  };
+}
+
+export function readCachedUniverseGameResults(ownerKey: string, universeId: string): PersistedGameResult[] {
+  if (typeof window === 'undefined' || ownerKey === 'guest') {
+    return [];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(getUniverseGameResultsCacheKey(ownerKey, universeId));
+
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsedValue = JSON.parse(rawValue) as { results?: unknown };
+
+    if (!Array.isArray(parsedValue.results)) {
+      return [];
+    }
+
+    return parsedValue.results
+      .map((entry) => normalizePersistedGameResult(entry))
+      .filter((entry): entry is PersistedGameResult => entry !== null);
+  } catch {
+    return [];
+  }
+}
+
+export function cacheUniverseGameResults(
+  ownerKey: string,
+  universeId: string,
+  results: readonly PersistedGameResult[],
+): void {
+  if (typeof window === 'undefined' || ownerKey === 'guest') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      getUniverseGameResultsCacheKey(ownerKey, universeId),
+      JSON.stringify({
+        cachedAt: new Date().toISOString(),
+        results,
+      }),
+    );
+  } catch {
+    // Ignore local storage failures and keep the in-memory response.
+  }
+}
+
+export function syncPersistedGameResultsToLocalProgress(
+  ownerKey: string,
+  universeId: string,
+  results: readonly PersistedGameResult[],
+): void {
+  if (typeof window === 'undefined' || ownerKey === 'guest') {
+    return;
+  }
+
+  for (const result of results) {
+    const storageKey = result.mode === 'quote'
+      ? getQuoteGameStorageKey(ownerKey, universeId, result.gameId)
+      : getCharacterGameStorageKey(ownerKey, universeId, result.gameId);
+
+    const nextState = {
+      completionRecorded: result.status === 'won',
+      firstLetterRevealed: result.revealedHintKeys.includes('first-letter'),
+      gaveUp: result.status === 'lost',
+      guessCount: Math.max(result.guessCount, result.guessedCharacterIds.length),
+      guessedCharacterIds: result.guessedCharacterIds,
+      resolvedAt: readResolvedTimestamp(result),
+      revealedHintKeys: result.revealedHintKeys.filter((key) => key !== 'first-letter'),
+      updatedAt: typeof result.updatedAt === 'string' && !Number.isNaN(Date.parse(result.updatedAt))
+        ? result.updatedAt
+        : new Date().toISOString(),
+    };
+
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(nextState));
+    } catch {
+      // Ignore local storage failures so game state still loads from the API response.
+    }
+  }
 }

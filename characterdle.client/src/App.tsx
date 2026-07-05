@@ -183,6 +183,34 @@ function readRouteFromSegments(segments: string[]): AppRoute | null {
         gameMode: 'character',
         page: 'support',
       }, explicitUniverseId);
+    case 'privacy-policy':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'privacyPolicy',
+      }, explicitUniverseId);
+    case 'terms':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'termsOfService',
+      }, explicitUniverseId);
+    case 'subscription-cancellation':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'termsOfService',
+      }, explicitUniverseId);
+    case 'refund-policy':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'termsOfService',
+      }, explicitUniverseId);
     default:
       return null;
   }
@@ -261,6 +289,14 @@ function buildBrowserUrl(route: AppRoute): string {
       return route.universeId
         ? `${universePrefix}/support`
         : '/support';
+    case 'privacyPolicy':
+      return route.universeId
+        ? `${universePrefix}/privacy-policy`
+        : '/privacy-policy';
+    case 'termsOfService':
+      return route.universeId
+        ? `${universePrefix}/terms`
+        : '/terms';
     default:
       return '/';
   }

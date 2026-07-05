@@ -2,7 +2,8 @@ interface UserAvatarProps {
   avatarUrl?: string | null;
   className?: string;
   displayName?: string;
-  size?: 'header' | 'card' | 'leaderboard';
+  isPremium?: boolean;
+  size?: 'header' | 'card' | 'hero' | 'leaderboard';
 }
 
 function getInitials(displayName: string | undefined) {
@@ -30,23 +31,28 @@ export function UserAvatar({
   avatarUrl = null,
   className,
   displayName,
+  isPremium = false,
   size = 'leaderboard',
 }: UserAvatarProps) {
   const classes = className
-    ? `user-avatar user-avatar--${size} ${className}`
-    : `user-avatar user-avatar--${size}`;
+    ? `user-avatar user-avatar--${size}${isPremium ? ' is-premium' : ''} ${className}`
+    : `user-avatar user-avatar--${size}${isPremium ? ' is-premium' : ''}`;
 
   if (avatarUrl) {
     return (
       <span className={classes} aria-hidden="true">
-        <img src={avatarUrl} alt="" loading="lazy" />
+        <span className="user-avatar__inner">
+          <img src={avatarUrl} alt="" loading="lazy" />
+        </span>
       </span>
     );
   }
 
   return (
     <span className={classes} aria-hidden="true">
-      <span className="user-avatar__initials">{getInitials(displayName)}</span>
+      <span className="user-avatar__inner">
+        <span className="user-avatar__initials">{getInitials(displayName)}</span>
+      </span>
     </span>
   );
 }

@@ -1,5 +1,6 @@
 import type { StreakLeaderboardEntry } from '../../types/leaderboard';
 import { StreakEmblem } from '../ui/StreakEmblem';
+import { SupporterBadge } from '../ui/SupporterBadge';
 import { UserAvatar } from '../ui/UserAvatar';
 
 interface StreakLeaderboardTableProps {
@@ -22,9 +23,12 @@ export function StreakLeaderboardTable({ rows }: StreakLeaderboardTableProps) {
         >
           <span className="rank-medal">{row.rank}</span>
           <div className="player-cell">
-            <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} size="leaderboard" className="avatar" />
+            <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} isPremium={row.showSupporterBadge} size="leaderboard" className="avatar" />
             <div className="player-copy">
-              <strong>{row.displayName}</strong>
+              <div className="player-name-row">
+                <strong>{row.displayName}</strong>
+                {row.showSupporterBadge && <SupporterBadge compact />}
+              </div>
               <small>{row.isCurrentUser ? 'You' : 'Daily player'}</small>
             </div>
           </div>

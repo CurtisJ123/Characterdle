@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { getPreviousUniverseGames } from '../services/universeGameApi';
 import type { PreviousUniverseGamesState } from '../types/universeGame';
 
-export function usePreviousUniverseGames(universeId: string): PreviousUniverseGamesState {
+export function usePreviousUniverseGames(
+  universeId: string,
+  accessToken: string | null,
+  requestScope: string,
+): PreviousUniverseGamesState {
   const [state, setState] = useState<PreviousUniverseGamesState>({
     data: null,
     error: null,
@@ -20,7 +24,7 @@ export function usePreviousUniverseGames(universeId: string): PreviousUniverseGa
 
     async function loadPreviousGames() {
       try {
-        const data = await getPreviousUniverseGames(universeId);
+        const data = await getPreviousUniverseGames(universeId, accessToken, requestScope);
 
         if (!isMounted) {
           return;
@@ -49,7 +53,7 @@ export function usePreviousUniverseGames(universeId: string): PreviousUniverseGa
     return () => {
       isMounted = false;
     };
-  }, [universeId]);
+  }, [accessToken, requestScope, universeId]);
 
   return state;
 }

@@ -1,7 +1,12 @@
+using Characterdle.Server.Features.Leaderboard;
+using Characterdle.Server.Features.Premium;
+
 namespace Characterdle.Server.Features.UniverseGames;
 
 public static class UniverseGameEndpoints
 {
+    private const int FreeArchiveGameLimit = 3;
+
     public static IEndpointRouteBuilder MapUniverseGameEndpoints(this IEndpointRouteBuilder app)
     {
         var games = app.MapGroup("/api/universes/{universeId}/games").WithTags("UniverseGames");
@@ -147,9 +152,12 @@ public static class UniverseGameEndpoints
     private static async Task<IResult> GetGameByIdAsync(
         string universeId,
         long gameId,
+        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
         IUniverseGameRepository repository,
+        SupabaseAuthClient authClient,
+        IPremiumRepository premiumRepository,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
@@ -160,6 +168,24 @@ public static class UniverseGameEndpoints
 
         try
         {
+            var premiumAccess = await TryGetPremiumAccessAsync(httpRequest, authClient, premiumRepository, cancellationToken);
+
+            if (!HasFullArchiveAccess(premiumAccess))
+            {
+                var previousGames = await repository.GetPreviousGamesAsync(universe, cancellationToken);
+                var accessibleGames = previousGames.Games.Take(FreeArchiveGameLimit);
+
+                if (!accessibleGames.Any(previousGame => previousGame.Id == gameId))
+                {
+                    return Results.Json(
+                        new
+                        {
+                            message = $"Premium unlocks the full archive. Free players can replay the last {FreeArchiveGameLimit} daily boards.",
+                        },
+                        statusCode: StatusCodes.Status403Forbidden);
+                }
+            }
+
             var game = await repository.GetGameByIdAsync(universe, gameId, cancellationToken);
 
             return game is null
@@ -279,5 +305,45 @@ public static class UniverseGameEndpoints
         }
 
         return errors;
+    }
+
+    private static async Task<PremiumAccessResponse?> TryGetPremiumAccessAsync(
+        HttpRequest request,
+        SupabaseAuthClient authClient,
+        IPremiumRepository premiumRepository,
+        CancellationToken cancellationToken)
+    {
+        var accessToken = ReadBearerToken(request);
+
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return null;
+        }
+
+        var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+
+        return user is null
+            ? null
+            : await premiumRepository.GetPremiumAccessAsync(user.UserId, cancellationToken);
+    }
+
+    private static bool HasFullArchiveAccess(PremiumAccessResponse? premiumAccess) =>
+        premiumAccess?.FullArchiveAccess == true;
+
+    private static string? ReadBearerToken(HttpRequest request)
+    {
+        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
+        {
+            return null;
+        }
+
+        var authorizationHeader = authorizationHeaderValues.ToString();
+
+        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return authorizationHeader["Bearer ".Length..].Trim();
     }
 }

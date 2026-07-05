@@ -1,0 +1,257 @@
+.streak-menu-wrap {
+  position: relative;
+}
+
+.streak-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  width: min(420px, calc(100vw - 24px));
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 96px;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--surface-container-lowest) 98%, transparent);
+  box-shadow: 0 20px 46px color-mix(in srgb, var(--black) 34%, transparent);
+}
+
+.streak-dropdown-tier,
+.streak-dropdown-progress {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  gap: 8px;
+}
+
+.streak-dropdown-progress {
+  align-content: center;
+  gap: 10px;
+}
+
+.streak-dropdown-label,
+.streak-dropdown-heading,
+.streak-dropdown-threshold,
+.streak-dropdown-progress-copy {
+  margin: 0;
+  text-align: center;
+}
+
+.streak-dropdown-label {
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.streak-dropdown-heading {
+  color: var(--on-surface);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.streak-dropdown-threshold,
+.streak-dropdown-progress-copy {
+  color: var(--on-surface-variant);
+  font-size: 0.73rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.streak-dropdown-progress-bar {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-container) 92%, transparent),
+      color-mix(in srgb, var(--surface-container-lowest) 96%, transparent)
+    );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 6%, transparent);
+}
+
+.streak-dropdown-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--primary) 74%, var(--tertiary) 26%),
+      var(--primary)
+    );
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--primary) 28%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 24%, transparent);
+}
+
+.streak-dropdown-savers {
+  position: relative;
+  grid-column: 1 / -1;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.streak-dropdown-savers.is-locked .streak-dropdown-label {
+  opacity: 0.62;
+}
+
+.streak-dropdown-savers-value {
+  margin: 0;
+  color: var(--on-surface);
+  font-size: 0.94rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.streak-dropdown-tooltip-wrap {
+  position: relative;
+  display: block;
+}
+
+.streak-dropdown-savers-trigger {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: help;
+}
+
+.streak-dropdown-savers-trigger .streak-dropdown-label,
+.streak-dropdown-savers-trigger .streak-dropdown-savers-value {
+  text-align: center;
+}
+
+.streak-dropdown-savers-trigger.is-locked-row {
+  cursor: default;
+}
+
+.streak-dropdown-savers-lock {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--primary) 34%, transparent);
+  border-radius: 999px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--surface-container-lowest) 94%, transparent);
+  box-shadow:
+    0 8px 18px color-mix(in srgb, var(--black) 24%, transparent),
+    0 0 12px color-mix(in srgb, var(--primary) 14%, transparent);
+  cursor: help;
+}
+
+.streak-dropdown-savers-lock img {
+  width: 15px;
+  height: 15px;
+}
+
+.streak-dropdown-savers-lock:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 62%, transparent);
+  outline-offset: 3px;
+}
+
+.streak-dropdown-premium-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 9px);
+  z-index: 3;
+  width: max-content;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: var(--radius-control);
+  padding: 7px 10px;
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface-container-lowest) 98%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--black) 34%, transparent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.streak-dropdown-savers-lock:hover .streak-dropdown-premium-tooltip,
+.streak-dropdown-savers-lock:focus-visible .streak-dropdown-premium-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.streak-dropdown-tooltip-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 2;
+  width: 240px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-soft);
+  padding: 12px 14px;
+  color: var(--on-surface-variant);
+  background: color-mix(in srgb, var(--surface-container-lowest) 98%, transparent);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--black) 34%, transparent);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.streak-dropdown-tooltip-wrap:hover .streak-dropdown-tooltip-panel,
+.streak-dropdown-tooltip-wrap:focus-within .streak-dropdown-tooltip-panel {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.streak-dropdown .streak-emblem.is-preview {
+  opacity: 0.84;
+}
+
+.streak-dropdown .streak-emblem.is-preview .streak-emblem__flame-image {
+  filter:
+    saturate(0.92)
+    brightness(0.96)
+    drop-shadow(0 6px 12px color-mix(in srgb, var(--black) 22%, transparent));
+}
+
+@media (max-width: 760px) {
+  .streak-dropdown {
+    width: min(360px, calc(100vw - 24px));
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .streak-dropdown-tier,
+  .streak-dropdown-progress {
+    justify-items: center;
+  }
+
+  .streak-dropdown-progress-bar {
+    max-width: 220px;
+  }
+
+  .streak-dropdown-tooltip-panel {
+    left: 0;
+    right: auto;
+    width: min(240px, calc(100vw - 72px));
+  }
+}

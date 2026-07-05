@@ -1,0 +1,65 @@
+.premium-archive-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 125;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.premium-archive-gate-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--surface-container-lowest) 76%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.premium-archive-gate-panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 28px;
+  border-radius: var(--radius-panel);
+  text-align: center;
+}
+
+.premium-archive-gate-panel h2 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  line-height: 0.96;
+}
+
+.premium-archive-gate-panel .muted-copy {
+  margin: 0;
+}
+
+.premium-archive-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.premium-archive-gate-actions .primary-button,
+.premium-archive-gate-actions .secondary-button {
+  min-width: 180px;
+}
+
+@media (max-width: 760px) {
+  .premium-archive-gate-overlay {
+    align-items: flex-start;
+    padding: 18px;
+    padding-top: 26px;
+  }
+
+  .premium-archive-gate-panel {
+    padding: 24px 20px;
+  }
+}

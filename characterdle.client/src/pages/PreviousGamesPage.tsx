@@ -10,12 +10,14 @@ import {
   getRemoteGameOutcome,
 } from '../lib/characterGameProgress';
 import type { GameMode } from '../types/game';
+import type { PremiumAccess } from '../types/premium';
 import type { NavigateToPage } from '../types/routes';
 
 interface PreviousGamesPageProps {
   onNavigate: NavigateToPage;
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
+  premiumAccess: PremiumAccess | null;
   selectedGameMode: GameMode;
 }
 
@@ -23,14 +25,25 @@ export function PreviousGamesPage({
   onNavigate,
   onOpenGame,
   onOpenHistory,
+  premiumAccess,
   selectedGameMode,
 }: PreviousGamesPageProps) {
   const { selectedUniverse } = useUniverse();
   const { session, user } = useAuth();
   const progressOwnerKey = getGameProgressOwnerKey(user?.id);
-  const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id);
-  const { data: gameResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
+  const requestScope = user?.id ?? 'guest';
+  const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id, session?.access_token ?? null, requestScope);
+  const { data: gameResults } = useUniverseGameResults(
+    session?.access_token ?? null,
+    selectedUniverse.id,
+    progressOwnerKey,
+  );
   const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
+  const hasFullArchiveAccess = premiumAccess?.fullArchiveAccess === true;
+  const archiveLookbackDays = Math.max(premiumAccess?.archiveLookbackDays ?? 3, 0);
+  const accessibleGameCount = hasFullArchiveAccess
+    ? Number.MAX_SAFE_INTEGER
+    : archiveLookbackDays;
   const gameOutcomes = new Map(
     (data?.games ?? []).map((game) => {
       const localOutcome = selectedGameMode === 'quote'
@@ -91,11 +104,11 @@ export function PreviousGamesPage({
 
         {!isLoading && !error && data && data.games.length > 0 && (
           <PreviousGamesGrid
+            accessibleGameCount={accessibleGameCount}
             games={data.games}
             gameMode={selectedGameMode}
             gameOutcomes={gameOutcomes}
             onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}
-            universeId={selectedUniverse.id}
             universeTitle={selectedUniverse.title}
           />
         )}

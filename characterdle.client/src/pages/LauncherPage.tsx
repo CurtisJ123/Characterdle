@@ -10,13 +10,14 @@ import type { UserProfile } from '../types/user';
 
 interface LauncherPageProps {
   authError: Error | null;
+  isPremiumUser: boolean;
   isUserLoading: boolean;
   onNavigate: NavigateToPage;
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   user: UserProfile | null;
 }
 
-export function LauncherPage({ authError, isUserLoading, onNavigate, onOpenGame, user }: LauncherPageProps) {
+export function LauncherPage({ authError, isPremiumUser, isUserLoading, onNavigate, onOpenGame, user }: LauncherPageProps) {
   const { selectedUniverse, setSelectedUniverseId } = useUniverse();
   const { data: leaderboardData, error: leaderboardError, isLoading: isLeaderboardLoading } = useLeaderboard(
     selectedUniverse.id,
@@ -54,7 +55,7 @@ export function LauncherPage({ authError, isUserLoading, onNavigate, onOpenGame,
         </div>
 
         <aside className="dashboard-rail" aria-label="Player snapshot">
-          <UserProfileCard error={authError} isLoading={isUserLoading} user={user} />
+          <UserProfileCard error={authError} isLoading={isUserLoading} isPremiumUser={isPremiumUser} user={user} />
           <MiniLeaderboardCard
             error={leaderboardError}
             isLoading={isLeaderboardLoading}

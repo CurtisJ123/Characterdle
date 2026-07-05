@@ -14,6 +14,7 @@ public sealed record LeaderboardEntryResponse(
     double? AverageGuesses,
     double? CharacterAverageGuesses,
     double? QuoteAverageGuesses,
+    bool ShowSupporterBadge,
     double WinRate,
     int CurrentStreak,
     bool IsCurrentUser);

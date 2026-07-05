@@ -58,6 +58,20 @@ export function SupportPage({ onNavigate }: SupportPageProps) {
             <li>Your device, browser, and a screenshot if you have one</li>
           </ul>
         </article>
+
+        <article className="glass-card support-card">
+          <p className="card-kicker">Policies</p>
+          <h2>Important legal pages</h2>
+          <div className="support-policy-links">
+            <button className="secondary-button support-policy-button" type="button" onClick={() => onNavigate('privacyPolicy')}>
+              Privacy Policy
+            </button>
+            <button className="secondary-button support-policy-button" type="button" onClick={() => onNavigate('termsOfService')}>
+              Terms of Service
+            </button>
+          </div>
+          <p className="muted-copy">Subscription cancellation and refund terms are included inside the Terms of Service page.</p>
+        </article>
       </section>
     </main>
   );

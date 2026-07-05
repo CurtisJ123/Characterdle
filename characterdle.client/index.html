@@ -59,26 +59,6 @@
     <meta name="twitter:image" content="https://characterdle.com/android-chrome-512x512.png" />
     <meta name="twitter:image:alt" content="Characterdle logo" />
 
-    <script>
-      (() => {
-        const { hostname, protocol } = window.location;
-        const isLocalHost = hostname === 'localhost'
-          || hostname === '127.0.0.1'
-          || hostname === '::1'
-          || hostname.endsWith('.localhost');
-
-        if (protocol === 'file:' || isLocalHost) {
-          return;
-        }
-
-        const adSenseScript = document.createElement('script');
-        adSenseScript.async = true;
-        adSenseScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2618219034381751';
-        adSenseScript.crossOrigin = 'anonymous';
-        document.head.appendChild(adSenseScript);
-      })();
-    </script>
-
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

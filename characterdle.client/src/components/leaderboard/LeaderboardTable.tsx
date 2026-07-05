@@ -1,5 +1,6 @@
 import type { GameMode } from '../../types/game';
 import type { ModeLeaderboardEntry } from '../../types/leaderboard';
+import { SupporterBadge } from '../ui/SupporterBadge';
 import { UserAvatar } from '../ui/UserAvatar';
 
 interface LeaderboardTableProps {
@@ -33,9 +34,12 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
         <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} key={row.userId}>
           <span className="rank-medal">{row.rank}</span>
           <div className="player-cell">
-            <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} size="leaderboard" className="avatar" />
+            <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} isPremium={row.showSupporterBadge} size="leaderboard" className="avatar" />
             <div className="player-copy">
-              <strong>{row.displayName}</strong>
+              <div className="player-name-row">
+                <strong>{row.displayName}</strong>
+                {row.showSupporterBadge && <SupporterBadge compact />}
+              </div>
               <small>{row.isCurrentUser ? 'You' : 'Ranked player'}</small>
             </div>
           </div>

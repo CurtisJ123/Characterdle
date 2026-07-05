@@ -71,6 +71,13 @@
   gap: 4px;
 }
 
+.player-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .player-copy strong {
   color: var(--on-surface);
   font-size: 1rem;

@@ -115,6 +115,7 @@ export function LeaderboardPage() {
         isCurrentUser: row.isCurrentUser,
         plays: getModePlays(row, selectedMode),
         rank: index + 1,
+        showSupporterBadge: row.showSupporterBadge,
         totalWins: row.totalWins,
         userId: row.userId,
         wins: getModeWins(row, selectedMode),

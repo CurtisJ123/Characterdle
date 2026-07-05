@@ -3,6 +3,37 @@
   gap: 28px;
 }
 
+.profile-billing-banner {
+  display: grid;
+  gap: 8px;
+  border-radius: var(--radius-panel);
+  padding: 18px 22px;
+}
+
+.profile-billing-banner strong {
+  color: var(--on-surface);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-billing-banner p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-weight: 700;
+}
+
+.profile-billing-banner.is-success {
+  border: 1px solid color-mix(in srgb, var(--status-success) 26%, transparent);
+  background: color-mix(in srgb, var(--status-success) 8%, var(--surface-container-lowest));
+}
+
+.profile-billing-banner.is-neutral {
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface-container-lowest));
+}
+
 .profile-empty-state,
 .profile-hero,
 .profile-panel {
@@ -35,28 +66,7 @@
 }
 
 .profile-hero-avatar {
-  width: 122px;
-  height: 122px;
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
-  border-radius: var(--radius-image);
-  object-fit: cover;
   box-shadow: 0 12px 34px color-mix(in srgb, var(--black) 26%, transparent);
-}
-
-.profile-hero-avatar.is-fallback {
-  display: inline-grid;
-  place-items: center;
-  color: var(--primary);
-  background:
-    radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--white) 16%, transparent), transparent 22%),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--surface-container) 98%, transparent),
-      color-mix(in srgb, var(--surface-panel-accent) 88%, transparent)
-    );
-  font-family: var(--heading-font);
-  font-size: 2.45rem;
-  font-weight: 900;
 }
 
 .profile-hero-copy h1 {
@@ -66,6 +76,13 @@
   font-size: clamp(2.3rem, 5vw, 4.6rem);
   line-height: 0.95;
   letter-spacing: -0.05em;
+}
+
+.profile-hero-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
 .profile-subtitle {

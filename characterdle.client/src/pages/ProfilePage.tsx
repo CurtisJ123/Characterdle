@@ -1,29 +1,21 @@
 import { useAuth } from '../hooks/useAuth';
-import { useUniverse } from '../hooks/useUniverse';
+import { UserAvatar } from '../components/ui/UserAvatar';
 import { StreakEmblem } from '../components/ui/StreakEmblem';
+import { SupporterBadge } from '../components/ui/SupporterBadge';
 import type { UniverseProfile } from '../types/profile';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 
+type BillingRedirectStatus = 'success' | 'cancelled' | null;
+
 interface ProfilePageProps {
+  billingRedirectStatus?: BillingRedirectStatus;
+  isPremiumUser: boolean;
   isProfileLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onNavigate: NavigateToPage;
   profile: UniverseProfile | null;
   profileError: Error | null;
-}
-
-function getInitials(displayName: string | undefined) {
-  if (!displayName) {
-    return '??';
-  }
-
-  return displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
+  showSupporterBadge: boolean;
 }
 
 function formatAverage(value: number | null) {
@@ -47,14 +39,16 @@ function formatDays(value: number) {
 }
 
 export function ProfilePage({
+  billingRedirectStatus = null,
+  isPremiumUser,
   isProfileLoading,
   onAuthNavigate,
   onNavigate,
   profile,
   profileError,
+  showSupporterBadge,
 }: ProfilePageProps) {
   const { isAuthenticated, session, user } = useAuth();
-  const { selectedUniverse } = useUniverse();
   const data = profile;
   const error = profileError;
   const isLoading = isProfileLoading && Boolean(session?.access_token);
@@ -67,6 +61,19 @@ export function ProfilePage({
     }).format(new Date(memberSinceValue))
     : 'Recently joined';
   const resolvedAvatarUrl = user?.avatarUrl ?? data?.avatarUrl ?? null;
+  const billingBanner = billingRedirectStatus === 'success'
+    ? {
+      tone: 'success' as const,
+      title: 'Subscription updated',
+      detail: 'Your premium access is being refreshed now. If it does not appear right away, give it a moment and reload the page.',
+    }
+    : billingRedirectStatus === 'cancelled'
+      ? {
+        tone: 'neutral' as const,
+        title: 'Checkout canceled',
+        detail: 'No changes were made to your subscription.',
+      }
+      : null;
 
   if (!isAuthenticated) {
     return (
@@ -89,20 +96,29 @@ export function ProfilePage({
 
   return (
     <main className="page profile-page">
+      {billingBanner && (
+        <section className={`profile-billing-banner glass-card is-${billingBanner.tone}`} aria-live="polite">
+          <strong>{billingBanner.title}</strong>
+          <p>{billingBanner.detail}</p>
+        </section>
+      )}
+
       <section className={`profile-hero glass-card${isInitialLoad ? ' is-loading' : ''}`}>
         <div className="profile-hero-main">
-          {resolvedAvatarUrl ? (
-            <img className="profile-hero-avatar" src={resolvedAvatarUrl} alt="" />
-          ) : (
-            <span className="profile-hero-avatar is-fallback" aria-hidden="true">
-              {getInitials(user?.displayName ?? data?.displayName)}
-            </span>
-          )}
+          <UserAvatar
+            avatarUrl={resolvedAvatarUrl}
+            className="profile-hero-avatar"
+            displayName={user?.displayName ?? data?.displayName}
+            isPremium={isPremiumUser}
+            size="hero"
+          />
 
           <div className="profile-hero-copy">
-            <p className="eyebrow">{selectedUniverse.title}</p>
-            <h1>{user?.displayName ?? data?.displayName ?? 'Profile'}</h1>
+            <div className="profile-hero-title-row">
+              <h1>{user?.displayName ?? data?.displayName ?? 'Profile'}</h1>
+            </div>
             <div className="profile-meta-row">
+              {showSupporterBadge && <SupporterBadge animatedFrame />}
               <span className="pill">Member since {memberSince}</span>
               <span className="pill">Overall rank {formatRank(data?.overallRank ?? null)}</span>
             </div>

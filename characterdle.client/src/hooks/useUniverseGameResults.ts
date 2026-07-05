@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
+import {
+  cacheUniverseGameResults,
+  readCachedUniverseGameResults,
+  syncPersistedGameResultsToLocalProgress,
+} from '../lib/characterGameProgress';
 import { getGameResults } from '../services/profileApi';
 import type { ProfileGameResultsState } from '../types/profile';
 
-export function useUniverseGameResults(accessToken: string | null, universeId: string): ProfileGameResultsState {
+export function useUniverseGameResults(
+  accessToken: string | null,
+  universeId: string,
+  ownerKey = 'guest',
+): ProfileGameResultsState {
   const [state, setState] = useState<ProfileGameResultsState>({
-    data: [],
+    data: accessToken ? readCachedUniverseGameResults(ownerKey, universeId) : [],
     error: null,
     isLoading: Boolean(accessToken),
   });
@@ -26,11 +35,13 @@ export function useUniverseGameResults(accessToken: string | null, universeId: s
         return;
       }
 
-      setState((currentState) => ({
-        ...currentState,
+      const cachedResults = readCachedUniverseGameResults(ownerKey, universeId);
+
+      setState({
+        data: cachedResults,
         error: null,
         isLoading: true,
-      }));
+      });
 
       try {
         const data = await getGameResults(accessToken, universeId);
@@ -39,6 +50,9 @@ export function useUniverseGameResults(accessToken: string | null, universeId: s
           return;
         }
 
+        cacheUniverseGameResults(ownerKey, universeId, data);
+        syncPersistedGameResultsToLocalProgress(ownerKey, universeId, data);
+
         setState({
           data,
           error: null,
@@ -46,6 +60,17 @@ export function useUniverseGameResults(accessToken: string | null, universeId: s
         });
       } catch (error) {
         if (!isMounted) {
+          return;
+        }
+
+        if (cachedResults.length > 0) {
+          syncPersistedGameResultsToLocalProgress(ownerKey, universeId, cachedResults);
+
+          setState({
+            data: cachedResults,
+            error: null,
+            isLoading: false,
+          });
           return;
         }
 
@@ -62,7 +87,7 @@ export function useUniverseGameResults(accessToken: string | null, universeId: s
     return () => {
       isMounted = false;
     };
-  }, [accessToken, universeId]);
+  }, [accessToken, ownerKey, universeId]);
 
   return state;
 }

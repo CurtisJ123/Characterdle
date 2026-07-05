@@ -1,29 +1,38 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { AccountDeletionStatus, AccountSettingsValues } from '../../types/auth';
+import type { BillingCheckoutPlan } from '../../types/billing';
 import { AccountAvatarPicker } from './AccountAvatarPicker';
 
 interface AccountSettingsOverlayProps {
   currentAvatarUrl: string | null;
   currentDisplayName: string;
+  isPremiumUser: boolean;
   onClose: () => void;
   onDeleteAccount: () => Promise<string>;
+  onOpenBillingPortal: () => Promise<void>;
   onLoadAccountDeletionStatus: () => Promise<AccountDeletionStatus>;
   onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
+  onStartCheckout: (plan: BillingCheckoutPlan) => Promise<void>;
 }
 
 export function AccountSettingsOverlay({
   currentAvatarUrl,
   currentDisplayName,
+  isPremiumUser,
   onClose,
   onDeleteAccount,
+  onOpenBillingPortal,
   onLoadAccountDeletionStatus,
   onSaveSettings,
+  onStartCheckout,
 }: AccountSettingsOverlayProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl);
+  const [billingMessage, setBillingMessage] = useState<string>();
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deletionStatus, setDeletionStatus] = useState<AccountDeletionStatus | null>(null);
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isBillingActionLoading, setIsBillingActionLoading] = useState(false);
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletionStatusLoading, setIsDeletionStatusLoading] = useState(true);
@@ -134,6 +143,34 @@ export function AccountSettingsOverlay({
     }
   }
 
+  async function handleStartCheckout(plan: BillingCheckoutPlan) {
+    setBillingMessage(undefined);
+    setErrorMessage(undefined);
+    setIsBillingActionLoading(true);
+
+    try {
+      await onStartCheckout(plan);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to start checkout.');
+    } finally {
+      setIsBillingActionLoading(false);
+    }
+  }
+
+  async function handleOpenBillingPortal() {
+    setBillingMessage(undefined);
+    setErrorMessage(undefined);
+    setIsBillingActionLoading(true);
+
+    try {
+      await onOpenBillingPortal();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to open billing portal.');
+    } finally {
+      setIsBillingActionLoading(false);
+    }
+  }
+
   return (
     <div className="account-settings-overlay" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
       <button
@@ -185,6 +222,50 @@ export function AccountSettingsOverlay({
             {isSaving ? 'Saving...' : 'Save changes'}
           </button>
         </form>
+
+        <section className="account-billing-zone" aria-labelledby="account-billing-zone-title">
+          <div className="account-billing-zone-heading">
+            <p className="card-kicker">Membership</p>
+            <h3 id="account-billing-zone-title">{isPremiumUser ? 'Premium active' : 'Upgrade to premium'}</h3>
+            <p className="muted-copy">
+              {isPremiumUser
+                ? 'Manage your subscription, cancellation, and payment details through Stripe.'
+                : 'Unlock the full archive, ad-free play, practice mode, profile customization, and streak protection.'}
+            </p>
+          </div>
+
+          {billingMessage && <p className="auth-feedback is-success">{billingMessage}</p>}
+
+          {isPremiumUser ? (
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={isBillingActionLoading}
+              onClick={() => { void handleOpenBillingPortal(); }}
+            >
+              {isBillingActionLoading ? 'Opening...' : 'Manage Billing'}
+            </button>
+          ) : (
+            <div className="account-billing-actions">
+              <button
+                className="primary-button"
+                type="button"
+                disabled={isBillingActionLoading}
+                onClick={() => { void handleStartCheckout('monthly'); }}
+              >
+                {isBillingActionLoading ? 'Redirecting...' : 'Monthly Premium'}
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={isBillingActionLoading}
+                onClick={() => { void handleStartCheckout('yearly'); }}
+              >
+                {isBillingActionLoading ? 'Redirecting...' : 'Yearly Premium'}
+              </button>
+            </div>
+          )}
+        </section>
 
         <section className="account-danger-zone" aria-labelledby="account-danger-zone-title">
           <div className="account-danger-zone-heading">

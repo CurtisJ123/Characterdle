@@ -198,6 +198,12 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
     {
         const string sql =
             """
+            delete from public."UserPremiumStatus"
+            where user_id = @userId;
+
+            delete from public."UniverseStreakCredits"
+            where user_id = @userId;
+
             delete from public."UniverseGameResults"
             where user_id = @userId;
 

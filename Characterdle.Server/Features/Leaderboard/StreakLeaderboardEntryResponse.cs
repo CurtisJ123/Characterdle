@@ -5,6 +5,7 @@ public sealed record StreakLeaderboardEntryResponse(
     Guid UserId,
     string DisplayName,
     string? AvatarUrl,
+    bool ShowSupporterBadge,
     int CurrentStreak,
     int LongestStreak,
     bool IsCurrentUser);

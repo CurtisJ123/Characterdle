@@ -91,6 +91,11 @@
   transform: translateY(-1px);
 }
 
+.streak-badge[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--primary) 48%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container-lowest));
+}
+
 .streak-badge-value {
   color: var(--on-surface);
   font-size: 0.88rem;

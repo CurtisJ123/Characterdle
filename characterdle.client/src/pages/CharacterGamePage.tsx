@@ -7,6 +7,7 @@ import { CharacterPortrait } from '../components/game/CharacterPortrait';
 import { QuoteGameBoard } from '../components/game/QuoteGameBoard';
 import { QuoteHintPills } from '../components/game/QuoteHintPills';
 import { QuotePromptCard } from '../components/game/QuotePromptCard';
+import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
 import { SiteHelpOverlay } from '../components/layout/SiteHelpOverlay';
 import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { useAuth } from '../hooks/useAuth';
@@ -21,8 +22,10 @@ import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
 import { compareAttributeValue } from '../lib/universeAttributes';
+import { createBillingCheckoutSession } from '../services/billingApi';
 import { trackUniverseGamePlay } from '../services/gamePlayTrackingApi';
 import { submitUniverseGameResult } from '../services/leaderboardApi';
+import { UniverseGameApiError } from '../services/universeGameApi';
 import type { GameMode } from '../types/game';
 import type { UniverseStreak } from '../types/leaderboard';
 import type { NavigateToPage } from '../types/routes';
@@ -71,10 +74,20 @@ export function CharacterGamePage({
   const syncedPlayTrackingKeysRef = useRef(new Set<string>());
   const wasCompleteRef = useRef(false);
   const { isAuthenticated, isLoading: isAuthLoading, session, user } = useAuth();
+  const requestScope = user?.id ?? 'guest';
   const progressOwnerKey = getGameProgressOwnerKey(user?.id);
   const { selectedUniverse } = useUniverse();
-  const { data, error, isLoading } = useUniverseGame(selectedUniverse.id, selectedGameId);
-  const { data: persistedResults } = useUniverseGameResults(session?.access_token ?? null, selectedUniverse.id);
+  const { data, error, isLoading } = useUniverseGame(
+    selectedUniverse.id,
+    selectedGameId,
+    session?.access_token ?? null,
+    requestScope,
+  );
+  const { data: persistedResults } = useUniverseGameResults(
+    session?.access_token ?? null,
+    selectedUniverse.id,
+    progressOwnerKey,
+  );
   const characterResult = useMemo(
     () => data
       ? persistedResults.find((result) => result.mode === 'character' && result.gameId === data.id) ?? null
@@ -203,6 +216,19 @@ export function CharacterGamePage({
     isQuoteMode ? displayedQuoteStatus === 'won' : displayedCharacterStatus === 'won'
   );
   const guestSignupPromptDelay = resultScrollDelay + GUEST_SIGNUP_POPUP_EXTRA_DELAY_MS;
+  const isPremiumArchiveLocked = !isAuthLoading
+    && selectedGameId !== null
+    && error instanceof UniverseGameApiError
+    && error.status === 403;
+
+  async function handleStartCheckout(plan: 'monthly' | 'yearly') {
+    if (!session?.access_token) {
+      throw new Error('You must be signed in to subscribe.');
+    }
+
+    const redirectUrl = await createBillingCheckoutSession(session.access_token, plan);
+    window.location.assign(redirectUrl);
+  }
 
   useEffect(() => {
     if (!shouldShowGuestVictorySignup) {
@@ -734,8 +760,26 @@ export function CharacterGamePage({
         )}
       </div>
       <SiteHelpOverlay isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      {isPremiumArchiveLocked && (
+        <PremiumArchiveGateOverlay
+          gameLabel={isQuoteMode ? 'Quote' : 'Character'}
+          onGoHome={() => onNavigate('launcher')}
+          onStartCheckout={isAuthenticated ? handleStartCheckout : undefined}
+        />
+      )}
 
-      {isQuoteMode && quoteGameData ? (
+      {isPremiumArchiveLocked ? (
+        <section className={isQuoteMode ? 'quote-mode-layout' : undefined}>
+          <section className={`game-hero${isQuoteMode ? ' is-quote' : ''}`}>
+            <p className="eyebrow">
+              {selectedGameId === null
+                ? `Universe: ${selectedUniverse.title}`
+                : `${selectedUniverse.title} archive`}
+            </p>
+            <h1>{heroTitle}</h1>
+          </section>
+        </section>
+      ) : isQuoteMode && quoteGameData ? (
         <section className="quote-mode-layout">
           <section className="game-hero is-quote">
             <p className="eyebrow">
@@ -744,7 +788,7 @@ export function CharacterGamePage({
                 : `${selectedUniverse.title} archive`}
             </p>
             <h1>{heroTitle}</h1>
-            {error && <p className="error-copy">Unable to load game.</p>}
+            {error && !isPremiumArchiveLocked && <p className="error-copy">{error.message}</p>}
           </section>
 
           <QuoteHintPills hints={currentRound.revealedHints} />
@@ -796,7 +840,7 @@ export function CharacterGamePage({
                 : `${selectedUniverse.title} archive`}
             </p>
             <h1>{heroTitle}</h1>
-            {error && <p className="error-copy">Unable to load game.</p>}
+            {error && !isPremiumArchiveLocked && <p className="error-copy">{error.message}</p>}
           </section>
 
           {searchForm}
