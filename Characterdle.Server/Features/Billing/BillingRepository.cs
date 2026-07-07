@@ -105,6 +105,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
               status,
               stripe_customer_id,
               stripe_subscription_id,
+              current_period_start,
               current_period_end,
               cancel_at_period_end,
               premium_started_at,
@@ -117,6 +118,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
               @status,
               @stripeCustomerId,
               @stripeSubscriptionId,
+              @currentPeriodStart,
               @currentPeriodEnd,
               @cancelAtPeriodEnd,
               @premiumStartedAt,
@@ -129,9 +131,14 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
               status = excluded.status,
               stripe_customer_id = coalesce(excluded.stripe_customer_id, public."UserPremiumStatus".stripe_customer_id),
               stripe_subscription_id = excluded.stripe_subscription_id,
+              current_period_start = excluded.current_period_start,
               current_period_end = excluded.current_period_end,
               cancel_at_period_end = excluded.cancel_at_period_end,
-              premium_started_at = coalesce(excluded.premium_started_at, public."UserPremiumStatus".premium_started_at),
+              premium_started_at = case
+                when public."UserPremiumStatus".stripe_subscription_id is distinct from excluded.stripe_subscription_id
+                  then coalesce(excluded.premium_started_at, excluded.current_period_start, public."UserPremiumStatus".premium_started_at)
+                else coalesce(public."UserPremiumStatus".premium_started_at, excluded.premium_started_at, excluded.current_period_start)
+              end,
               premium_ended_at = excluded.premium_ended_at,
               updated_at = timezone('utc', now());
             """;
@@ -142,6 +149,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
         command.Parameters.AddWithValue("status", snapshot.Status);
         command.Parameters.AddWithValue("stripeCustomerId", (object?)snapshot.StripeCustomerId ?? DBNull.Value);
         command.Parameters.AddWithValue("stripeSubscriptionId", (object?)snapshot.StripeSubscriptionId ?? DBNull.Value);
+        command.Parameters.AddWithValue("currentPeriodStart", (object?)snapshot.CurrentPeriodStart ?? DBNull.Value);
         command.Parameters.AddWithValue("currentPeriodEnd", (object?)snapshot.CurrentPeriodEnd ?? DBNull.Value);
         command.Parameters.AddWithValue("cancelAtPeriodEnd", snapshot.CancelAtPeriodEnd);
         command.Parameters.AddWithValue("premiumStartedAt", (object?)snapshot.PremiumStartedAt ?? DBNull.Value);

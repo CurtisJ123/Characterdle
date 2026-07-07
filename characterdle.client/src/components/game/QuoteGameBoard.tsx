@@ -23,6 +23,7 @@ interface QuoteGameBoardProps {
   rows: QuoteGameRow[];
   secondaryActionLabel?: string;
   showHintCount?: boolean;
+  showShareButton?: boolean;
   showGuestSignupPrompt?: boolean;
   status: CharacterGameStatus;
   universeId: string;
@@ -55,6 +56,7 @@ export function QuoteGameBoard({
   rows,
   secondaryActionLabel,
   showHintCount = false,
+  showShareButton = true,
   showGuestSignupPrompt = false,
   status,
   universeId,
@@ -151,19 +153,21 @@ export function QuoteGameBoard({
                 {secondaryActionLabel}
               </button>
             )}
-            <GameShareButton
-              payload={{
-                gameId,
-                guessCount,
-                hintCount,
-                mode: 'quote',
-                rows,
-                streak: currentStreak,
-                status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
-                universeId,
-                universeName,
-              }}
-            />
+            {showShareButton && (
+              <GameShareButton
+                payload={{
+                  gameId,
+                  guessCount,
+                  hintCount,
+                  mode: 'quote',
+                  rows,
+                  streak: currentStreak,
+                  status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,
+                  universeId,
+                  universeName,
+                }}
+              />
+            )}
           </div>
         </section>
       )}

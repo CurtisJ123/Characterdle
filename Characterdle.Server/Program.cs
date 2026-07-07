@@ -76,6 +76,7 @@ builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameReposito
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<IBillingRepository, BillingRepository>();
 builder.Services.AddScoped<IPremiumRepository, PremiumRepository>();
+builder.Services.AddScoped<IPremiumStreakSaverService, PremiumStreakSaverService>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
 builder.Services.AddScoped<IAccountDeletionGuard, DefaultAccountDeletionGuard>();
 builder.Services.AddSingleton<StripeBillingService>();

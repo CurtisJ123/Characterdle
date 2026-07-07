@@ -77,6 +77,60 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             cancellationToken);
     }
 
+    public async Task<CurrentUniverseGameResponse?> GetRandomGameAsync(
+        UniverseDefinition universe,
+        string mode,
+        CancellationToken cancellationToken)
+    {
+        var normalizedMode = string.Equals(mode, "quote", StringComparison.OrdinalIgnoreCase)
+            ? "quote"
+            : "character";
+        var characters = await LoadAllCharactersAsync(universe, cancellationToken);
+
+        if (characters.Count == 0)
+        {
+            return null;
+        }
+
+        if (normalizedMode == "quote")
+        {
+            if (string.IsNullOrWhiteSpace(universe.QuoteTableName))
+            {
+                return null;
+            }
+
+            var quotePrompt = await LoadRandomQuotePromptAsync(universe, cancellationToken);
+
+            if (quotePrompt is null)
+            {
+                return null;
+            }
+
+            var answerCharacter = characters.FirstOrDefault(character => character.Id == quotePrompt.CharacterId)
+                ?? await LoadCharacterByIdAsync(universe, quotePrompt.CharacterId, cancellationToken);
+
+            return answerCharacter is null
+                ? null
+                : BuildTemporaryGameResponse(
+                    universe,
+                    sourceId: quotePrompt.Id,
+                    answerCharacter,
+                    quotePrompt,
+                    characters);
+        }
+
+        var randomCharacter = await LoadRandomCharacterAsync(universe, cancellationToken);
+
+        return randomCharacter is null
+            ? null
+            : BuildTemporaryGameResponse(
+                universe,
+                sourceId: randomCharacter.Id,
+                randomCharacter,
+                quotePrompt: null,
+                characters);
+    }
+
     public async Task<bool> UpsertGamePlayAsync(
         UniverseDefinition universe,
         long gameId,
@@ -218,25 +272,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
 
         await gameReader.CloseAsync();
 
-        var charactersSql =
-            $"""
-            select
-              {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 0)}
-            from {universe.CharacterTableName} as characters
-            order by characters.display_name;
-            """;
-
-        await using var charactersCommand = dataSource.CreateCommand(charactersSql);
-        await using var charactersReader = await charactersCommand.ExecuteReaderAsync(cancellationToken);
-
-        var characters = new List<UniverseCharacterRecord>();
-
-        while (await charactersReader.ReadAsync(cancellationToken))
-        {
-            characters.Add(ReadCharacter(charactersReader, 0, universe.AttributeDefinitions));
-        }
-
-        await charactersReader.CloseAsync();
+        var characters = await LoadAllCharactersAsync(universe, cancellationToken);
         var modeStats = await LoadModeStatsAsync(universe, resolvedGameId, cancellationToken);
         var characterStats = modeStats.TryGetValue("character", out var resolvedCharacterStats)
             ? resolvedCharacterStats
@@ -430,6 +466,147 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             PlayCount: 0,
             AverageGuessSampleSize: 0,
             AverageGuesses: null);
+
+    private CurrentUniverseGameResponse BuildTemporaryGameResponse(
+        UniverseDefinition universe,
+        long sourceId,
+        UniverseCharacterRecord answerCharacter,
+        UniverseQuotePromptRecord? quotePrompt,
+        IReadOnlyList<UniverseCharacterRecord> characters)
+    {
+        var quoteStats = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? null
+            : EmptyModeStats();
+
+        return new CurrentUniverseGameResponse(
+            sourceId,
+            DateTime.UtcNow,
+            universe.Id,
+            universe.DisplayName,
+            EmptyModeStats(),
+            quoteStats,
+            universe.AttributeDefinitions,
+            answerCharacter,
+            quotePrompt,
+            characters);
+    }
+
+    private async Task<List<UniverseCharacterRecord>> LoadAllCharactersAsync(
+        UniverseDefinition universe,
+        CancellationToken cancellationToken)
+    {
+        var charactersSql =
+            $"""
+            select
+              {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 0)}
+            from {universe.CharacterTableName} as characters
+            order by characters.display_name;
+            """;
+
+        await using var charactersCommand = dataSource.CreateCommand(charactersSql);
+        await using var charactersReader = await charactersCommand.ExecuteReaderAsync(cancellationToken);
+
+        var characters = new List<UniverseCharacterRecord>();
+
+        while (await charactersReader.ReadAsync(cancellationToken))
+        {
+            characters.Add(ReadCharacter(charactersReader, 0, universe.AttributeDefinitions));
+        }
+
+        return characters;
+    }
+
+    private async Task<UniverseCharacterRecord?> LoadRandomCharacterAsync(
+        UniverseDefinition universe,
+        CancellationToken cancellationToken)
+    {
+        var sql =
+            $"""
+            select
+              {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 0)}
+            from {universe.CharacterTableName} as characters
+            order by random()
+            limit 1;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken)
+            ? ReadCharacter(reader, 0, universe.AttributeDefinitions)
+            : null;
+    }
+
+    private async Task<UniverseCharacterRecord?> LoadCharacterByIdAsync(
+        UniverseDefinition universe,
+        long characterId,
+        CancellationToken cancellationToken)
+    {
+        var sql =
+            $"""
+            select
+              {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 0)}
+            from {universe.CharacterTableName} as characters
+            where characters.id = @characterId
+            limit 1;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("characterId", characterId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken)
+            ? ReadCharacter(reader, 0, universe.AttributeDefinitions)
+            : null;
+    }
+
+    private async Task<UniverseQuotePromptRecord?> LoadRandomQuotePromptAsync(
+        UniverseDefinition universe,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(universe.QuoteTableName))
+        {
+            return null;
+        }
+
+        var hasEpisodeTitleTable = !string.IsNullOrWhiteSpace(universe.EpisodeTitleTableName);
+        var episodeTitleProjection = hasEpisodeTitleTable
+            ? "episode_titles.title"
+            : "null::text";
+        var episodeTitleJoin = hasEpisodeTitleTable
+            ? $"""
+            left join {universe.EpisodeTitleTableName} as episode_titles
+              on episode_titles.id = quotes.episode_title_id
+            """
+            : string.Empty;
+        var sql =
+            $"""
+            select
+              quotes.id,
+              quotes.character_id,
+              quotes.quote_text,
+              quotes.season_number,
+              quotes.episode_number,
+              {episodeTitleProjection} as episode_title
+            from {universe.QuoteTableName} as quotes
+            {episodeTitleJoin}
+            order by random()
+            limit 1;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken)
+            ? new UniverseQuotePromptRecord(
+                reader.GetInt64(0),
+                reader.GetInt64(1),
+                reader.GetString(2),
+                reader.GetInt32(3),
+                reader.GetInt32(4),
+                reader.IsDBNull(5) ? null : reader.GetString(5))
+            : null;
+    }
 
     private static string BuildCharacterSelectProjection(
         string? tableAlias,

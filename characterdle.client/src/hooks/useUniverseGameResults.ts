@@ -11,14 +11,24 @@ export function useUniverseGameResults(
   accessToken: string | null,
   universeId: string,
   ownerKey = 'guest',
+  enabled = true,
 ): ProfileGameResultsState {
   const [state, setState] = useState<ProfileGameResultsState>({
-    data: accessToken ? readCachedUniverseGameResults(ownerKey, universeId) : [],
+    data: enabled && accessToken ? readCachedUniverseGameResults(ownerKey, universeId) : [],
     error: null,
-    isLoading: Boolean(accessToken),
+    isLoading: Boolean(enabled && accessToken),
   });
 
   useEffect(() => {
+    if (!enabled) {
+      setState({
+        data: [],
+        error: null,
+        isLoading: false,
+      });
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
@@ -87,7 +97,7 @@ export function useUniverseGameResults(
     return () => {
       isMounted = false;
     };
-  }, [accessToken, ownerKey, universeId]);
+  }, [accessToken, enabled, ownerKey, universeId]);
 
   return state;
 }

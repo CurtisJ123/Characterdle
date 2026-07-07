@@ -58,8 +58,9 @@
 
 .result-stat-card strong {
   color: var(--on-surface);
-  font-family: var(--heading-font);
+  font-family: var(--body-font);
   font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 

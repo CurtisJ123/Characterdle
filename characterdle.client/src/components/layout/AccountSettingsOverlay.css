@@ -77,7 +77,7 @@
   text-transform: uppercase;
 }
 
-.account-settings-form input {
+.account-settings-form input[type='text'] {
   width: 100%;
   border: 1px solid color-mix(in srgb, var(--outline) 45%, transparent);
   border-radius: var(--radius-control);
@@ -87,7 +87,7 @@
   outline: none;
 }
 
-.account-settings-form input:focus {
+.account-settings-form input[type='text']:focus {
   border-color: color-mix(in srgb, var(--primary) 82%, transparent);
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent),
@@ -96,6 +96,107 @@
 
 .account-settings-form .primary-button {
   width: 100%;
+}
+
+.account-settings-toggle-panel {
+  display: grid;
+  gap: 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: var(--radius-soft);
+  padding: 18px;
+  background: color-mix(in srgb, var(--surface-panel-neutral) 82%, transparent);
+}
+
+.account-settings-toggle-panel.is-locked {
+  border-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  opacity: 0.86;
+}
+
+.account-settings-toggle-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.account-settings-toggle-copy h3 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1.1rem;
+}
+
+.account-settings-toggle-copy .muted-copy,
+.account-settings-toggle-locked-copy {
+  margin: 0;
+}
+
+.account-settings-toggle-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  color: var(--on-surface);
+  cursor: pointer;
+  text-transform: none;
+}
+
+.account-settings-toggle-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.account-settings-toggle-track {
+  position: relative;
+  width: 54px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.account-settings-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--on-surface);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--black) 24%, transparent);
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.account-settings-toggle-control input:checked + .account-settings-toggle-track {
+  border-color: color-mix(in srgb, var(--primary) 64%, transparent);
+  background: color-mix(in srgb, var(--primary) 24%, var(--surface-container-lowest));
+}
+
+.account-settings-toggle-control input:checked + .account-settings-toggle-track .account-settings-toggle-thumb {
+  transform: translateX(24px);
+  background: var(--primary);
+}
+
+.account-settings-toggle-control input:focus-visible + .account-settings-toggle-track {
+  outline: 2px solid color-mix(in srgb, var(--primary) 54%, transparent);
+  outline-offset: 3px;
+}
+
+.account-settings-toggle-control input:disabled + .account-settings-toggle-track {
+  opacity: 0.54;
+}
+
+.account-settings-toggle-control input:disabled ~ .account-settings-toggle-state {
+  opacity: 0.54;
+}
+
+.account-settings-toggle-state {
+  color: var(--on-surface);
+  font-size: 0.84rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .account-billing-zone {

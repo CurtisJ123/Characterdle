@@ -18,4 +18,5 @@ public sealed record PremiumAccessResponse(
     int ArchiveLookbackDays,
     bool StreakProtection,
     int StreakSaversPerCycle,
-    int AvailableStreakSavers);
+    int AvailableStreakSavers,
+    bool AutoUseStreakSavers);

@@ -161,6 +161,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         string email,
         string displayName,
         string? avatarUrl,
+        bool autoUseStreakSavers,
         CancellationToken cancellationToken)
     {
         const string sql =
@@ -182,6 +183,25 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               display_name = excluded.display_name,
               avatar_url = excluded.avatar_url,
               updated_at = timezone('utc', now());
+
+            insert into public."UserPremiumStatus" (
+              user_id,
+              is_premium,
+              status,
+              auto_use_streak_savers,
+              updated_at
+            )
+            values (
+              @userId,
+              false,
+              'inactive',
+              @autoUseStreakSavers,
+              timezone('utc', now())
+            )
+            on conflict (user_id) do update
+            set
+              auto_use_streak_savers = excluded.auto_use_streak_savers,
+              updated_at = timezone('utc', now());
             """;
 
         await using var command = dataSource.CreateCommand(sql);
@@ -189,6 +209,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         command.Parameters.AddWithValue("displayName", displayName);
         command.Parameters.AddWithValue("email", email);
         command.Parameters.AddWithValue("avatarUrl", (object?)avatarUrl ?? DBNull.Value);
+        command.Parameters.AddWithValue("autoUseStreakSavers", autoUseStreakSavers);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -199,6 +220,9 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         const string sql =
             """
             delete from public."UserPremiumStatus"
+            where user_id = @userId;
+
+            delete from public."UniverseStreakSaverUsages"
             where user_id = @userId;
 
             delete from public."UniverseStreakCredits"

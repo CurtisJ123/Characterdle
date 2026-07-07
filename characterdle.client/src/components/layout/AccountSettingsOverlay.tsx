@@ -1,38 +1,34 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { AccountDeletionStatus, AccountSettingsValues } from '../../types/auth';
-import type { BillingCheckoutPlan } from '../../types/billing';
 import { AccountAvatarPicker } from './AccountAvatarPicker';
 
 interface AccountSettingsOverlayProps {
+  currentAutoUseStreakSavers: boolean;
   currentAvatarUrl: string | null;
   currentDisplayName: string;
-  isPremiumUser: boolean;
+  isStreakSaverSettingEnabled: boolean;
   onClose: () => void;
   onDeleteAccount: () => Promise<string>;
-  onOpenBillingPortal: () => Promise<void>;
   onLoadAccountDeletionStatus: () => Promise<AccountDeletionStatus>;
   onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
-  onStartCheckout: (plan: BillingCheckoutPlan) => Promise<void>;
 }
 
 export function AccountSettingsOverlay({
+  currentAutoUseStreakSavers,
   currentAvatarUrl,
   currentDisplayName,
-  isPremiumUser,
+  isStreakSaverSettingEnabled,
   onClose,
   onDeleteAccount,
-  onOpenBillingPortal,
   onLoadAccountDeletionStatus,
   onSaveSettings,
-  onStartCheckout,
 }: AccountSettingsOverlayProps) {
+  const [autoUseStreakSavers, setAutoUseStreakSavers] = useState(currentAutoUseStreakSavers);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl);
-  const [billingMessage, setBillingMessage] = useState<string>();
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deletionStatus, setDeletionStatus] = useState<AccountDeletionStatus | null>(null);
   const [displayName, setDisplayName] = useState(currentDisplayName);
   const [errorMessage, setErrorMessage] = useState<string>();
-  const [isBillingActionLoading, setIsBillingActionLoading] = useState(false);
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletionStatusLoading, setIsDeletionStatusLoading] = useState(true);
@@ -114,6 +110,7 @@ export function AccountSettingsOverlay({
     try {
       const resultMessage = await onSaveSettings({
         avatarUrl,
+        autoUseStreakSavers,
         displayName: normalizedDisplayName,
       });
       setMessage(resultMessage);
@@ -140,34 +137,6 @@ export function AccountSettingsOverlay({
       setErrorMessage(error instanceof Error ? error.message : 'Unable to delete your account.');
     } finally {
       setIsDeleting(false);
-    }
-  }
-
-  async function handleStartCheckout(plan: BillingCheckoutPlan) {
-    setBillingMessage(undefined);
-    setErrorMessage(undefined);
-    setIsBillingActionLoading(true);
-
-    try {
-      await onStartCheckout(plan);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to start checkout.');
-    } finally {
-      setIsBillingActionLoading(false);
-    }
-  }
-
-  async function handleOpenBillingPortal() {
-    setBillingMessage(undefined);
-    setErrorMessage(undefined);
-    setIsBillingActionLoading(true);
-
-    try {
-      await onOpenBillingPortal();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to open billing portal.');
-    } finally {
-      setIsBillingActionLoading(false);
     }
   }
 
@@ -215,6 +184,38 @@ export function AccountSettingsOverlay({
             onChange={setAvatarUrl}
           />
 
+          <section className={`account-settings-toggle-panel${isStreakSaverSettingEnabled ? '' : ' is-locked'}`}>
+            <div className="account-settings-toggle-copy">
+              <p className="card-kicker">Streak protection</p>
+              <h3>Automatic streak savers</h3>
+              <p className="muted-copy">
+                If enabled, an available streak saver is spent automatically when you miss a daily character game
+                and it can fully preserve your streak.
+              </p>
+            </div>
+
+            <label className="account-settings-toggle-control">
+              <input
+                checked={autoUseStreakSavers}
+                disabled={!isStreakSaverSettingEnabled}
+                type="checkbox"
+                onChange={(event) => setAutoUseStreakSavers(event.target.checked)}
+              />
+              <span className="account-settings-toggle-track" aria-hidden="true">
+                <span className="account-settings-toggle-thumb" />
+              </span>
+              <span className="account-settings-toggle-state">
+                {autoUseStreakSavers ? 'On' : 'Off'}
+              </span>
+            </label>
+
+            {!isStreakSaverSettingEnabled && (
+              <p className="muted-copy account-settings-toggle-locked-copy">
+                Premium is required before automatic streak saver controls become available.
+              </p>
+            )}
+          </section>
+
           {message && <p className="auth-feedback is-success">{message}</p>}
           {errorMessage && <p className="auth-feedback is-error">{errorMessage}</p>}
 
@@ -222,50 +223,6 @@ export function AccountSettingsOverlay({
             {isSaving ? 'Saving...' : 'Save changes'}
           </button>
         </form>
-
-        <section className="account-billing-zone" aria-labelledby="account-billing-zone-title">
-          <div className="account-billing-zone-heading">
-            <p className="card-kicker">Membership</p>
-            <h3 id="account-billing-zone-title">{isPremiumUser ? 'Premium active' : 'Upgrade to premium'}</h3>
-            <p className="muted-copy">
-              {isPremiumUser
-                ? 'Manage your subscription, cancellation, and payment details through Stripe.'
-                : 'Unlock the full archive, ad-free play, practice mode, profile customization, and streak protection.'}
-            </p>
-          </div>
-
-          {billingMessage && <p className="auth-feedback is-success">{billingMessage}</p>}
-
-          {isPremiumUser ? (
-            <button
-              className="secondary-button"
-              type="button"
-              disabled={isBillingActionLoading}
-              onClick={() => { void handleOpenBillingPortal(); }}
-            >
-              {isBillingActionLoading ? 'Opening...' : 'Manage Billing'}
-            </button>
-          ) : (
-            <div className="account-billing-actions">
-              <button
-                className="primary-button"
-                type="button"
-                disabled={isBillingActionLoading}
-                onClick={() => { void handleStartCheckout('monthly'); }}
-              >
-                {isBillingActionLoading ? 'Redirecting...' : 'Monthly Premium'}
-              </button>
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={isBillingActionLoading}
-                onClick={() => { void handleStartCheckout('yearly'); }}
-              >
-                {isBillingActionLoading ? 'Redirecting...' : 'Yearly Premium'}
-              </button>
-            </div>
-          )}
-        </section>
 
         <section className="account-danger-zone" aria-labelledby="account-danger-zone-title">
           <div className="account-danger-zone-heading">

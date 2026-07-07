@@ -1,13 +1,19 @@
 import type { BillingCheckoutPlan } from '../../types/billing';
 
 interface PremiumArchiveGateOverlayProps {
+  featureLabel?: string;
   gameLabel: string;
+  headline?: string;
+  message?: string;
   onGoHome: () => void;
   onStartCheckout?: (plan: BillingCheckoutPlan) => Promise<void>;
 }
 
 export function PremiumArchiveGateOverlay({
+  featureLabel = 'Premium archive',
   gameLabel,
+  headline = 'Subscribe to premium to play.',
+  message = `Premium members can play every archived ${gameLabel.toLowerCase()} board. Free players can replay the most recent daily boards.`,
   onGoHome,
   onStartCheckout,
 }: PremiumArchiveGateOverlayProps) {
@@ -20,11 +26,10 @@ export function PremiumArchiveGateOverlay({
     >
       <div className="premium-archive-gate-overlay-scrim" />
       <article className="premium-archive-gate-panel glass-card">
-        <p className="card-kicker">Premium archive</p>
-        <h2>Subscribe to premium to play.</h2>
+        <p className="card-kicker">{featureLabel}</p>
+        <h2>{headline}</h2>
         <p className="muted-copy">
-          Premium members can play every archived {gameLabel.toLowerCase()} board. Free players can
-          replay the most recent daily boards.
+          {message}
         </p>
         <div className="premium-archive-gate-actions">
           {onStartCheckout && (

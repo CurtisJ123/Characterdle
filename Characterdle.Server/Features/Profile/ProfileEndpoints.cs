@@ -174,6 +174,7 @@ public static class ProfileEndpoints
                 user.Email,
                 request.DisplayName.Trim(),
                 normalizedAvatarUrl,
+                request.AutoUseStreakSavers,
                 cancellationToken);
 
             return Results.NoContent();

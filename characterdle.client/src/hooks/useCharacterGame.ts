@@ -348,6 +348,7 @@ export function useCharacterGame(
   game: CurrentUniverseGame | null,
   persistedResult: PersistedGameResult | null = null,
   ownerKey = 'guest',
+  persistProgress = true,
 ): GameRoundState<CharacterGameRow> {
   const [lastSubmittedCharacterId, setLastSubmittedCharacterId] = useState<number | null>(null);
   const [totalGuessCount, setTotalGuessCount] = useState(0);
@@ -377,7 +378,16 @@ export function useCharacterGame(
       return;
     }
 
-    const storedState = resolveStoredState(game, persistedResult, ownerKey);
+    const storedState = persistProgress
+      ? resolveStoredState(game, persistedResult, ownerKey)
+      : {
+        completionRecorded: false,
+        firstLetterRevealed: false,
+        gaveUp: false,
+        guessCount: 0,
+        guessedCharacterIds: [],
+        revealedHintKeys: [],
+      };
     const storedActivity = hasStoredActivity(storedState);
     setLastSubmittedCharacterId(null);
     setTotalGuessCount(storedState.guessCount);
@@ -390,10 +400,10 @@ export function useCharacterGame(
     setRevealedHintKeys(storedState.revealedHintKeys);
     setCompletedGameStats(cloneCompletedGameStats(game.characterStats));
     setMessage(null);
-  }, [game, ownerKey, persistedResult]);
+  }, [game, ownerKey, persistProgress, persistedResult]);
 
   useEffect(() => {
-    if (!game || typeof window === 'undefined') {
+    if (!persistProgress || !game || typeof window === 'undefined') {
       return;
     }
 
@@ -439,6 +449,7 @@ export function useCharacterGame(
     gaveUp,
     guessedCharacterIds,
     ownerKey,
+    persistProgress,
     revealedHintKeys,
     totalGuessCount,
   ]);
@@ -600,7 +611,7 @@ export function useCharacterGame(
     setRevealedHintKeys([]);
     setCompletedGameStats(cloneCompletedGameStats(game?.characterStats));
 
-    if (!game || typeof window === 'undefined') {
+    if (!persistProgress || !game || typeof window === 'undefined') {
       return;
     }
 

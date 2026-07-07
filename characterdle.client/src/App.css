@@ -20,6 +20,7 @@
 @import './components/launcher/UserProfileCard.css';
 @import './components/launcher/MiniLeaderboardCard.css';
 @import './pages/CharacterGamePage.css';
+@import './pages/RandomGamePage.css';
 @import './components/game/CharacterPortrait.css';
 @import './components/game/CharacterGuessRow.css';
 @import './components/game/AttributeChip.css';
@@ -35,6 +36,7 @@
 @import './pages/PreviousGamesPage.css';
 @import './components/history/PreviousGamesGrid.css';
 @import './pages/LeaderboardPage.css';
+@import './pages/PremiumPage.css';
 @import './pages/ProfilePage.css';
 @import './pages/LegalDocumentPage.css';
 @import './pages/SupportPage.css';

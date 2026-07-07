@@ -129,8 +129,9 @@
 .champion-stats dd {
   margin: 4px 0 0;
   color: var(--on-surface);
-  font-family: var(--heading-font);
+  font-family: var(--body-font);
   font-size: 1.18rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 900;
 }
 

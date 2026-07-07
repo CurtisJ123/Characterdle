@@ -315,25 +315,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
       };
     }
 
-    if (Object.keys(updatePayload).length === 0) {
-      return {
-        message: 'No changes to save.',
-        requiresEmailConfirmation: false,
-      };
+    if (Object.keys(updatePayload).length > 0) {
+      const { error } = await supabase.auth.updateUser(updatePayload);
+
+      if (error) {
+        throw normalizeError(error, 'Unable to update your profile.');
+      }
     }
 
-    const { error } = await supabase.auth.updateUser(updatePayload);
+    await updateProfileSettings(
+      session.access_token,
+      normalizedDisplayName,
+      normalizedAvatarUrl,
+      values.autoUseStreakSavers,
+    );
 
-    if (error) {
-      throw normalizeError(error, 'Unable to update your profile.');
+    if (Object.keys(updatePayload).length > 0) {
+      await refreshUser();
     }
-
-    await updateProfileSettings(session.access_token, normalizedDisplayName, normalizedAvatarUrl);
-
-    await refreshUser();
 
     return {
-      message: 'Profile updated.',
+      message: 'Settings updated.',
       requiresEmailConfirmation: false,
     };
   }

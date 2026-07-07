@@ -56,6 +56,26 @@ interface CompletedGameStatsPayload {
   playCount: number;
 }
 
+interface CurrentUniverseGamePayload {
+  id: number;
+  dateTime: string;
+  universeId: string;
+  universeName: string;
+  characterStats: CompletedGameStatsPayload;
+  quoteStats: CompletedGameStatsPayload | null;
+  attributeDefinitions: UniverseAttributeDefinitionPayload[];
+  answerCharacter: UniverseCharacterPayload;
+  quotePrompt: {
+    characterId: number;
+    episodeNumber: number;
+    episodeTitle?: string | null;
+    id: number | string;
+    seasonNumber: number;
+    text: string;
+  } | null;
+  characters: UniverseCharacterPayload[];
+}
+
 function createUniverseGameCacheKey(universeId: string, gameId: number | null): string {
   return `${universeId}:${gameId ?? 'current'}`;
 }
@@ -148,6 +168,26 @@ export function getUniverseCharacterAvatarOptions(universeId: string): Promise<U
   return request;
 }
 
+export async function getRandomUniverseGame(
+  universeId: string,
+  mode: 'character' | 'quote',
+  accessToken: string | null = null,
+): Promise<CurrentUniverseGame> {
+  const response = await fetch(
+    buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/games/random${mode === 'quote' ? '/quote' : ''}`),
+    {
+      headers: createApiHeaders(accessToken),
+    },
+  );
+
+  if (!response.ok) {
+    await throwUniverseGameApiError(response, `Random game request failed with ${response.status}.`);
+  }
+
+  const payload = await response.json() as CurrentUniverseGamePayload;
+  return mapCurrentUniverseGame(payload);
+}
+
 function createApiHeaders(accessToken: string | null): HeadersInit {
   return accessToken
     ? {
@@ -201,47 +241,8 @@ async function fetchUniverseGame(
     await throwUniverseGameApiError(response, `Game request failed with ${response.status}.`);
   }
 
-  const payload = await response.json() as {
-    id: number;
-    dateTime: string;
-    universeId: string;
-    universeName: string;
-    characterStats: CompletedGameStatsPayload;
-    quoteStats: CompletedGameStatsPayload | null;
-    attributeDefinitions: UniverseAttributeDefinitionPayload[];
-    answerCharacter: UniverseCharacterPayload;
-    quotePrompt: {
-      characterId: number;
-      episodeNumber: number;
-      episodeTitle?: string | null;
-      id: number | string;
-      seasonNumber: number;
-      text: string;
-    } | null;
-    characters: UniverseCharacterPayload[];
-  };
-
-  return {
-    attributeDefinitions: payload.attributeDefinitions.map(mapAttributeDefinition),
-    answerCharacter: mapCharacter(payload.answerCharacter),
-    characterStats: mapCompletedGameStats(payload.characterStats),
-    dateTime: payload.dateTime,
-    characters: payload.characters.map(mapCharacter),
-    id: payload.id,
-    quotePrompt: payload.quotePrompt
-      ? {
-        characterId: payload.quotePrompt.characterId,
-        episodeNumber: payload.quotePrompt.episodeNumber,
-        episodeTitle: payload.quotePrompt.episodeTitle ?? null,
-        id: String(payload.quotePrompt.id),
-        seasonNumber: payload.quotePrompt.seasonNumber,
-        text: payload.quotePrompt.text,
-      }
-      : null,
-    quoteStats: payload.quoteStats ? mapCompletedGameStats(payload.quoteStats) : null,
-    universeId: payload.universeId,
-    universeName: payload.universeName,
-  };
+  const payload = await response.json() as CurrentUniverseGamePayload;
+  return mapCurrentUniverseGame(payload);
 }
 
 async function fetchPreviousUniverseGames(universeId: string, accessToken: string | null): Promise<PreviousUniverseGames> {
@@ -318,5 +319,29 @@ function mapCompletedGameStats(payload: CompletedGameStatsPayload): CompletedGam
     averageGuessSampleSize: payload.averageGuessSampleSize,
     averageGuesses: payload.averageGuesses,
     playCount: payload.playCount,
+  };
+}
+
+function mapCurrentUniverseGame(payload: CurrentUniverseGamePayload): CurrentUniverseGame {
+  return {
+    attributeDefinitions: payload.attributeDefinitions.map(mapAttributeDefinition),
+    answerCharacter: mapCharacter(payload.answerCharacter),
+    characterStats: mapCompletedGameStats(payload.characterStats),
+    dateTime: payload.dateTime,
+    characters: payload.characters.map(mapCharacter),
+    id: payload.id,
+    quotePrompt: payload.quotePrompt
+      ? {
+        characterId: payload.quotePrompt.characterId,
+        episodeNumber: payload.quotePrompt.episodeNumber,
+        episodeTitle: payload.quotePrompt.episodeTitle ?? null,
+        id: String(payload.quotePrompt.id),
+        seasonNumber: payload.quotePrompt.seasonNumber,
+        text: payload.quotePrompt.text,
+      }
+      : null,
+    quoteStats: payload.quoteStats ? mapCompletedGameStats(payload.quoteStats) : null,
+    universeId: payload.universeId,
+    universeName: payload.universeName,
   };
 }

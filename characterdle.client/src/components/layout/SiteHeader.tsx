@@ -1,50 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
 import type { AccountDeletionStatus, AccountSettingsValues } from '../../types/auth';
-import type { BillingCheckoutPlan } from '../../types/billing';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 import { StreakProgressDropdown } from './StreakProgressDropdown';
 import { StreakEmblem } from '../ui/StreakEmblem';
 import { UserAvatar } from '../ui/UserAvatar';
 import { AccountSettingsOverlay } from './AccountSettingsOverlay';
 import { BrandButton } from './BrandButton';
+import { PremiumCrownIcon } from '../ui/PremiumCrownIcon';
 
 interface SiteHeaderProps {
+  autoUseStreakSavers: boolean;
   availableStreakSavers: number;
   currentStreak: number;
   currentPage: Page;
+  currentStreakSaverSettingEnabled: boolean;
   hasStreakProtection: boolean;
   isAuthenticated: boolean;
   isPremiumUser: boolean;
   isUserLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onDeleteAccount: () => Promise<string>;
-  onOpenBillingPortal: () => Promise<void>;
   onLoadAccountDeletionStatus: () => Promise<AccountDeletionStatus>;
   onNavigate: NavigateToPage;
   onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
   onSignOut: () => Promise<void> | void;
-  onStartCheckout: (plan: BillingCheckoutPlan) => Promise<void>;
   userAvatarUrl?: string | null;
   userDisplayName?: string;
 }
 
 export function SiteHeader({
+  autoUseStreakSavers,
   availableStreakSavers,
   currentStreak,
   currentPage,
+  currentStreakSaverSettingEnabled,
   hasStreakProtection,
   isAuthenticated,
   isPremiumUser,
   isUserLoading,
   onAuthNavigate,
   onDeleteAccount,
-  onOpenBillingPortal,
   onLoadAccountDeletionStatus,
   onNavigate,
   onSaveSettings,
   onSignOut,
-  onStartCheckout,
   userAvatarUrl,
   userDisplayName,
 }: SiteHeaderProps) {
@@ -53,7 +53,7 @@ export function SiteHeader({
   const [isStreakMenuOpen, setIsStreakMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const streakMenuRef = useRef<HTMLDivElement>(null);
-  const activeNav = currentPage === 'game' ? 'launcher' : currentPage;
+  const activeNav = currentPage === 'game' || currentPage === 'random' ? 'launcher' : currentPage;
   const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
 
   useEffect(() => {
@@ -139,6 +139,21 @@ export function SiteHeader({
 
           <div className="header-actions" aria-label="Account actions">
             {isAuthenticated && (
+              <button
+                className={`premium-cta-button${currentPage === 'premium' ? ' is-active' : ''}`}
+                type="button"
+                onClick={() => onNavigate('premium')}
+              >
+                <PremiumCrownIcon className="premium-cta-icon" />
+                <span className="premium-cta-copy">
+                  <strong>Go Premium</strong>
+                  <span>
+                    Under <span className="premium-cta-price">50¢</span> a week
+                  </span>
+                </span>
+              </button>
+            )}
+            {isAuthenticated && (
               <div className="streak-menu-wrap" ref={streakMenuRef}>
                 <button
                   className="streak-badge"
@@ -157,6 +172,7 @@ export function SiteHeader({
                 </button>
                 {isStreakMenuOpen && (
                   <StreakProgressDropdown
+                    autoUseStreakSavers={autoUseStreakSavers}
                     availableStreakSavers={availableStreakSavers}
                     hasStreakProtection={hasStreakProtection}
                     streak={currentStreak}
@@ -204,15 +220,14 @@ export function SiteHeader({
       </header>
       {isSettingsOpen && (
         <AccountSettingsOverlay
+          currentAutoUseStreakSavers={autoUseStreakSavers}
           currentAvatarUrl={userAvatarUrl ?? null}
           currentDisplayName={userDisplayName ?? ''}
-          isPremiumUser={isPremiumUser}
+          isStreakSaverSettingEnabled={currentStreakSaverSettingEnabled}
           onClose={() => setIsSettingsOpen(false)}
           onDeleteAccount={onDeleteAccount}
-          onOpenBillingPortal={onOpenBillingPortal}
           onLoadAccountDeletionStatus={onLoadAccountDeletionStatus}
           onSaveSettings={onSaveSettings}
-          onStartCheckout={onStartCheckout}
         />
       )}
     </>

@@ -10,12 +10,13 @@ interface GameResultPanelProps {
   guessCount: number;
   hintCount: number;
   playCount: number;
+  sharePayload?: GameSharePayload | null;
   showHintCount?: boolean;
+  showShareButton?: boolean;
   primaryActionLabel?: string;
   primaryTitle?: string;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
-  sharePayload: GameSharePayload;
   secondaryActionLabel?: string;
   status: Extract<CharacterGameStatus, 'won' | 'lost'>;
 }
@@ -37,17 +38,19 @@ export function GameResultPanel({
   guessCount,
   hintCount,
   playCount,
+  sharePayload = null,
   showHintCount = false,
+  showShareButton = true,
   primaryActionLabel,
   primaryTitle = 'Correct',
   onPrimaryAction,
   onSecondaryAction,
-  sharePayload,
   secondaryActionLabel,
   status,
 }: GameResultPanelProps) {
   const showPrimaryAction = !!primaryActionLabel && !!onPrimaryAction;
   const showSecondaryAction = !!secondaryActionLabel && !!onSecondaryAction;
+  const canShare = showShareButton && !!sharePayload;
 
   if (status === 'lost') {
     return (
@@ -85,7 +88,7 @@ export function GameResultPanel({
               {secondaryActionLabel}
             </button>
           )}
-          <GameShareButton payload={sharePayload} />
+          {canShare && <GameShareButton payload={sharePayload} />}
         </div>
       </section>
     );
@@ -139,7 +142,7 @@ export function GameResultPanel({
             {secondaryActionLabel}
           </button>
         )}
-        <GameShareButton payload={sharePayload} />
+        {canShare && <GameShareButton payload={sharePayload} />}
       </div>
     </section>
   );

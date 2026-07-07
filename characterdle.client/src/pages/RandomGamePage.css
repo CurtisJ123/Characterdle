@@ -1,0 +1,49 @@
+.random-game-page {
+  padding-top: 28px;
+}
+
+.random-route-shell {
+  width: min(680px, 100%);
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  text-align: center;
+  padding: 34px 30px;
+}
+
+.random-route-shell h1 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  line-height: 0.96;
+}
+
+.random-route-shell .muted-copy,
+.random-route-status {
+  max-width: 48ch;
+  margin: 0;
+}
+
+.random-route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .random-route-shell {
+    padding: 28px 22px;
+  }
+
+  .random-route-actions {
+    width: 100%;
+  }
+
+  .random-route-actions .primary-button,
+  .random-route-actions .secondary-button {
+    width: 100%;
+  }
+}

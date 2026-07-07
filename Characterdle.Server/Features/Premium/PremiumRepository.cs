@@ -2,7 +2,9 @@ using Npgsql;
 
 namespace Characterdle.Server.Features.Premium;
 
-public sealed class PremiumRepository(NpgsqlDataSource dataSource) : IPremiumRepository
+public sealed class PremiumRepository(
+    NpgsqlDataSource dataSource,
+    IPremiumStreakSaverService streakSaverService) : IPremiumRepository
 {
     private const int DefaultArchiveLookbackDays = 3;
     private const string PremiumPlanCode = "premium";
@@ -16,6 +18,8 @@ public sealed class PremiumRepository(NpgsqlDataSource dataSource) : IPremiumRep
         Guid userId,
         CancellationToken cancellationToken)
     {
+        await streakSaverService.EnsureMonthlyStreakSaversAsync(userId, cancellationToken);
+
         const string sql =
             """
             select
@@ -23,10 +27,13 @@ public sealed class PremiumRepository(NpgsqlDataSource dataSource) : IPremiumRep
               status,
               stripe_customer_id,
               stripe_subscription_id,
+              current_period_start,
               current_period_end,
               cancel_at_period_end,
               premium_started_at,
-              premium_ended_at
+              premium_ended_at,
+              available_streak_savers,
+              auto_use_streak_savers
             from public."UserPremiumStatus"
             where user_id = @userId;
             """;
@@ -49,9 +56,9 @@ public sealed class PremiumRepository(NpgsqlDataSource dataSource) : IPremiumRep
             SubscriptionStatus: status,
             BilledPriceCents: null,
             CurrencyCode: "USD",
-            CurrentPeriodStart: reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset>(6),
-            CurrentPeriodEnd: reader.IsDBNull(4) ? null : reader.GetFieldValue<DateTimeOffset>(4),
-            CancelAtPeriodEnd: !reader.IsDBNull(5) && reader.GetBoolean(5),
+            CurrentPeriodStart: reader.IsDBNull(4) ? null : reader.GetFieldValue<DateTimeOffset>(4),
+            CurrentPeriodEnd: reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5),
+            CancelAtPeriodEnd: !reader.IsDBNull(6) && reader.GetBoolean(6),
             BillingDiscountCode: null,
             AdFree: isPremium,
             PracticeMode: isPremium,
@@ -61,7 +68,8 @@ public sealed class PremiumRepository(NpgsqlDataSource dataSource) : IPremiumRep
             ArchiveLookbackDays: isPremium ? 36500 : DefaultArchiveLookbackDays,
             StreakProtection: isPremium,
             StreakSaversPerCycle: isPremium ? 1 : 0,
-            AvailableStreakSavers: 0);
+            AvailableStreakSavers: reader.IsDBNull(9) ? 0 : reader.GetInt32(9),
+            AutoUseStreakSavers: reader.IsDBNull(10) || reader.GetBoolean(10));
     }
 
     public async Task<bool> HasActiveSubscriptionAsync(
@@ -109,5 +117,6 @@ public sealed class PremiumRepository(NpgsqlDataSource dataSource) : IPremiumRep
             ArchiveLookbackDays: DefaultArchiveLookbackDays,
             StreakProtection: false,
             StreakSaversPerCycle: 0,
-            AvailableStreakSavers: 0);
+            AvailableStreakSavers: 0,
+            AutoUseStreakSavers: true);
 }

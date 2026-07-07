@@ -1,0 +1,238 @@
+.premium-page {
+  display: grid;
+  gap: 24px;
+}
+
+.premium-hero,
+.premium-benefit-column,
+.premium-details-panel {
+  border-radius: var(--radius-panel);
+  padding: clamp(22px, 4vw, 34px);
+}
+
+.premium-hero {
+  display: grid;
+  gap: 22px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--primary) 18%, transparent), transparent 30%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-container) 94%, transparent),
+      color-mix(in srgb, var(--surface-container-lowest) 98%, transparent)
+    );
+}
+
+.premium-hero-copy h1,
+.premium-section-heading h2,
+.premium-benefit-item h3,
+.premium-details-panel h3 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+}
+
+.premium-hero-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.premium-hero-copy h1 {
+  font-size: clamp(2.6rem, 6vw, 5rem);
+  line-height: 0.94;
+}
+
+.premium-hero-pill {
+  gap: 8px;
+  align-items: center;
+}
+
+.premium-hero-pill-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.premium-status-copy {
+  margin: 0;
+  color: color-mix(in srgb, var(--on-surface) 78%, transparent);
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.premium-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.premium-hero-button {
+  min-width: 210px;
+  justify-content: center;
+}
+
+.premium-action-error {
+  margin: 0;
+}
+
+.premium-pricing-grid,
+.premium-benefits-grid,
+.premium-detail-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.premium-pricing-grid,
+.premium-benefits-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.premium-plan-card,
+.premium-benefit-column {
+  display: grid;
+  gap: 18px;
+}
+
+.premium-plan-card {
+  border-radius: var(--radius-panel);
+  padding: 22px;
+}
+
+.premium-plan-card.is-featured {
+  border-color: color-mix(in srgb, var(--primary) 34%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--white) 6%, transparent),
+    0 16px 36px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.premium-plan-badge-row,
+.premium-benefit-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.premium-plan-note {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.premium-plan-price-block {
+  display: grid;
+  gap: 6px;
+}
+
+.premium-plan-price-block strong {
+  color: var(--on-surface);
+  font-family: var(--body-font);
+  font-size: clamp(3.2rem, 8vw, 5.2rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.88;
+}
+
+.premium-plan-price-block span {
+  color: var(--outline);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.premium-plan-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.premium-section-heading {
+  display: grid;
+  gap: 10px;
+}
+
+.premium-section-heading h2 {
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 0.96;
+}
+
+.premium-benefit-list {
+  display: grid;
+  gap: 14px;
+}
+
+.premium-benefit-item {
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: var(--radius-soft);
+  padding: 18px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 64%, transparent);
+}
+
+.premium-benefit-item h3 {
+  font-size: 1.3rem;
+}
+
+.premium-benefit-item p {
+  margin: 0;
+}
+
+.premium-benefit-pill {
+  font-size: 0.58rem;
+}
+
+.premium-benefit-pill.is-live {
+  --accent: var(--status-success);
+}
+
+.premium-benefit-pill.is-soon {
+  --accent: var(--primary);
+}
+
+.premium-details-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.premium-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.premium-detail-grid article {
+  display: grid;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: var(--radius-soft);
+  padding: 18px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 64%, transparent);
+}
+
+.premium-detail-grid p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .premium-pricing-grid,
+  .premium-benefits-grid,
+  .premium-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .premium-hero-actions {
+    display: grid;
+  }
+
+  .premium-hero-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .premium-plan-badge-row,
+  .premium-benefit-topline {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+}

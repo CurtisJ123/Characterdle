@@ -58,6 +58,14 @@
   line-height: 1;
 }
 
+.table-row > strong {
+  color: var(--on-surface);
+  font-family: var(--body-font);
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .player-cell {
   display: flex;
   align-items: center;
@@ -113,7 +121,9 @@
 
 .streak-value-copy strong {
   color: var(--on-surface);
+  font-family: var(--body-font);
   font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 900;
   line-height: 1;
 }

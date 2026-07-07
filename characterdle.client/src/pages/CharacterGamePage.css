@@ -5,6 +5,7 @@
 
 .game-hero {
   max-width: 760px;
+  margin-top: 18px;
   text-align: center;
 }
 
@@ -32,7 +33,7 @@
 
 .game-top-actions {
   position: absolute;
-  top: 18px;
+  top: 10px;
   right: 0;
   z-index: 2;
   display: flex;
@@ -66,6 +67,121 @@
   width: 22px;
   height: 22px;
   display: block;
+}
+
+.random-game-button {
+  position: relative;
+  min-width: 154px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  overflow: visible;
+  padding: 0 16px 0 10px;
+}
+
+.random-game-button.is-locked {
+  border-color: color-mix(in srgb, var(--primary) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
+  cursor: not-allowed;
+}
+
+.random-game-button.is-locked:hover {
+  border-color: color-mix(in srgb, var(--primary) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-container-lowest) 92%, transparent);
+}
+
+.random-game-icon-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.random-game-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.random-game-label {
+  color: var(--on-surface);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.random-game-lock {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ffd54a;
+  border-radius: 999px;
+  background: var(--surface-container-lowest);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--surface-container-lowest) 90%, transparent),
+    0 0 14px color-mix(in srgb, #ffd54a 24%, transparent);
+  pointer-events: none;
+}
+
+.random-game-lock img {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.random-game-premium-tooltip {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 4;
+  width: max-content;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, #ffd54a 42%, transparent);
+  border-radius: var(--radius-control);
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface-container-lowest) 98%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--black) 34%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.random-game-premium-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 16px;
+  bottom: calc(100% - 1px);
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid color-mix(in srgb, #ffd54a 42%, transparent);
+  border-left: 1px solid color-mix(in srgb, #ffd54a 42%, transparent);
+  background: color-mix(in srgb, var(--surface-container-lowest) 98%, transparent);
+  transform: rotate(45deg);
+}
+
+.random-game-button.is-locked:hover .random-game-premium-tooltip,
+.random-game-button.is-locked:focus-visible .random-game-premium-tooltip {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .game-mode-switch-button {
@@ -347,6 +463,10 @@
     width: 100%;
     justify-content: flex-end;
     margin-bottom: 16px;
+  }
+
+  .game-hero {
+    margin-top: 0;
   }
 
   .search-box {

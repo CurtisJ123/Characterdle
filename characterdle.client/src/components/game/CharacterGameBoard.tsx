@@ -31,6 +31,7 @@ interface CharacterGameBoardProps {
   rows: CharacterGameRow[];
   secondaryActionLabel?: string;
   showHintCount?: boolean;
+  showShareButton?: boolean;
   showGuestSignupPrompt?: boolean;
   status: CharacterGameStatus;
   universeId: string;
@@ -54,6 +55,7 @@ export function CharacterGameBoard({
   rows,
   secondaryActionLabel,
   showHintCount = false,
+  showShareButton = true,
   showGuestSignupPrompt = false,
   status,
   universeId,
@@ -108,11 +110,6 @@ export function CharacterGameBoard({
           guessCount={guessCount}
           hintCount={hintCount}
           playCount={completedGameStats.playCount}
-          showHintCount={showHintCount}
-          primaryActionLabel={primaryActionLabel}
-          primaryTitle="Correct"
-          onPrimaryAction={onPrimaryAction ?? onViewLeaderboard}
-          onSecondaryAction={onSecondaryAction}
           sharePayload={{
             gameId,
             guessCount,
@@ -124,6 +121,12 @@ export function CharacterGameBoard({
             universeId,
             universeName,
           }}
+          showHintCount={showHintCount}
+          showShareButton={showShareButton}
+          primaryActionLabel={primaryActionLabel}
+          primaryTitle="Correct"
+          onPrimaryAction={onPrimaryAction ?? onViewLeaderboard}
+          onSecondaryAction={onSecondaryAction}
           secondaryActionLabel={secondaryActionLabel}
           status={status}
         />

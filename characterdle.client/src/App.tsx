@@ -25,7 +25,7 @@ const mainSiteDefaultRoute: AppRoute = {
 };
 
 function isUniverseScopedPage(page: Page): boolean {
-  return page === 'game' || page === 'history' || page === 'leaderboard' || page === 'profile';
+  return page === 'game' || page === 'random' || page === 'history' || page === 'leaderboard' || page === 'profile';
 }
 
 function applyUniverseScope(
@@ -154,6 +154,13 @@ function readRouteFromSegments(segments: string[]): AppRoute | null {
         page: 'game',
       }, explicitUniverseId);
     }
+    case 'random':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: parseGameMode(modeSegment) ?? 'character',
+        page: 'random',
+      }, explicitUniverseId);
     case 'archive':
     case 'history':
       return applyUniverseScope({
@@ -168,6 +175,13 @@ function readRouteFromSegments(segments: string[]): AppRoute | null {
         gameId: null,
         gameMode: 'character',
         page: 'leaderboard',
+      }, explicitUniverseId);
+    case 'premium':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'premium',
       }, explicitUniverseId);
     case 'profile':
       return applyUniverseScope({
@@ -279,10 +293,18 @@ function buildBrowserUrl(route: AppRoute): string {
       return route.gameId === null
         ? `${universePrefix}/game/${route.gameMode}`
         : `${universePrefix}/game/${route.gameMode}/${route.gameId}`;
+    case 'random':
+      return route.gameMode === 'quote'
+        ? `${universePrefix}/random/quote`
+        : `${universePrefix}/random`;
     case 'history':
       return `${universePrefix}/archive/${route.gameMode}`;
     case 'leaderboard':
       return `${universePrefix}/leaderboard`;
+    case 'premium':
+      return route.universeId
+        ? `${universePrefix}/premium`
+        : '/premium';
     case 'profile':
       return `${universePrefix}/profile`;
     case 'support':
@@ -401,6 +423,16 @@ function App() {
     });
   }
 
+  function openRandomGame(gameMode: GameMode, universeId?: string) {
+    navigateToRoute({
+      authMode: route.authMode,
+      gameId: null,
+      gameMode,
+      page: 'random',
+      universeId: universeId ?? route.universeId ?? selectedUniverseId,
+    });
+  }
+
   if (route.page === 'landing') {
     return <LandingPage onNavigate={handleNavigate} onAuthNavigate={openAuth} />;
   }
@@ -415,6 +447,7 @@ function App() {
       onNavigate={handleNavigate}
       onOpenGame={openGame}
       onOpenHistory={openHistory}
+      onOpenRandomGame={openRandomGame}
     />
   );
 }

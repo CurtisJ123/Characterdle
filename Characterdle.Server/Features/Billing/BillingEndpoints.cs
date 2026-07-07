@@ -327,7 +327,7 @@ public static class BillingEndpoints
         var snapshot = new StripePremiumStatusSnapshot(
             StripeCustomerId: subscription.CustomerId,
             StripeSubscriptionId: subscription.Id,
-            Status: string.IsNullOrWhiteSpace(subscription.Status) ? "inactive" : subscription.Status,
+            Status: NormalizeStoredSubscriptionStatus(subscription.Status),
             IsPremium: isPremium,
             CurrentPeriodStart: currentPeriodStart,
             CurrentPeriodEnd: currentPeriodEnd,
@@ -370,6 +370,23 @@ public static class BillingEndpoints
             "past_due" => true,
             "canceled" => currentPeriodEnd.HasValue && currentPeriodEnd.Value > DateTimeOffset.UtcNow,
             _ => false,
+        };
+    }
+
+    private static string NormalizeStoredSubscriptionStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return "inactive";
+        }
+
+        return status.Trim().ToLowerInvariant() switch
+        {
+            "active" => "active",
+            "trialing" => "trialing",
+            "past_due" => "past_due",
+            "canceled" => "canceled",
+            _ => "inactive",
         };
     }
 

@@ -17,6 +17,7 @@ export interface PremiumAccess {
   streakProtection: boolean;
   streakSaversPerCycle: number;
   availableStreakSavers: number;
+  autoUseStreakSavers: boolean;
 }
 
 export interface PremiumState {

@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import calendarDaysIcon from '../assets/calendar-days-heroicons.svg';
+import lockClosedIcon from '../assets/lock-closed-heroicons.svg';
 import questionMarkCircleIcon from '../assets/question-mark-circle-heroicons.svg';
 import { CharacterGameBoard } from '../components/game/CharacterGameBoard';
 import { CharacterHintPanel } from '../components/game/CharacterHintPanel';
@@ -10,6 +11,7 @@ import { QuotePromptCard } from '../components/game/QuotePromptCard';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
 import { SiteHelpOverlay } from '../components/layout/SiteHelpOverlay';
 import { LoadingOverlay } from '../components/ui/LoadingOverlay';
+import { DiceIcon } from '../components/ui/DiceIcon';
 import { useAuth } from '../hooks/useAuth';
 import { useCharacterGame } from '../hooks/useCharacterGame';
 import { useQuoteGame } from '../hooks/useQuoteGame';
@@ -28,15 +30,21 @@ import { submitUniverseGameResult } from '../services/leaderboardApi';
 import { UniverseGameApiError } from '../services/universeGameApi';
 import type { GameMode } from '../types/game';
 import type { UniverseStreak } from '../types/leaderboard';
+import type { PremiumAccess } from '../types/premium';
 import type { NavigateToPage } from '../types/routes';
-import type { CharacterGameRow, CurrentUniverseGame, QuoteGameRow } from '../types/universeGame';
+import type { CharacterGameRow, CurrentUniverseGame, CurrentUniverseGameState, QuoteGameRow } from '../types/universeGame';
 
 interface CharacterGamePageProps {
   currentStreak: number;
+  gameStateOverride?: CurrentUniverseGameState;
+  gameVariant?: 'daily' | 'archive' | 'random';
   onNavigate: NavigateToPage;
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
+  onOpenRandomGame: (gameMode: GameMode, universeId?: string) => void;
+  onRefreshRandomGame?: () => void;
   onStreakUpdated: (streak: UniverseStreak) => void;
+  premiumAccess: PremiumAccess | null;
   selectedGameId: number | null;
   selectedGameMode: GameMode;
 }
@@ -55,10 +63,15 @@ function getCharacterResultScrollDelay(attributeCount: number): number {
 
 export function CharacterGamePage({
   currentStreak,
+  gameStateOverride,
+  gameVariant,
   onNavigate,
   onOpenGame,
   onOpenHistory,
+  onOpenRandomGame,
+  onRefreshRandomGame,
   onStreakUpdated,
+  premiumAccess,
   selectedGameId,
   selectedGameMode,
 }: CharacterGamePageProps) {
@@ -77,16 +90,21 @@ export function CharacterGamePage({
   const requestScope = user?.id ?? 'guest';
   const progressOwnerKey = getGameProgressOwnerKey(user?.id);
   const { selectedUniverse } = useUniverse();
-  const { data, error, isLoading } = useUniverseGame(
+  const resolvedGameVariant = gameVariant ?? (selectedGameId === null ? 'daily' : 'archive');
+  const isTemporaryGame = resolvedGameVariant === 'random';
+  const fetchedGameState = useUniverseGame(
     selectedUniverse.id,
     selectedGameId,
     session?.access_token ?? null,
     requestScope,
+    !gameStateOverride,
   );
+  const { data, error, isLoading } = gameStateOverride ?? fetchedGameState;
   const { data: persistedResults } = useUniverseGameResults(
     session?.access_token ?? null,
     selectedUniverse.id,
     progressOwnerKey,
+    !isTemporaryGame,
   );
   const characterResult = useMemo(
     () => data
@@ -101,8 +119,8 @@ export function CharacterGamePage({
       : null,
     [persistedResults, quoteGameData],
   );
-  const characterGame = useCharacterGame(data, characterResult, progressOwnerKey);
-  const quoteGame = useQuoteGame(quoteGameData, quoteResult, progressOwnerKey);
+  const characterGame = useCharacterGame(data, characterResult, progressOwnerKey, !isTemporaryGame);
+  const quoteGame = useQuoteGame(quoteGameData, quoteResult, progressOwnerKey, !isTemporaryGame);
   const isQuoteMode = selectedGameMode === 'quote';
   const isGameLoading = isLoading && !data && !error;
 
@@ -172,8 +190,8 @@ export function CharacterGamePage({
   const remoteQuoteOutcome = quoteResult
     ? getRemoteGameOutcome(quoteResult.status, quoteResult.completedAt)
     : 'pending';
-  const usesRemoteCharacterResult = !isQuoteMode && !!data && characterGame.status === 'playing' && remoteCharacterOutcome !== 'pending';
-  const usesRemoteQuoteResult = isQuoteMode && !!quoteGameData && quoteGame.status === 'playing' && remoteQuoteOutcome !== 'pending';
+  const usesRemoteCharacterResult = !isTemporaryGame && !isQuoteMode && !!data && characterGame.status === 'playing' && remoteCharacterOutcome !== 'pending';
+  const usesRemoteQuoteResult = !isTemporaryGame && isQuoteMode && !!quoteGameData && quoteGame.status === 'playing' && remoteQuoteOutcome !== 'pending';
   const displayedCharacterRows = usesRemoteCharacterResult && data
     ? [buildSolvedCharacterRow(data)]
     : characterGame.rows;
@@ -211,7 +229,7 @@ export function CharacterGamePage({
     : RESULT_SCROLL_FALLBACK_DELAY_MS;
   const shouldOfferQuoteFollowUp = displayedCharacterStatus === 'won' && !!quoteGameData && !hasPlayedQuoteGame;
   const shouldOfferCharacterFollowUp = displayedQuoteStatus === 'won' && !!data && !hasWonCharacterGame;
-  const shouldShowGuestSignupPrompt = !isAuthLoading && !isAuthenticated;
+  const shouldShowGuestSignupPrompt = !isTemporaryGame && !isAuthLoading && !isAuthenticated;
   const shouldShowGuestVictorySignup = shouldShowGuestSignupPrompt && (
     isQuoteMode ? displayedQuoteStatus === 'won' : displayedCharacterStatus === 'won'
   );
@@ -220,6 +238,7 @@ export function CharacterGamePage({
     && selectedGameId !== null
     && error instanceof UniverseGameApiError
     && error.status === 403;
+  const isRandomGameLocked = premiumAccess?.practiceMode !== true;
 
   async function handleStartCheckout(plan: 'monthly' | 'yearly') {
     if (!session?.access_token) {
@@ -290,7 +309,7 @@ export function CharacterGamePage({
   }, [isComplete, resultScrollDelay]);
 
   useEffect(() => {
-    if (!data) {
+    if (isTemporaryGame || !data) {
       return;
     }
 
@@ -349,11 +368,13 @@ export function CharacterGamePage({
     characterGame.hintCount,
     characterGame.status,
     data,
+    isTemporaryGame,
   ]);
 
   useEffect(() => {
     if (
-      !data
+      isTemporaryGame
+      || !data
       || !session?.access_token
       || !user
       || (
@@ -416,13 +437,14 @@ export function CharacterGamePage({
     characterGame.revealedHints,
     characterGame.status,
     data,
+    isTemporaryGame,
     onStreakUpdated,
     session?.access_token,
     user,
   ]);
 
   useEffect(() => {
-    if (!quoteGameData) {
+    if (!quoteGameData || isTemporaryGame) {
       return;
     }
 
@@ -477,6 +499,7 @@ export function CharacterGamePage({
 
     void syncPlayTracking();
   }, [
+    isTemporaryGame,
     quoteGame.guessCount,
     quoteGame.hintCount,
     quoteGame.status,
@@ -485,7 +508,8 @@ export function CharacterGamePage({
 
   useEffect(() => {
     if (
-      !quoteGameData
+      isTemporaryGame
+      || !quoteGameData
       || !session?.access_token
       || !user
       || (
@@ -542,6 +566,7 @@ export function CharacterGamePage({
 
     void syncResult();
   }, [
+    isTemporaryGame,
     quoteGame.guessCount,
     quoteGame.guessedCharacterIds,
     quoteGame.hintCount,
@@ -623,36 +648,62 @@ export function CharacterGamePage({
     ?? (isQuoteMode
       ? quoteGameData?.gameId ?? data?.id ?? null
       : data?.id ?? quoteGameData?.gameId ?? null);
-  const heroTitle = selectedGameId === null
+  const heroTitle = resolvedGameVariant === 'random'
     ? isQuoteMode
-      ? resolvedGameId !== null
-        ? `Daily Quote Game #${resolvedGameId}`
-        : 'Daily Quote Game'
-      : resolvedGameId !== null
-        ? `Daily Character Game #${resolvedGameId}`
-        : 'Daily Character Game'
-    : isQuoteMode
-      ? `Archive Quote Game #${selectedGameId}`
-      : `Archive Character Game #${selectedGameId}`;
+      ? 'Random Quote Game'
+      : 'Random Character Game'
+    : resolvedGameVariant === 'daily'
+      ? isQuoteMode
+        ? resolvedGameId !== null
+          ? `Daily Quote Game #${resolvedGameId}`
+          : 'Daily Quote Game'
+        : resolvedGameId !== null
+          ? `Daily Character Game #${resolvedGameId}`
+          : 'Daily Character Game'
+      : isQuoteMode
+        ? `Archive Quote Game #${selectedGameId}`
+        : `Archive Character Game #${selectedGameId}`;
+  const heroEyebrow = resolvedGameVariant === 'archive'
+    ? `${selectedUniverse.title} archive`
+    : `Universe: ${selectedUniverse.title}`;
   const searchPlaceholder = isQuoteMode
     ? 'Guess the speaker'
     : 'Type a name';
-  const characterPrimaryActionLabel = shouldOfferQuoteFollowUp ? 'Play Quote' : 'View Leaderboard';
-  const characterPrimaryAction = shouldOfferQuoteFollowUp
-    ? () => onOpenGame('quote', selectedGameId)
-    : () => onNavigate('leaderboard');
-  const characterSecondaryActionLabel = shouldOfferQuoteFollowUp ? 'Leaderboard' : undefined;
-  const characterSecondaryAction = shouldOfferQuoteFollowUp
-    ? () => onNavigate('leaderboard')
-    : undefined;
-  const quotePrimaryActionLabel = shouldOfferCharacterFollowUp ? 'Play Character Game' : 'View Leaderboard';
-  const quotePrimaryAction = shouldOfferCharacterFollowUp
-    ? () => onOpenGame('character', selectedGameId)
-    : () => onNavigate('leaderboard');
-  const quoteSecondaryActionLabel = shouldOfferCharacterFollowUp ? 'Leaderboard' : undefined;
-  const quoteSecondaryAction = shouldOfferCharacterFollowUp
-    ? () => onNavigate('leaderboard')
-    : undefined;
+  const characterPrimaryActionLabel = resolvedGameVariant === 'random'
+    ? 'Another Random Game'
+    : shouldOfferQuoteFollowUp ? 'Play Quote' : 'View Leaderboard';
+  const characterPrimaryAction = resolvedGameVariant === 'random'
+    ? (onRefreshRandomGame ?? (() => onOpenRandomGame('character')))
+    : shouldOfferQuoteFollowUp
+      ? () => onOpenGame('quote', selectedGameId)
+      : () => onNavigate('leaderboard');
+  const characterSecondaryActionLabel = resolvedGameVariant === 'random'
+    ? 'Random Quote'
+    : shouldOfferQuoteFollowUp ? 'Leaderboard' : undefined;
+  const characterSecondaryAction = resolvedGameVariant === 'random'
+    ? () => onOpenRandomGame('quote')
+    : shouldOfferQuoteFollowUp
+      ? () => onNavigate('leaderboard')
+      : undefined;
+  const quotePrimaryActionLabel = resolvedGameVariant === 'random'
+    ? 'Another Random Quote'
+    : shouldOfferCharacterFollowUp ? 'Play Character Game' : 'View Leaderboard';
+  const quotePrimaryAction = resolvedGameVariant === 'random'
+    ? (onRefreshRandomGame ?? (() => onOpenRandomGame('quote')))
+    : shouldOfferCharacterFollowUp
+      ? () => onOpenGame('character', selectedGameId)
+      : () => onNavigate('leaderboard');
+  const quoteSecondaryActionLabel = resolvedGameVariant === 'random'
+    ? 'Random Character'
+    : shouldOfferCharacterFollowUp ? 'Leaderboard' : undefined;
+  const quoteSecondaryAction = resolvedGameVariant === 'random'
+    ? () => onOpenRandomGame('character')
+    : shouldOfferCharacterFollowUp
+      ? () => onNavigate('leaderboard')
+      : undefined;
+  const hintTooltipMessage = isTemporaryGame
+    ? 'Random games are practice-only and never saved.'
+    : 'Using hints makes this round unranked. Giving up still counts as a loss.';
 
   const searchForm = (
     <form className="search-box" aria-label="Submit a guess" onSubmit={handleSubmit}>
@@ -685,7 +736,7 @@ export function CharacterGamePage({
               {currentRound.hintActionLabel}
             </button>
             <span id="hint-stats-tooltip" className="hint-trigger-tooltip" role="tooltip">
-              Using hints makes this round unranked. Giving up still counts as a loss.
+              {hintTooltipMessage}
             </span>
           </div>
         </div>
@@ -723,7 +774,7 @@ export function CharacterGamePage({
       {showLoadingOverlay && (
         <LoadingOverlay
           title="Please wait"
-          message="Loading game..."
+          message={isTemporaryGame ? `Loading random ${selectedGameMode} game...` : 'Loading game...'}
         />
       )}
 
@@ -747,9 +798,51 @@ export function CharacterGamePage({
           <img src={questionMarkCircleIcon} alt="" aria-hidden="true" />
         </button>
         <button
+          className={`game-action-button random-game-button${isRandomGameLocked ? ' is-locked' : ''}`}
+          type="button"
+          aria-disabled={isRandomGameLocked}
+          aria-describedby={isRandomGameLocked ? 'random-game-premium-tooltip' : undefined}
+          aria-label={isRandomGameLocked ? `Requires premium to play a random ${selectedGameMode} game` : `Play a random ${selectedGameMode} game`}
+          title={isRandomGameLocked ? undefined : isTemporaryGame ? 'Load another random game' : 'Play a random game'}
+          onClick={() => {
+            if (isRandomGameLocked) {
+              return;
+            }
+
+            if (isTemporaryGame && onRefreshRandomGame) {
+              onRefreshRandomGame();
+              return;
+            }
+
+            onOpenRandomGame(selectedGameMode);
+          }}
+        >
+          <span className="random-game-icon-wrap" aria-hidden="true">
+            <DiceIcon className="random-game-icon" />
+          </span>
+          <span className="random-game-label">Random Game</span>
+          {isRandomGameLocked && (
+            <span className="random-game-lock" aria-hidden="true">
+              <img src={lockClosedIcon} alt="" />
+            </span>
+          )}
+          {isRandomGameLocked && (
+            <span id="random-game-premium-tooltip" className="random-game-premium-tooltip" role="tooltip">
+              Requires premium
+            </span>
+          )}
+        </button>
+        <button
           className="game-action-button game-mode-switch-button"
           type="button"
-          onClick={() => onOpenGame(isQuoteMode ? 'character' : 'quote', null)}
+          onClick={() => {
+            if (isTemporaryGame) {
+              onOpenRandomGame(isQuoteMode ? 'character' : 'quote');
+              return;
+            }
+
+            onOpenGame(isQuoteMode ? 'character' : 'quote', null);
+          }}
         >
           {isQuoteMode ? 'Characterdle' : 'Quote'}
         </button>
@@ -771,22 +864,14 @@ export function CharacterGamePage({
       {isPremiumArchiveLocked ? (
         <section className={isQuoteMode ? 'quote-mode-layout' : undefined}>
           <section className={`game-hero${isQuoteMode ? ' is-quote' : ''}`}>
-            <p className="eyebrow">
-              {selectedGameId === null
-                ? `Universe: ${selectedUniverse.title}`
-                : `${selectedUniverse.title} archive`}
-            </p>
+            <p className="eyebrow">{heroEyebrow}</p>
             <h1>{heroTitle}</h1>
           </section>
         </section>
       ) : isQuoteMode && quoteGameData ? (
         <section className="quote-mode-layout">
           <section className="game-hero is-quote">
-            <p className="eyebrow">
-              {selectedGameId === null
-                ? `Universe: ${selectedUniverse.title}`
-                : `${selectedUniverse.title} archive`}
-            </p>
+            <p className="eyebrow">{heroEyebrow}</p>
             <h1>{heroTitle}</h1>
             {error && !isPremiumArchiveLocked && <p className="error-copy">{error.message}</p>}
           </section>
@@ -811,8 +896,9 @@ export function CharacterGamePage({
               primaryActionLabel={quotePrimaryActionLabel}
               rows={displayedQuoteRows}
               secondaryActionLabel={quoteSecondaryActionLabel}
-              showHintCount={usesRemoteQuoteResult}
-              showGuestSignupPrompt={showDelayedGuestSignupPrompt && displayedQuoteStatus === 'won'}
+              showHintCount={isTemporaryGame || usesRemoteQuoteResult}
+              showShareButton={!isTemporaryGame}
+              showGuestSignupPrompt={!isTemporaryGame && showDelayedGuestSignupPrompt && displayedQuoteStatus === 'won'}
               status={displayedQuoteStatus}
               universeId={quoteGameData.universeId}
               universeName={quoteGameData.universeName}
@@ -822,11 +908,7 @@ export function CharacterGamePage({
       ) : isQuoteMode ? (
         <section className="quote-mode-layout">
           <section className="game-hero is-quote">
-            <p className="eyebrow">
-              {selectedGameId === null
-                ? `Universe: ${selectedUniverse.title}`
-                : `${selectedUniverse.title} archive`}
-            </p>
+            <p className="eyebrow">{heroEyebrow}</p>
             <h1>{heroTitle}</h1>
             <p className="error-copy">Quote game unavailable.</p>
           </section>
@@ -834,11 +916,7 @@ export function CharacterGamePage({
       ) : (
         <>
           <section className="game-hero">
-            <p className="eyebrow">
-              {selectedGameId === null
-                ? `Universe: ${selectedUniverse.title}`
-                : `${selectedUniverse.title} archive`}
-            </p>
+            <p className="eyebrow">{heroEyebrow}</p>
             <h1>{heroTitle}</h1>
             {error && !isPremiumArchiveLocked && <p className="error-copy">{error.message}</p>}
           </section>
@@ -864,8 +942,9 @@ export function CharacterGamePage({
               primaryActionLabel={characterPrimaryActionLabel}
               rows={displayedCharacterRows}
               secondaryActionLabel={characterSecondaryActionLabel}
-              showHintCount={usesRemoteCharacterResult}
-              showGuestSignupPrompt={showDelayedGuestSignupPrompt && displayedCharacterStatus === 'won'}
+              showHintCount={isTemporaryGame || usesRemoteCharacterResult}
+              showShareButton={!isTemporaryGame}
+              showGuestSignupPrompt={!isTemporaryGame && showDelayedGuestSignupPrompt && displayedCharacterStatus === 'won'}
               status={displayedCharacterStatus}
               universeId={data?.universeId ?? selectedUniverse.id}
               universeName={data?.universeName ?? selectedUniverse.title}

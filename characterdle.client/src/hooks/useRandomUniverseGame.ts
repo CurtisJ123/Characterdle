@@ -1,30 +1,21 @@
 import { useEffect, useState } from 'react';
-import { getUniverseGame } from '../services/universeGameApi';
+import { getRandomUniverseGame } from '../services/universeGameApi';
+import type { GameMode } from '../types/game';
 import type { CurrentUniverseGameState } from '../types/universeGame';
 
-export function useUniverseGame(
+export function useRandomUniverseGame(
   universeId: string,
-  gameId: number | null,
+  mode: GameMode,
   accessToken: string | null,
-  requestScope: string,
-  enabled = true,
+  refreshKey = 0,
 ): CurrentUniverseGameState {
   const [state, setState] = useState<CurrentUniverseGameState>({
     data: null,
     error: null,
-    isLoading: enabled,
+    isLoading: true,
   });
 
   useEffect(() => {
-    if (!enabled) {
-      setState({
-        data: null,
-        error: null,
-        isLoading: false,
-      });
-      return;
-    }
-
     let isMounted = true;
 
     setState({
@@ -33,9 +24,9 @@ export function useUniverseGame(
       isLoading: true,
     });
 
-    async function loadGame() {
+    async function loadRandomGame() {
       try {
-        const data = await getUniverseGame(universeId, gameId, accessToken, requestScope);
+        const data = await getRandomUniverseGame(universeId, mode, accessToken);
 
         if (!isMounted) {
           return;
@@ -53,18 +44,18 @@ export function useUniverseGame(
 
         setState({
           data: null,
-          error: error instanceof Error ? error : new Error('Unable to load game data.'),
+          error: error instanceof Error ? error : new Error('Unable to resolve a random game.'),
           isLoading: false,
         });
       }
     }
 
-    void loadGame();
+    void loadRandomGame();
 
     return () => {
       isMounted = false;
     };
-  }, [accessToken, enabled, gameId, requestScope, universeId]);
+  }, [accessToken, mode, refreshKey, universeId]);
 
   return state;
 }

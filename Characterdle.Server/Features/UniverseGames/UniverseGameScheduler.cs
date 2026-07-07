@@ -1,4 +1,5 @@
 using Npgsql;
+using Characterdle.Server.Features.Premium;
 
 namespace Characterdle.Server.Features.UniverseGames;
 
@@ -25,12 +26,15 @@ public sealed class UniverseGameScheduler(
 
         using var scope = scopeFactory.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IUniverseGameRepository>();
+        var streakSaverService = scope.ServiceProvider.GetRequiredService<IPremiumStreakSaverService>();
         var nowUtc = DateTimeOffset.UtcNow;
+        await streakSaverService.EnsureMonthlyStreakSaversAsync(cancellationToken);
 
         foreach (var universe in universeCatalog.Universes)
         {
             var timeZone = UniverseGameTimeZoneResolver.Resolve(universe.ScheduleTimeZoneId);
             var todayLocalDate = ConvertUtcToLocalDate(nowUtc.UtcDateTime, timeZone);
+            await streakSaverService.ProtectMissedStreaksAsync(universe, todayLocalDate, cancellationToken);
             await ExpireMissedStreaksAsync(universe.Id, todayLocalDate, cancellationToken);
             var latestGameUtc = await repository.GetMostRecentGameDateTimeUtcAsync(universe, cancellationToken);
             var latestLocalDate = latestGameUtc.HasValue

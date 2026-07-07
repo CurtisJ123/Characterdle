@@ -271,6 +271,7 @@ export function useQuoteGame(
   game: QuoteGameData | null,
   persistedResult: PersistedGameResult | null = null,
   ownerKey = 'guest',
+  persistProgress = true,
 ): GameRoundState<QuoteGameRow> {
   const [totalGuessCount, setTotalGuessCount] = useState(0);
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
@@ -298,7 +299,16 @@ export function useQuoteGame(
       return;
     }
 
-    const storedState = resolveStoredState(game, persistedResult, ownerKey);
+    const storedState = persistProgress
+      ? resolveStoredState(game, persistedResult, ownerKey)
+      : {
+        completionRecorded: false,
+        firstLetterRevealed: false,
+        gaveUp: false,
+        guessCount: 0,
+        guessedCharacterIds: [],
+        revealedHintKeys: [],
+      };
     const storedActivity = hasStoredActivity(storedState);
     setTotalGuessCount(storedState.guessCount);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
@@ -310,10 +320,10 @@ export function useQuoteGame(
     setRevealedHintKeys(storedState.revealedHintKeys);
     setCompletedGameStats(cloneCompletedGameStats(game.completedGameStats));
     setMessage(null);
-  }, [game, ownerKey, persistedResult]);
+  }, [game, ownerKey, persistProgress, persistedResult]);
 
   useEffect(() => {
-    if (!game || typeof window === 'undefined') {
+    if (!persistProgress || !game || typeof window === 'undefined') {
       return;
     }
 
@@ -359,6 +369,7 @@ export function useQuoteGame(
     gaveUp,
     guessedCharacterIds,
     ownerKey,
+    persistProgress,
     revealedHintKeys,
     totalGuessCount,
   ]);
@@ -530,7 +541,7 @@ export function useQuoteGame(
     setRevealedHintKeys([]);
     setCompletedGameStats(cloneCompletedGameStats(game?.completedGameStats));
 
-    if (!game || typeof window === 'undefined') {
+    if (!persistProgress || !game || typeof window === 'undefined') {
       return;
     }
 

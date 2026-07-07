@@ -3,12 +3,14 @@ import { formatStreakDayLabel, getStreakTierProgress } from '../../lib/streakFla
 import { StreakEmblem } from '../ui/StreakEmblem';
 
 interface StreakProgressDropdownProps {
+  autoUseStreakSavers: boolean;
   availableStreakSavers: number;
   hasStreakProtection: boolean;
   streak: number;
 }
 
 export function StreakProgressDropdown({
+  autoUseStreakSavers,
   availableStreakSavers,
   hasStreakProtection,
   streak,
@@ -91,7 +93,9 @@ export function StreakProgressDropdown({
               className="streak-dropdown-tooltip-panel"
               role="tooltip"
             >
-              If your streak would expire, an available streak saver is used automatically to protect it.
+              {autoUseStreakSavers
+                ? 'If your streak would expire, an available streak saver is used automatically to protect it.'
+                : 'Automatic streak saver use is turned off in Settings, so saved charges stay on your account until you re-enable it.'}
             </div>
           </div>
         ) : (

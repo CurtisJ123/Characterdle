@@ -66,6 +66,73 @@
   margin-left: 12px;
 }
 
+.premium-cta-button {
+  min-width: 188px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 58%, transparent);
+  border-radius: var(--radius-control);
+  padding: 0 14px 0 12px;
+  color: var(--on-surface);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--tertiary) 86%, var(--primary) 14%), var(--primary)),
+    linear-gradient(180deg, var(--primary), var(--primary));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--white) 24%, transparent),
+    0 12px 26px color-mix(in srgb, var(--primary) 20%, transparent);
+  transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.premium-cta-button:hover,
+.premium-cta-button:focus-visible,
+.premium-cta-button.is-active {
+  border-color: color-mix(in srgb, var(--primary) 82%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--white) 32%, transparent),
+    0 16px 32px color-mix(in srgb, var(--primary) 28%, transparent);
+  filter: saturate(1.04);
+  transform: translateY(-1px);
+}
+
+.premium-cta-icon {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.premium-cta-copy {
+  display: grid;
+  gap: 1px;
+  line-height: 1;
+  text-align: left;
+}
+
+.premium-cta-copy strong {
+  color: var(--on-surface);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.premium-cta-copy > span {
+  color: color-mix(in srgb, var(--on-surface) 68%, transparent);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.premium-cta-price {
+  font-family: var(--body-font);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
 .streak-badge {
   min-width: 152px;
   min-height: 42px;
@@ -230,13 +297,25 @@
   }
 
   .header-actions {
-    margin-left: auto;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-left: 0;
   }
 }
 
 @media (max-width: 520px) {
   .header-inner {
     width: min(100% - 24px, 1200px);
+  }
+
+  .premium-cta-button {
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  .premium-cta-copy span {
+    display: none;
   }
 
   .streak-badge {

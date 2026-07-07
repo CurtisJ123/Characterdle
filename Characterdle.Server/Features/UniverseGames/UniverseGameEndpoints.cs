@@ -23,6 +23,20 @@ public static class UniverseGameEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        games.MapGet("/random", GetRandomGameAsync)
+            .WithName("GetRandomUniverseGame")
+            .Produces<CurrentUniverseGameResponse>()
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        games.MapGet("/random/{mode}", GetRandomGameAsync)
+            .WithName("GetRandomUniverseGameByMode")
+            .Produces<CurrentUniverseGameResponse>()
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         games.MapGet("/{gameId:long}", GetGameByIdAsync)
             .WithName("GetUniverseGameById")
             .Produces<CurrentUniverseGameResponse>()
@@ -144,6 +158,67 @@ public static class UniverseGameEndpoints
 
             return Results.Problem(
                 title: "Unable to load previous universe game data.",
+                detail: detail,
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+    }
+
+    private static async Task<IResult> GetRandomGameAsync(
+        string universeId,
+        string? mode,
+        HttpRequest httpRequest,
+        IHostEnvironment hostEnvironment,
+        UniverseCatalog universeCatalog,
+        IUniverseGameRepository repository,
+        SupabaseAuthClient authClient,
+        IPremiumRepository premiumRepository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        if (!universeCatalog.TryGet(universeId, out var universe))
+        {
+            return Results.NotFound(new { message = $"No universe named '{universeId}' is registered." });
+        }
+
+        try
+        {
+            var normalizedMode = string.Equals(mode?.Trim(), "quote", StringComparison.OrdinalIgnoreCase)
+                ? "quote"
+                : "character";
+            var premiumAccess = await TryGetPremiumAccessAsync(httpRequest, authClient, premiumRepository, cancellationToken);
+
+            if (!HasRandomGameAccess(premiumAccess))
+            {
+                return Results.Json(
+                    new
+                    {
+                        message = "Premium unlocks Random Game. Upgrade to jump into unlimited character and quote practice rounds pulled directly from the live database.",
+                    },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            var game = await repository.GetRandomGameAsync(universe, normalizedMode, cancellationToken);
+
+            return game is null
+                ? Results.NotFound(new
+                {
+                    message = normalizedMode == "quote"
+                        ? $"No quotes are available for random play in universe '{universe.DisplayName}'."
+                        : $"No characters are available for random play in universe '{universe.DisplayName}'.",
+                })
+                : Results.Ok(game);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            var logger = loggerFactory.CreateLogger(typeof(UniverseGameEndpoints).FullName!);
+            logger.LogError(exception, "Unable to resolve a random universe game for {UniverseId}.", universeId);
+
+            var detail = hostEnvironment.IsDevelopment()
+                ? exception.GetBaseException().Message
+                : "The database request failed while resolving a random game.";
+
+            return Results.Problem(
+                title: "Unable to resolve a random universe game.",
                 detail: detail,
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }
@@ -329,6 +404,9 @@ public static class UniverseGameEndpoints
 
     private static bool HasFullArchiveAccess(PremiumAccessResponse? premiumAccess) =>
         premiumAccess?.FullArchiveAccess == true;
+
+    private static bool HasRandomGameAccess(PremiumAccessResponse? premiumAccess) =>
+        premiumAccess?.PracticeMode == true;
 
     private static string? ReadBearerToken(HttpRequest request)
     {

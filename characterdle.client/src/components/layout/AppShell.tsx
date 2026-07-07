@@ -18,7 +18,9 @@ import { LauncherPage } from '../../pages/LauncherPage';
 import { LeaderboardPage } from '../../pages/LeaderboardPage';
 import { LegalDocumentPage } from '../../pages/LegalDocumentPage';
 import { PreviousGamesPage } from '../../pages/PreviousGamesPage';
+import { PremiumPage } from '../../pages/PremiumPage';
 import { ProfilePage } from '../../pages/ProfilePage';
+import { RandomGamePage } from '../../pages/RandomGamePage';
 import { SupportPage } from '../../pages/SupportPage';
 import { getGameResults } from '../../services/profileApi';
 import type { AccountSettingsValues } from '../../types/auth';
@@ -45,6 +47,7 @@ interface AppShellProps {
   onNavigate: NavigateToPage;
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
+  onOpenRandomGame: (gameMode: GameMode, universeId?: string) => void;
 }
 
 export function AppShell({
@@ -56,6 +59,7 @@ export function AppShell({
   onNavigate,
   onOpenGame,
   onOpenHistory,
+  onOpenRandomGame,
 }: AppShellProps) {
   const {
     authError,
@@ -78,6 +82,7 @@ export function AppShell({
   const {
     data: premiumData,
     isLoading: isPremiumLoading,
+    reload: reloadPremium,
   } = usePremium(session?.access_token ?? null);
   const [liveStreak, setLiveStreak] = useState<LiveStreakState | null>(null);
   const streakScope = `${user?.id ?? 'guest'}:${selectedUniverse.id}`;
@@ -163,14 +168,15 @@ export function AppShell({
     const currentDisplayName = user?.displayName ?? '';
     const currentAvatarUrl = user?.avatarUrl ?? null;
     const hasProfileChanges = values.displayName !== currentDisplayName || values.avatarUrl !== currentAvatarUrl;
+    const hasStreakSaverPreferenceChange = values.autoUseStreakSavers !== (premiumAccess?.autoUseStreakSavers ?? true);
     let profileMessage = 'No changes to save.';
 
-    if (hasProfileChanges) {
+    if (hasProfileChanges || hasStreakSaverPreferenceChange) {
       const result = await updateAccount(values);
       profileMessage = result.message;
     }
 
-    await reloadProfile();
+    await Promise.all([reloadProfile(), reloadPremium()]);
 
     return profileMessage;
   }
@@ -210,19 +216,19 @@ export function AppShell({
       />
       <SiteHeader
         isPremiumUser={showSupporterBadge}
+        autoUseStreakSavers={premiumAccess?.autoUseStreakSavers ?? true}
         availableStreakSavers={premiumAccess?.availableStreakSavers ?? 0}
         currentPage={currentPage}
+        currentStreakSaverSettingEnabled={premiumAccess?.streakProtection === true}
         isAuthenticated={isAuthenticated}
         isUserLoading={isLoading}
         hasStreakProtection={premiumAccess?.streakProtection === true}
         onAuthNavigate={onAuthNavigate}
         onDeleteAccount={handleDeleteAccount}
-        onOpenBillingPortal={handleOpenBillingPortal}
         onLoadAccountDeletionStatus={getAccountDeletionStatus}
         onNavigate={onNavigate}
         onSaveSettings={handleSaveSettings}
         onSignOut={handleSignOut}
-        onStartCheckout={handleStartCheckout}
         currentStreak={currentStreak}
         userAvatarUrl={user?.avatarUrl}
         userDisplayName={user?.displayName}
@@ -247,12 +253,29 @@ export function AppShell({
       {currentPage === 'game' && (
         <CharacterGamePage
           key={user?.id ?? 'guest'}
+          premiumAccess={premiumAccess}
           onNavigate={onNavigate}
           onOpenGame={onOpenGame}
           onOpenHistory={onOpenHistory}
+          onOpenRandomGame={onOpenRandomGame}
           currentStreak={currentStreak}
           onStreakUpdated={handleStreakUpdated}
           selectedGameId={currentGameId}
+          selectedGameMode={currentGameMode}
+        />
+      )}
+      {currentPage === 'random' && (
+        <RandomGamePage
+          accessToken={session?.access_token ?? null}
+          currentStreak={currentStreak}
+          isAuthenticated={isAuthenticated}
+          onNavigate={onNavigate}
+          onOpenGame={onOpenGame}
+          onOpenHistory={onOpenHistory}
+          onOpenRandomGame={onOpenRandomGame}
+          onStreakUpdated={handleStreakUpdated}
+          onStartCheckout={handleStartCheckout}
+          premiumAccess={premiumAccess}
           selectedGameMode={currentGameMode}
         />
       )}
@@ -266,6 +289,17 @@ export function AppShell({
         />
       )}
       {currentPage === 'leaderboard' && <LeaderboardPage />}
+      {currentPage === 'premium' && (
+        <PremiumPage
+          isAuthenticated={isAuthenticated}
+          isPremiumLoading={isPremiumLoading}
+          onAuthNavigate={onAuthNavigate}
+          onNavigate={onNavigate}
+          onOpenBillingPortal={handleOpenBillingPortal}
+          onStartCheckout={handleStartCheckout}
+          premiumAccess={premiumAccess}
+        />
+      )}
       {currentPage === 'profile' && (
         <ProfilePage
           billingRedirectStatus={billingRedirectStatus}

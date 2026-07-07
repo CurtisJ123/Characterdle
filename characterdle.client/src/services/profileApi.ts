@@ -76,6 +76,7 @@ export async function updateProfileSettings(
   accessToken: string,
   displayName: string,
   avatarUrl: string | null,
+  autoUseStreakSavers: boolean,
 ): Promise<void> {
   const response = await fetch(buildApiUrl('/api/profile'), {
     method: 'PATCH',
@@ -86,6 +87,7 @@ export async function updateProfileSettings(
     },
     body: JSON.stringify({
       avatarUrl,
+      autoUseStreakSavers,
       displayName,
     }),
   });

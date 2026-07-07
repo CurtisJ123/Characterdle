@@ -2,4 +2,5 @@ namespace Characterdle.Server.Features.Profile;
 
 public sealed record UpdateProfileRequest(
     string DisplayName,
-    string? AvatarUrl);
+    string? AvatarUrl,
+    bool AutoUseStreakSavers);
