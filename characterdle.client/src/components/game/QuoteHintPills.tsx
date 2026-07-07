@@ -11,6 +11,10 @@ const hintBlueprints = [
 ];
 
 export function QuoteHintPills({ hints }: QuoteHintPillsProps) {
+  if (hints.length === 0) {
+    return null;
+  }
+
   const revealedHints = new Map(hints.map((hint) => [hint.id, hint]));
 
   return (

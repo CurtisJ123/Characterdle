@@ -12,6 +12,7 @@ export function UniverseCard({ universe, onPlay, onPlayQuote }: UniverseCardProp
   const cardClassName = [
     'universe-card',
     'glass-card',
+    `is-universe-${universe.id}`,
     `is-${universe.launchState}`,
     universe.isFeatured ? 'is-featured' : '',
     universe.isPlayable ? 'is-playable' : 'is-disabled',
@@ -29,7 +30,6 @@ export function UniverseCard({ universe, onPlay, onPlayQuote }: UniverseCardProp
       )}
       <div className="universe-content">
         <div className="universe-copy">
-          <span className="pill">{universe.genre}</span>
           <h2>{universe.title}</h2>
           {universe.description && <p>{universe.description}</p>}
         </div>

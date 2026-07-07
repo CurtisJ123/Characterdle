@@ -216,6 +216,7 @@ export function AppShell({
       />
       <SiteHeader
         isPremiumUser={showSupporterBadge}
+        isPremiumLoading={isPremiumLoading}
         autoUseStreakSavers={premiumAccess?.autoUseStreakSavers ?? true}
         availableStreakSavers={premiumAccess?.availableStreakSavers ?? 0}
         currentPage={currentPage}
@@ -227,6 +228,7 @@ export function AppShell({
         onDeleteAccount={handleDeleteAccount}
         onLoadAccountDeletionStatus={getAccountDeletionStatus}
         onNavigate={onNavigate}
+        onOpenBillingPortal={handleOpenBillingPortal}
         onSaveSettings={handleSaveSettings}
         onSignOut={handleSignOut}
         currentStreak={currentStreak}

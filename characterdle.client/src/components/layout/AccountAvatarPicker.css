@@ -5,7 +5,7 @@
 
 .account-avatar-picker__header {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -17,13 +17,6 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.account-avatar-picker__copy {
-  margin: 6px 0 0;
-  color: var(--on-surface-variant);
-  font-size: 0.86rem;
-  line-height: 1.45;
 }
 
 .account-avatar-picker__clear {
@@ -122,11 +115,9 @@
 }
 
 .account-avatar-picker__grid {
-  max-height: 360px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 12px;
-  overflow-y: auto;
   padding-right: 4px;
 }
 
@@ -148,6 +139,14 @@
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   transform: translateY(-1px);
   outline: none;
+}
+
+.account-avatar-picker__change:disabled,
+.account-avatar-picker__clear:disabled,
+.account-avatar-option:disabled {
+  cursor: wait;
+  opacity: 0.64;
+  transform: none;
 }
 
 .account-avatar-option.is-selected {

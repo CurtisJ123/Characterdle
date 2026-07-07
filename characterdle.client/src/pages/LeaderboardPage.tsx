@@ -32,6 +32,18 @@ function getModeAverageGuesses(row: LeaderboardEntry, mode: GameMode): number | 
     : row.characterAverageGuesses;
 }
 
+function getWinRate(wins: number, plays: number): number | null {
+  return plays > 0
+    ? (wins / plays) * 100
+    : null;
+}
+
+function formatRate(value: number | null): string {
+  return value === null
+    ? '--'
+    : `${value.toFixed(1)}%`;
+}
+
 function compareNullableNumbers(left: number | null, right: number | null): number {
   if (left === null && right === null) {
     return 0;
@@ -172,9 +184,6 @@ export function LeaderboardPage() {
             </div>
           </div>
           <div className="champion-copy">
-            <span className="pill">
-              {selectedUniverse.title} {selectedView === 'streak' ? 'Streaks' : modeLabel}
-            </span>
             <h1>
               {selectedView === 'streak'
                 ? topStreakPlayer?.displayName ?? 'No streaks yet'
@@ -199,16 +208,12 @@ export function LeaderboardPage() {
                     <dd>{topPlayer?.wins ?? 0}</dd>
                   </div>
                   <div className="champion-stat-card">
-                    <dt>Plays</dt>
-                    <dd>{topPlayer?.plays ?? 0}</dd>
+                    <dt>Win Rate</dt>
+                    <dd>{formatRate(topPlayer ? getWinRate(topPlayer.wins, topPlayer.plays) : null)}</dd>
                   </div>
                   <div className="champion-stat-card">
                     <dt>Avg. Guesses</dt>
                     <dd>{topPlayer?.averageGuesses?.toFixed(1) ?? '--'}</dd>
-                  </div>
-                  <div className="champion-stat-card">
-                    <dt>Total Wins</dt>
-                    <dd>{topPlayer?.totalWins ?? 0}</dd>
                   </div>
                 </>
               )}
@@ -236,28 +241,22 @@ export function LeaderboardPage() {
           ) : (
             <>
               <h2>{currentUser ? `Your ${modeLabel} Standing` : `${modeLabel} Overview`}</h2>
-              <MetricRow label="Players" value={String(overview.playerCount)} />
-              <MetricRow
-                label={currentUser ? 'Your Rank' : 'Wins'}
-                value={currentUser ? `#${currentUser.rank}` : String(overview.totalWins)}
-              />
-              <MetricRow
-                label={currentUser ? 'Wins' : 'Avg. Guesses'}
-                value={currentUser
-                  ? String(currentUser.wins)
-                  : overview.averageGuesses === null
-                    ? '--'
-                    : overview.averageGuesses.toFixed(1)}
-              />
-              <MetricRow
-                label={currentUser ? 'Avg. Guesses' : 'Rounds'}
-                value={currentUser
-                  ? currentUser.averageGuesses === null
-                    ? '--'
-                    : currentUser.averageGuesses.toFixed(1)
-                  : String(overview.totalPlays)}
-              />
-              {currentUser && <MetricRow label="Rounds" value={String(currentUser.plays)} />}
+              {currentUser ? (
+                <>
+                  <MetricRow label="Your Rank" value={`#${currentUser.rank}`} />
+                  <MetricRow label="Players" value={String(overview.playerCount)} />
+                  <MetricRow label="Wins" value={String(currentUser.wins)} />
+                </>
+              ) : (
+                <>
+                  <MetricRow label="Players" value={String(overview.playerCount)} />
+                  <MetricRow label="Wins" value={String(overview.totalWins)} />
+                  <MetricRow
+                    label="Avg. Guesses"
+                    value={overview.averageGuesses === null ? '--' : overview.averageGuesses.toFixed(1)}
+                  />
+                </>
+              )}
             </>
           )}
         </aside>

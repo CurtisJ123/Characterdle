@@ -1,5 +1,4 @@
 import type { LeaderboardEntry } from '../../types/leaderboard';
-import { SupporterBadge } from '../ui/SupporterBadge';
 import { UserAvatar } from '../ui/UserAvatar';
 
 const HOME_LEADERBOARD_LIMIT = 10;
@@ -27,10 +26,7 @@ export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniL
         <div className="mini-rank" key={row.userId}>
           <span className="rank-number">{row.rank}</span>
           <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} isPremium={row.showSupporterBadge} size="leaderboard" className="avatar" />
-          <strong>
-            {row.displayName}
-            {row.showSupporterBadge && <SupporterBadge compact />}
-          </strong>
+          <strong>{row.displayName}</strong>
           <span>{row.totalWins}</span>
         </div>
       ))}

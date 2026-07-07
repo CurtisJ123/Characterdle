@@ -402,9 +402,10 @@
 }
 
 .game-hero.is-quote {
-  width: 100%;
-  max-width: none;
-  text-align: left;
+  width: min(760px, 100%);
+  max-width: 760px;
+  justify-self: center;
+  text-align: center;
 }
 
 .quote-mode-layout .search-box {

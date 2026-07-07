@@ -22,11 +22,14 @@
 .account-settings-panel {
   position: relative;
   z-index: 1;
-  width: min(560px, 100%);
+  width: min(960px, 100%);
+  height: min(720px, calc(100vh - 56px));
   display: grid;
-  gap: 24px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 18px;
   border-radius: var(--radius-panel);
-  padding: 28px;
+  padding: 30px;
+  overflow: hidden;
 }
 
 .account-settings-close {
@@ -54,6 +57,11 @@
   outline-offset: 2px;
 }
 
+.account-settings-heading {
+  display: grid;
+  gap: 8px;
+}
+
 .account-settings-heading h2 {
   margin: 0;
   color: var(--on-surface);
@@ -62,12 +70,206 @@
   line-height: 1;
 }
 
-.account-settings-form {
+.account-settings-mobile-select {
+  display: none;
+  gap: 9px;
+  color: var(--on-surface-variant);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-settings-mobile-select select,
+.account-settings-form input[type='text'],
+.account-delete-confirmation input {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--outline) 45%, transparent);
+  border-radius: var(--radius-control);
+  padding: 16px 18px;
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface-container-lowest) 56%, transparent);
+  outline: none;
+}
+
+.account-settings-mobile-select select:focus,
+.account-settings-form input[type='text']:focus {
+  border-color: color-mix(in srgb, var(--primary) 82%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent),
+    0 0 24px color-mix(in srgb, var(--primary-container) 20%, transparent);
+}
+
+.account-delete-confirmation input {
+  border-color: color-mix(in srgb, var(--status-danger) 26%, transparent);
+}
+
+.account-delete-confirmation input:focus {
+  border-color: color-mix(in srgb, var(--status-danger) 54%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--status-danger) 10%, transparent),
+    0 0 20px color-mix(in srgb, var(--status-danger) 14%, transparent);
+}
+
+.account-settings-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.account-settings-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.account-settings-nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: var(--radius-soft);
+  min-height: 58px;
+  padding: 0 16px;
+  color: var(--on-surface-variant);
+  background: color-mix(in srgb, var(--surface-container-lowest) 56%, transparent);
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.account-settings-nav-button:hover,
+.account-settings-nav-button:focus-visible,
+.account-settings-nav-button.is-active {
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.account-settings-nav-button.is-premium {
+  border: 2px solid #ffd54a;
+  box-shadow:
+    inset 0 0 12px color-mix(in srgb, #ffd54a 10%, transparent),
+    0 0 6px color-mix(in srgb, #ffd54a 54%, transparent),
+    0 0 14px color-mix(in srgb, #ffd54a 20%, transparent);
+}
+
+.account-settings-nav-button.is-premium:hover,
+.account-settings-nav-button.is-premium:focus-visible,
+.account-settings-nav-button.is-premium.is-active {
+  border-color: #ffd54a;
+  background:
+    radial-gradient(circle at 10% 12%, color-mix(in srgb, var(--white) 12%, transparent), transparent 22%),
+    color-mix(in srgb, var(--primary) 10%, var(--surface-container-lowest));
+  box-shadow:
+    inset 0 0 14px color-mix(in srgb, #ffd54a 12%, transparent),
+    0 0 10px color-mix(in srgb, #ffd54a 60%, transparent),
+    0 0 20px color-mix(in srgb, #ffd54a 24%, transparent);
+}
+
+.account-settings-nav-button.is-danger {
+  border-color: color-mix(in srgb, var(--status-danger) 24%, transparent);
+  box-shadow:
+    inset 0 0 10px color-mix(in srgb, var(--status-danger) 6%, transparent),
+    0 0 6px color-mix(in srgb, var(--status-danger) 14%, transparent),
+    0 0 14px color-mix(in srgb, var(--status-danger) 8%, transparent);
+}
+
+.account-settings-nav-button.is-danger:hover,
+.account-settings-nav-button.is-danger:focus-visible,
+.account-settings-nav-button.is-danger.is-active {
+  border-color: color-mix(in srgb, var(--status-danger) 42%, transparent);
+  background:
+    radial-gradient(circle at 10% 14%, color-mix(in srgb, var(--status-danger) 10%, transparent), transparent 28%),
+    color-mix(in srgb, var(--status-danger) 8%, transparent);
+  box-shadow:
+    inset 0 0 12px color-mix(in srgb, var(--status-danger) 8%, transparent),
+    0 0 8px color-mix(in srgb, var(--status-danger) 18%, transparent),
+    0 0 16px color-mix(in srgb, var(--status-danger) 10%, transparent);
+}
+
+.account-settings-nav-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-settings-nav-icon {
+  width: 18px;
+  height: 18px;
+  color: #ffd54a;
+  flex: 0 0 auto;
+}
+
+.account-settings-nav-button strong {
+  color: var(--on-surface);
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-settings-content {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 48%, transparent) color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
+}
+
+.account-settings-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.account-settings-content::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
+}
+
+.account-settings-content::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary) 66%, transparent),
+    color-mix(in srgb, var(--primary-soft) 82%, transparent)
+  );
+  background-clip: padding-box;
+}
+
+.account-settings-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary) 82%, transparent),
+    color-mix(in srgb, var(--primary-soft) 92%, transparent)
+  );
+  background-clip: padding-box;
+}
+
+.account-settings-form,
+.account-danger-zone {
   display: grid;
   gap: 18px;
 }
 
-.account-settings-form label {
+.account-settings-form {
+  align-content: start;
+  min-height: 100%;
+}
+
+.account-settings-form label,
+.account-delete-confirmation label {
   display: grid;
   gap: 9px;
   color: var(--on-surface-variant);
@@ -77,56 +279,73 @@
   text-transform: uppercase;
 }
 
-.account-settings-form input[type='text'] {
-  width: 100%;
-  border: 1px solid color-mix(in srgb, var(--outline) 45%, transparent);
-  border-radius: var(--radius-control);
-  padding: 17px 18px;
-  color: var(--on-surface);
-  background: color-mix(in srgb, var(--surface-container-lowest) 56%, transparent);
-  outline: none;
+.account-settings-inline-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
 }
 
-.account-settings-form input[type='text']:focus {
-  border-color: color-mix(in srgb, var(--primary) 82%, transparent);
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--primary) 10%, transparent),
-    0 0 24px color-mix(in srgb, var(--primary-container) 20%, transparent);
+.account-settings-inline-save {
+  min-width: 88px;
+  justify-content: center;
+  align-self: stretch;
 }
 
-.account-settings-form .primary-button {
-  width: 100%;
-}
-
-.account-settings-toggle-panel {
+.account-settings-section-card,
+.account-settings-toggle-panel,
+.account-danger-zone {
   display: grid;
   gap: 16px;
   border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
   border-radius: var(--radius-soft);
-  padding: 18px;
+  padding: 20px;
   background: color-mix(in srgb, var(--surface-panel-neutral) 82%, transparent);
+}
+
+.account-settings-section-card--premium {
+  border-color: color-mix(in srgb, #ffd54a 42%, transparent);
+  background:
+    radial-gradient(circle at 10% 14%, color-mix(in srgb, #ffd54a 12%, transparent), transparent 28%),
+    color-mix(in srgb, var(--surface-panel-neutral) 88%, transparent);
+}
+
+.account-settings-section-heading,
+.account-settings-toggle-copy,
+.account-danger-zone-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.account-settings-section-heading h3,
+.account-settings-toggle-copy h3,
+.account-danger-zone-heading h3 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 1.22rem;
+}
+
+.account-settings-section-heading .muted-copy,
+.account-settings-toggle-copy .muted-copy,
+.account-danger-zone-heading .muted-copy,
+.account-settings-toggle-locked-copy {
+  margin: 0;
+}
+
+.account-settings-action-button,
+.account-settings-submit {
+  width: 100%;
+  justify-content: center;
+}
+
+.account-settings-submit {
+  margin-top: auto;
 }
 
 .account-settings-toggle-panel.is-locked {
   border-color: color-mix(in srgb, var(--primary) 10%, transparent);
   opacity: 0.86;
-}
-
-.account-settings-toggle-copy {
-  display: grid;
-  gap: 8px;
-}
-
-.account-settings-toggle-copy h3 {
-  margin: 0;
-  color: var(--on-surface);
-  font-family: var(--heading-font);
-  font-size: 1.1rem;
-}
-
-.account-settings-toggle-copy .muted-copy,
-.account-settings-toggle-locked-copy {
-  margin: 0;
 }
 
 .account-settings-toggle-control {
@@ -183,10 +402,7 @@
   outline-offset: 3px;
 }
 
-.account-settings-toggle-control input:disabled + .account-settings-toggle-track {
-  opacity: 0.54;
-}
-
+.account-settings-toggle-control input:disabled + .account-settings-toggle-track,
 .account-settings-toggle-control input:disabled ~ .account-settings-toggle-state {
   opacity: 0.54;
 }
@@ -197,58 +413,6 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.account-billing-zone {
-  display: grid;
-  gap: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
-  padding-top: 24px;
-}
-
-.account-billing-zone-heading {
-  display: grid;
-  gap: 8px;
-}
-
-.account-billing-zone-heading h3 {
-  margin: 0;
-  color: var(--on-surface);
-  font-family: var(--heading-font);
-  font-size: 1.3rem;
-}
-
-.account-billing-zone-heading .muted-copy {
-  margin: 0;
-}
-
-.account-billing-actions {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.account-danger-zone {
-  display: grid;
-  gap: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
-  padding-top: 24px;
-}
-
-.account-danger-zone-heading {
-  display: grid;
-  gap: 8px;
-}
-
-.account-danger-zone-heading h3 {
-  margin: 0;
-  color: var(--on-surface);
-  font-family: var(--heading-font);
-  font-size: 1.3rem;
-}
-
-.account-danger-zone-heading .muted-copy {
-  margin: 0;
 }
 
 .account-danger-status {
@@ -308,37 +472,28 @@
   gap: 14px;
 }
 
-.account-delete-confirmation label {
-  display: grid;
-  gap: 9px;
-  color: var(--on-surface-variant);
-  font-size: 0.82rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.account-delete-confirmation input {
-  width: 100%;
-  border: 1px solid color-mix(in srgb, var(--status-danger) 26%, transparent);
-  border-radius: var(--radius-control);
-  padding: 17px 18px;
-  color: var(--on-surface);
-  background: color-mix(in srgb, var(--surface-container-lowest) 56%, transparent);
-  outline: none;
-}
-
-.account-delete-confirmation input:focus {
-  border-color: color-mix(in srgb, var(--status-danger) 54%, transparent);
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--status-danger) 10%, transparent),
-    0 0 20px color-mix(in srgb, var(--status-danger) 14%, transparent);
-}
-
 .account-delete-actions {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 820px) {
+  .account-settings-panel {
+    height: min(760px, calc(100vh - 44px));
+  }
+
+  .account-settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .account-settings-mobile-select {
+    display: grid;
+  }
+
+  .account-settings-sidebar {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -349,14 +504,15 @@
   }
 
   .account-settings-panel {
+    height: min(780px, calc(100vh - 32px));
     padding: 24px 20px;
   }
 
-  .account-delete-actions {
+  .account-settings-inline-input {
     grid-template-columns: 1fr;
   }
 
-  .account-billing-actions {
+  .account-delete-actions {
     grid-template-columns: 1fr;
   }
 }

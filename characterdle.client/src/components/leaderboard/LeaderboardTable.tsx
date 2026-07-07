@@ -40,7 +40,7 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
                 <strong>{row.displayName}</strong>
                 {row.showSupporterBadge && <SupporterBadge compact />}
               </div>
-              <small>{row.isCurrentUser ? 'You' : 'Ranked player'}</small>
+              {row.isCurrentUser && <small>You</small>}
             </div>
           </div>
           <strong>{row.wins}</strong>

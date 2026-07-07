@@ -14,15 +14,17 @@ interface SiteHeaderProps {
   availableStreakSavers: number;
   currentStreak: number;
   currentPage: Page;
+  isPremiumLoading: boolean;
+  isPremiumUser: boolean;
   currentStreakSaverSettingEnabled: boolean;
   hasStreakProtection: boolean;
   isAuthenticated: boolean;
-  isPremiumUser: boolean;
   isUserLoading: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onDeleteAccount: () => Promise<string>;
   onLoadAccountDeletionStatus: () => Promise<AccountDeletionStatus>;
   onNavigate: NavigateToPage;
+  onOpenBillingPortal: () => Promise<void>;
   onSaveSettings: (values: AccountSettingsValues) => Promise<string>;
   onSignOut: () => Promise<void> | void;
   userAvatarUrl?: string | null;
@@ -34,15 +36,17 @@ export function SiteHeader({
   availableStreakSavers,
   currentStreak,
   currentPage,
+  isPremiumLoading,
+  isPremiumUser,
   currentStreakSaverSettingEnabled,
   hasStreakProtection,
   isAuthenticated,
-  isPremiumUser,
   isUserLoading,
   onAuthNavigate,
   onDeleteAccount,
   onLoadAccountDeletionStatus,
   onNavigate,
+  onOpenBillingPortal,
   onSaveSettings,
   onSignOut,
   userAvatarUrl,
@@ -223,10 +227,14 @@ export function SiteHeader({
           currentAutoUseStreakSavers={autoUseStreakSavers}
           currentAvatarUrl={userAvatarUrl ?? null}
           currentDisplayName={userDisplayName ?? ''}
+          isPremiumLoading={isPremiumLoading}
+          isPremiumUser={isPremiumUser}
           isStreakSaverSettingEnabled={currentStreakSaverSettingEnabled}
           onClose={() => setIsSettingsOpen(false)}
           onDeleteAccount={onDeleteAccount}
           onLoadAccountDeletionStatus={onLoadAccountDeletionStatus}
+          onNavigate={onNavigate}
+          onOpenBillingPortal={onOpenBillingPortal}
           onSaveSettings={onSaveSettings}
         />
       )}

@@ -3,12 +3,14 @@ import { useUniverseCharacterOptions } from '../../hooks/useUniverseCharacterOpt
 import { UserAvatar } from '../ui/UserAvatar';
 
 interface AccountAvatarPickerProps {
+  isSaving?: boolean;
   selectedAvatarUrl: string | null;
   universeId: string;
   onChange: (avatarUrl: string | null) => void;
 }
 
 export function AccountAvatarPicker({
+  isSaving = false,
   selectedAvatarUrl,
   universeId,
   onChange,
@@ -23,7 +25,7 @@ export function AccountAvatarPicker({
   );
   const hasSelectedPortrait = Boolean(selectedAvatarUrl);
   const selectionTitle = selectedOption?.displayName ?? (hasSelectedPortrait ? 'Saved portrait' : 'Use initials');
-  const selectionCopy = hasSelectedPortrait ? 'Current portrait' : 'No portrait selected';
+  const selectionCopy = hasSelectedPortrait ? 'Portrait selected' : 'Using initials';
 
   const filteredOptions = useMemo(() => {
     if (!normalizedQuery) {
@@ -52,10 +54,9 @@ export function AccountAvatarPicker({
       <div className="account-avatar-picker__header">
         <div>
           <span className="account-avatar-picker__label">Profile picture</span>
-          <p className="account-avatar-picker__copy">Choose a Game of Thrones character portrait.</p>
         </div>
-        <button className="account-avatar-picker__change" type="button" onClick={handleTogglePicker}>
-          {isPickerOpen ? 'Hide' : 'Change'}
+        <button className="account-avatar-picker__change" type="button" disabled={isSaving} onClick={handleTogglePicker}>
+          {isSaving ? 'Saving...' : isPickerOpen ? 'Hide' : 'Change'}
         </button>
       </div>
 
@@ -75,7 +76,12 @@ export function AccountAvatarPicker({
       {isPickerOpen && (
         <div className="account-avatar-picker__chooser">
           <div className="account-avatar-picker__actions">
-            <button className="account-avatar-picker__clear" type="button" onClick={() => handleAvatarSelect(null)}>
+            <button
+              className="account-avatar-picker__clear"
+              type="button"
+              disabled={isSaving}
+              onClick={() => handleAvatarSelect(null)}
+            >
               Use initials
             </button>
           </div>
@@ -86,6 +92,7 @@ export function AccountAvatarPicker({
               name="avatarSearch"
               type="text"
               placeholder="Search character portraits"
+              disabled={isSaving}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -105,6 +112,7 @@ export function AccountAvatarPicker({
                   className={`account-avatar-option ${selectedAvatarUrl === option.portraitUrl ? 'is-selected' : ''}`}
                   type="button"
                   role="listitem"
+                  disabled={isSaving}
                   aria-pressed={selectedAvatarUrl === option.portraitUrl}
                   onClick={() => handleAvatarSelect(option.portraitUrl)}
                 >

@@ -203,6 +203,18 @@
   transform: translateY(-2px);
 }
 
+@media (min-width: 761px) {
+  .universe-grid:not(.single-universe) .universe-card.is-universe-got.is-featured .universe-copy {
+    max-width: min(70%, 560px);
+  }
+
+  .universe-grid:not(.single-universe) .universe-card.is-universe-got.is-featured h2 {
+    margin-top: 0;
+    font-size: clamp(3.1rem, 7vw, 5rem);
+    line-height: 0.92;
+  }
+}
+
 @media (max-width: 520px) {
   .universe-copy {
     max-width: 100%;
