@@ -246,6 +246,7 @@ export function AppShell({
       )}
       {currentPage === 'launcher' && (
         <LauncherPage
+          accessToken={session?.access_token ?? null}
           authError={authError}
           isPremiumUser={showSupporterBadge}
           isUserLoading={isLoading}

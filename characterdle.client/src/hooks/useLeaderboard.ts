@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { getLeaderboard } from '../services/leaderboardApi';
 import type { UniverseLeaderboardState } from '../types/leaderboard';
 
-export function useLeaderboard(universeId: string, currentUserId: string | null): UniverseLeaderboardState {
+export function useLeaderboard(
+  universeId: string,
+  accessToken: string | null,
+  requestScope: string,
+): UniverseLeaderboardState {
   const [state, setState] = useState<UniverseLeaderboardState>({
     data: null,
     error: null,
@@ -20,7 +24,7 @@ export function useLeaderboard(universeId: string, currentUserId: string | null)
 
     async function loadLeaderboard() {
       try {
-        const data = await getLeaderboard(universeId, currentUserId);
+        const data = await getLeaderboard(universeId, accessToken, requestScope);
 
         if (!isMounted) {
           return;
@@ -49,7 +53,7 @@ export function useLeaderboard(universeId: string, currentUserId: string | null)
     return () => {
       isMounted = false;
     };
-  }, [currentUserId, universeId]);
+  }, [accessToken, requestScope, universeId]);
 
   return state;
 }

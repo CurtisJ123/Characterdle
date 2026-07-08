@@ -1,5 +1,6 @@
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.Premium;
+using Characterdle.Server.Infrastructure.Auth;
 
 namespace Characterdle.Server.Features.UniverseGames;
 
@@ -166,11 +167,10 @@ public static class UniverseGameEndpoints
     private static async Task<IResult> GetRandomGameAsync(
         string universeId,
         string? mode,
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         IUniverseGameRepository repository,
-        SupabaseAuthClient authClient,
         IPremiumRepository premiumRepository,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -185,7 +185,7 @@ public static class UniverseGameEndpoints
             var normalizedMode = string.Equals(mode?.Trim(), "quote", StringComparison.OrdinalIgnoreCase)
                 ? "quote"
                 : "character";
-            var premiumAccess = await TryGetPremiumAccessAsync(httpRequest, authClient, premiumRepository, cancellationToken);
+            var premiumAccess = await TryGetPremiumAccessAsync(currentUserAccessor, premiumRepository, cancellationToken);
 
             if (!HasRandomGameAccess(premiumAccess))
             {
@@ -227,11 +227,10 @@ public static class UniverseGameEndpoints
     private static async Task<IResult> GetGameByIdAsync(
         string universeId,
         long gameId,
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         IUniverseGameRepository repository,
-        SupabaseAuthClient authClient,
         IPremiumRepository premiumRepository,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -243,7 +242,7 @@ public static class UniverseGameEndpoints
 
         try
         {
-            var premiumAccess = await TryGetPremiumAccessAsync(httpRequest, authClient, premiumRepository, cancellationToken);
+            var premiumAccess = await TryGetPremiumAccessAsync(currentUserAccessor, premiumRepository, cancellationToken);
 
             if (!HasFullArchiveAccess(premiumAccess))
             {
@@ -383,19 +382,11 @@ public static class UniverseGameEndpoints
     }
 
     private static async Task<PremiumAccessResponse?> TryGetPremiumAccessAsync(
-        HttpRequest request,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         IPremiumRepository premiumRepository,
         CancellationToken cancellationToken)
     {
-        var accessToken = ReadBearerToken(request);
-
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            return null;
-        }
-
-        var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+        var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
         return user is null
             ? null
@@ -407,21 +398,4 @@ public static class UniverseGameEndpoints
 
     private static bool HasRandomGameAccess(PremiumAccessResponse? premiumAccess) =>
         premiumAccess?.PracticeMode == true;
-
-    private static string? ReadBearerToken(HttpRequest request)
-    {
-        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
-        {
-            return null;
-        }
-
-        var authorizationHeader = authorizationHeaderValues.ToString();
-
-        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return authorizationHeader["Bearer ".Length..].Trim();
-    }
 }

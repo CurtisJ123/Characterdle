@@ -29,7 +29,7 @@ export function StreakLeaderboardTable({ rows }: StreakLeaderboardTableProps) {
                 <strong>{row.displayName}</strong>
                 {row.showSupporterBadge && <SupporterBadge compact />}
               </div>
-              <small>{row.isCurrentUser ? 'You' : 'Daily player'}</small>
+              {row.isCurrentUser && <small>You</small>}
             </div>
           </div>
           <div className="streak-value-cell">

@@ -5,6 +5,7 @@ using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.Premium;
 using Characterdle.Server.Features.Profile;
 using Characterdle.Server.Features.UniverseGames;
+using Characterdle.Server.Infrastructure.Auth;
 using Characterdle.Server.Infrastructure.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -28,6 +29,7 @@ if (int.TryParse(renderPort, out var parsedRenderPort)
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<ClientAppOptions>(builder.Configuration.GetSection(ClientAppOptions.SectionName));
 builder.Services.Configure<SchedulingOptions>(builder.Configuration.GetSection(SchedulingOptions.SectionName));
 builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
@@ -79,6 +81,7 @@ builder.Services.AddScoped<IPremiumRepository, PremiumRepository>();
 builder.Services.AddScoped<IPremiumStreakSaverService, PremiumStreakSaverService>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
 builder.Services.AddScoped<IAccountDeletionGuard, DefaultAccountDeletionGuard>();
+builder.Services.AddScoped<ICurrentSupabaseUserAccessor, CurrentSupabaseUserAccessor>();
 builder.Services.AddSingleton<StripeBillingService>();
 builder.Services.AddSingleton<UniverseGameScheduler>();
 builder.Services.AddHttpClient<SupabaseAuthClient>(client =>

@@ -1,4 +1,5 @@
 using Characterdle.Server.Features.UniverseGames;
+using Characterdle.Server.Infrastructure.Auth;
 
 namespace Characterdle.Server.Features.Leaderboard;
 
@@ -27,9 +28,9 @@ public static class LeaderboardEndpoints
 
     private static async Task<IResult> GetLeaderboardAsync(
         string universeId,
-        string? currentUserId,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository repository,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -41,16 +42,11 @@ public static class LeaderboardEndpoints
 
         try
         {
-            Guid? parsedCurrentUserId = null;
-
-            if (!string.IsNullOrWhiteSpace(currentUserId) && Guid.TryParse(currentUserId, out var currentUserGuid))
-            {
-                parsedCurrentUserId = currentUserGuid;
-            }
+            var currentUser = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             var leaderboard = await repository.GetLeaderboardAsync(
                 universe,
-                parsedCurrentUserId,
+                currentUser?.UserId,
                 limit: 50,
                 cancellationToken);
 
@@ -75,11 +71,10 @@ public static class LeaderboardEndpoints
     private static async Task<IResult> SubmitResultAsync(
         string universeId,
         SubmitUniverseGameResultRequest request,
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository repository,
-        SupabaseAuthClient authClient,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
@@ -97,14 +92,7 @@ public static class LeaderboardEndpoints
                 return Results.ValidationProblem(validationErrors);
             }
 
-            var accessToken = ReadBearerToken(httpRequest);
-
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -219,22 +207,5 @@ public static class LeaderboardEndpoints
         }
 
         return errors;
-    }
-
-    private static string? ReadBearerToken(HttpRequest request)
-    {
-        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
-        {
-            return null;
-        }
-
-        var authorizationHeader = authorizationHeaderValues.ToString();
-
-        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return authorizationHeader["Bearer ".Length..].Trim();
     }
 }

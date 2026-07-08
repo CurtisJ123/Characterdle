@@ -1,4 +1,5 @@
 using Characterdle.Server.Features.Leaderboard;
+using Characterdle.Server.Infrastructure.Auth;
 
 namespace Characterdle.Server.Features.Premium;
 
@@ -18,9 +19,8 @@ public static class PremiumEndpoints
     }
 
     private static async Task<IResult> GetPremiumStateAsync(
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository leaderboardRepository,
         IPremiumRepository premiumRepository,
         ILoggerFactory loggerFactory,
@@ -28,7 +28,7 @@ public static class PremiumEndpoints
     {
         try
         {
-            var user = await GetAuthenticatedUserAsync(httpRequest, authClient, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -55,35 +55,4 @@ public static class PremiumEndpoints
         }
     }
 
-    private static async Task<VerifiedSupabaseUser?> GetAuthenticatedUserAsync(
-        HttpRequest request,
-        SupabaseAuthClient authClient,
-        CancellationToken cancellationToken)
-    {
-        var accessToken = ReadBearerToken(request);
-
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            return null;
-        }
-
-        return await authClient.GetUserAsync(accessToken, cancellationToken);
-    }
-
-    private static string? ReadBearerToken(HttpRequest request)
-    {
-        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
-        {
-            return null;
-        }
-
-        var authorizationHeader = authorizationHeaderValues.ToString();
-
-        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return authorizationHeader["Bearer ".Length..].Trim();
-    }
 }

@@ -8,8 +8,8 @@ import { buildApiUrl } from '../lib/runtimeConfig';
 const leaderboardRequests = new Map<string, Promise<UniverseLeaderboard>>();
 const MAX_PERSISTED_GUESSES = 50;
 
-function createLeaderboardCacheKey(universeId: string, currentUserId: string | null): string {
-  return `${universeId}:${currentUserId ?? 'guest'}`;
+function createLeaderboardCacheKey(universeId: string, requestScope: string): string {
+  return `${universeId}:${requestScope}`;
 }
 
 export function clearLeaderboardCache(universeId?: string) {
@@ -25,15 +25,19 @@ export function clearLeaderboardCache(universeId?: string) {
   }
 }
 
-export function getLeaderboard(universeId: string, currentUserId: string | null): Promise<UniverseLeaderboard> {
-  const cacheKey = createLeaderboardCacheKey(universeId, currentUserId);
+export function getLeaderboard(
+  universeId: string,
+  accessToken: string | null,
+  requestScope: string,
+): Promise<UniverseLeaderboard> {
+  const cacheKey = createLeaderboardCacheKey(universeId, requestScope);
   const cachedRequest = leaderboardRequests.get(cacheKey);
 
   if (cachedRequest) {
     return cachedRequest;
   }
 
-  const request = fetchLeaderboard(universeId, currentUserId).catch((error: unknown) => {
+  const request = fetchLeaderboard(universeId, accessToken).catch((error: unknown) => {
     leaderboardRequests.delete(cacheKey);
     throw error;
   });
@@ -81,14 +85,16 @@ export function retainGuessesForPersistence(guessedCharacterIds: readonly number
   return [...guessedCharacterIds.slice(0, MAX_PERSISTED_GUESSES - 1), firstGuess];
 }
 
-async function fetchLeaderboard(universeId: string, currentUserId: string | null): Promise<UniverseLeaderboard> {
-  const query = currentUserId
-    ? `?currentUserId=${encodeURIComponent(currentUserId)}`
-    : '';
-  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/leaderboard/${query}`), {
-    headers: {
-      Accept: 'application/json',
-    },
+async function fetchLeaderboard(universeId: string, accessToken: string | null): Promise<UniverseLeaderboard> {
+  const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/leaderboard/`), {
+    headers: accessToken
+      ? {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      }
+      : {
+        Accept: 'application/json',
+      },
   });
 
   if (!response.ok) {

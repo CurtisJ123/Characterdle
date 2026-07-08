@@ -9,6 +9,7 @@ import type { NavigateToPage } from '../types/routes';
 import type { UserProfile } from '../types/user';
 
 interface LauncherPageProps {
+  accessToken: string | null;
   authError: Error | null;
   isPremiumUser: boolean;
   isUserLoading: boolean;
@@ -17,11 +18,20 @@ interface LauncherPageProps {
   user: UserProfile | null;
 }
 
-export function LauncherPage({ authError, isPremiumUser, isUserLoading, onNavigate, onOpenGame, user }: LauncherPageProps) {
+export function LauncherPage({
+  accessToken,
+  authError,
+  isPremiumUser,
+  isUserLoading,
+  onNavigate,
+  onOpenGame,
+  user,
+}: LauncherPageProps) {
   const { selectedUniverse, setSelectedUniverseId } = useUniverse();
   const { data: leaderboardData, error: leaderboardError, isLoading: isLeaderboardLoading } = useLeaderboard(
     selectedUniverse.id,
-    user?.id ?? null,
+    accessToken,
+    user?.id ?? 'guest',
   );
 
   function handleOpenUniverseGame(universeId: string, gameMode: GameMode) {

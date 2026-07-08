@@ -1,5 +1,6 @@
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.UniverseGames;
+using Characterdle.Server.Infrastructure.Auth;
 
 namespace Characterdle.Server.Features.Profile;
 
@@ -51,10 +52,9 @@ public static class ProfileEndpoints
 
     private static async Task<IResult> GetProfileAsync(
         string universeId,
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository leaderboardRepository,
         IProfileRepository profileRepository,
         ILoggerFactory loggerFactory,
@@ -67,14 +67,7 @@ public static class ProfileEndpoints
 
         try
         {
-            var accessToken = ReadBearerToken(httpRequest);
-
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -110,10 +103,9 @@ public static class ProfileEndpoints
 
     private static async Task<IResult> UpdateProfileAsync(
         UpdateProfileRequest request,
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         IProfileRepository profileRepository,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -135,14 +127,7 @@ public static class ProfileEndpoints
                     statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
-            var accessToken = ReadBearerToken(httpRequest);
-
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -196,20 +181,12 @@ public static class ProfileEndpoints
     }
 
     private static async Task<IResult> GetAccountDeletionStatusAsync(
-        HttpRequest httpRequest,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         SupabaseAdminAuthClient adminAuthClient,
         IAccountDeletionGuard accountDeletionGuard,
         CancellationToken cancellationToken)
     {
-        var accessToken = ReadBearerToken(httpRequest);
-
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            return Results.Unauthorized();
-        }
-
-        var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+        var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
         if (user is null)
         {
@@ -226,9 +203,8 @@ public static class ProfileEndpoints
     }
 
     private static async Task<IResult> DeleteAccountAsync(
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         SupabaseAdminAuthClient adminAuthClient,
         IAccountDeletionGuard accountDeletionGuard,
         IProfileRepository profileRepository,
@@ -237,14 +213,7 @@ public static class ProfileEndpoints
     {
         try
         {
-            var accessToken = ReadBearerToken(httpRequest);
-
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -290,10 +259,9 @@ public static class ProfileEndpoints
 
     private static async Task<IResult> GetGameResultsAsync(
         string universeId,
-        HttpRequest httpRequest,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         IProfileRepository profileRepository,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -305,14 +273,7 @@ public static class ProfileEndpoints
 
         try
         {
-            var accessToken = ReadBearerToken(httpRequest);
-
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await authClient.GetUserAsync(accessToken, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -368,23 +329,6 @@ public static class ProfileEndpoints
             false,
             eligibility.Message
             ?? "Deleting your account permanently removes your profile, streaks, and leaderboard history.");
-    }
-
-    private static string? ReadBearerToken(HttpRequest request)
-    {
-        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
-        {
-            return null;
-        }
-
-        var authorizationHeader = authorizationHeaderValues.ToString();
-
-        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return authorizationHeader["Bearer ".Length..].Trim();
     }
 
     private static Dictionary<string, string[]> ValidateUpdate(UpdateProfileRequest request)

@@ -1,6 +1,7 @@
 using System.Text;
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.Premium;
+using Characterdle.Server.Infrastructure.Auth;
 using Stripe;
 using Stripe.Checkout;
 
@@ -37,9 +38,8 @@ public static class BillingEndpoints
     }
 
     private static async Task<IResult> CreateCheckoutSessionAsync(
-        HttpRequest httpRequest,
         CreateBillingCheckoutSessionRequest request,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository leaderboardRepository,
         IPremiumRepository premiumRepository,
         IBillingRepository billingRepository,
@@ -49,7 +49,7 @@ public static class BillingEndpoints
     {
         try
         {
-            var user = await GetAuthenticatedUserAsync(httpRequest, authClient, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -115,8 +115,7 @@ public static class BillingEndpoints
     }
 
     private static async Task<IResult> CreatePortalSessionAsync(
-        HttpRequest httpRequest,
-        SupabaseAuthClient authClient,
+        ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository leaderboardRepository,
         IBillingRepository billingRepository,
         StripeBillingService stripeBillingService,
@@ -125,7 +124,7 @@ public static class BillingEndpoints
     {
         try
         {
-            var user = await GetAuthenticatedUserAsync(httpRequest, authClient, cancellationToken);
+            var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
 
             if (user is null)
             {
@@ -388,38 +387,6 @@ public static class BillingEndpoints
             "canceled" => "canceled",
             _ => "inactive",
         };
-    }
-
-    private static async Task<VerifiedSupabaseUser?> GetAuthenticatedUserAsync(
-        HttpRequest request,
-        SupabaseAuthClient authClient,
-        CancellationToken cancellationToken)
-    {
-        var accessToken = ReadBearerToken(request);
-
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            return null;
-        }
-
-        return await authClient.GetUserAsync(accessToken, cancellationToken);
-    }
-
-    private static string? ReadBearerToken(HttpRequest request)
-    {
-        if (!request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues))
-        {
-            return null;
-        }
-
-        var authorizationHeader = authorizationHeaderValues.ToString();
-
-        if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return authorizationHeader["Bearer ".Length..].Trim();
     }
 
     private static Guid? TryParseGuid(string? rawValue) =>
