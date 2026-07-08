@@ -14,6 +14,7 @@ interface SiteHeaderProps {
   availableStreakSavers: number;
   currentStreak: number;
   currentPage: Page;
+  isPremiumActive: boolean;
   isPremiumLoading: boolean;
   isPremiumUser: boolean;
   currentStreakSaverSettingEnabled: boolean;
@@ -36,6 +37,7 @@ export function SiteHeader({
   availableStreakSavers,
   currentStreak,
   currentPage,
+  isPremiumActive,
   isPremiumLoading,
   isPremiumUser,
   currentStreakSaverSettingEnabled,
@@ -59,6 +61,7 @@ export function SiteHeader({
   const streakMenuRef = useRef<HTMLDivElement>(null);
   const activeNav = currentPage === 'game' || currentPage === 'random' ? 'launcher' : currentPage;
   const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
+  const canShowPremiumCta = isAuthenticated && !isPremiumLoading && !isPremiumActive;
 
   useEffect(() => {
     if (!isProfileMenuOpen && !isStreakMenuOpen) {
@@ -142,7 +145,7 @@ export function SiteHeader({
           </nav>
 
           <div className="header-actions" aria-label="Account actions">
-            {isAuthenticated && (
+            {canShowPremiumCta && (
               <button
                 className={`premium-cta-button${currentPage === 'premium' ? ' is-active' : ''}`}
                 type="button"

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { CharacterGamePage } from './CharacterGamePage';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
 import { useRandomUniverseGame } from '../hooks/useRandomUniverseGame';
@@ -38,25 +37,20 @@ export function RandomGamePage({
   selectedGameMode,
 }: RandomGamePageProps) {
   const { selectedUniverse } = useUniverse();
-  const [refreshKey, setRefreshKey] = useState(0);
-  const randomGameState = useRandomUniverseGame(
+  const randomGame = useRandomUniverseGame(
     selectedUniverse.id,
     selectedGameMode,
     accessToken,
-    refreshKey,
   );
+  const { advanceToNextGame, roundKey, state: randomGameState } = randomGame;
   const { data, error, isLoading } = randomGameState;
   const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
   const isPremiumLocked = error instanceof UniverseGameApiError && error.status === 403;
 
-  function handleRefreshRandomGame() {
-    setRefreshKey((currentValue) => currentValue + 1);
-  }
-
   if (data) {
     return (
       <CharacterGamePage
-        key={`${selectedGameMode}:${refreshKey}`}
+        key={`${selectedGameMode}:${roundKey}`}
         currentStreak={currentStreak}
         gameStateOverride={randomGameState}
         gameVariant="random"
@@ -64,7 +58,7 @@ export function RandomGamePage({
         onOpenGame={onOpenGame}
         onOpenHistory={onOpenHistory}
         onOpenRandomGame={onOpenRandomGame}
-        onRefreshRandomGame={handleRefreshRandomGame}
+        onRefreshRandomGame={advanceToNextGame}
         onStreakUpdated={onStreakUpdated}
         premiumAccess={premiumAccess}
         selectedGameId={null}

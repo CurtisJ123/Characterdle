@@ -24,6 +24,7 @@ interface QuoteGameBoardProps {
   secondaryActionLabel?: string;
   showHintCount?: boolean;
   showShareButton?: boolean;
+  highlightPrimaryAction?: boolean;
   showGuestSignupPrompt?: boolean;
   status: CharacterGameStatus;
   universeId: string;
@@ -57,6 +58,7 @@ export function QuoteGameBoard({
   secondaryActionLabel,
   showHintCount = false,
   showShareButton = true,
+  highlightPrimaryAction = false,
   showGuestSignupPrompt = false,
   status,
   universeId,
@@ -141,7 +143,7 @@ export function QuoteGameBoard({
           <div className="button-stack quote-summary-actions">
             {showPrimaryAction && (
               <button
-                className="primary-button quote-summary-button"
+                className={highlightPrimaryAction ? 'primary-button quote-summary-button is-random-ready' : 'primary-button quote-summary-button'}
                 type="button"
                 onClick={onPrimaryAction ?? onViewLeaderboard}
               >

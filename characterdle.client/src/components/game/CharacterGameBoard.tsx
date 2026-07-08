@@ -32,6 +32,7 @@ interface CharacterGameBoardProps {
   secondaryActionLabel?: string;
   showHintCount?: boolean;
   showShareButton?: boolean;
+  highlightPrimaryAction?: boolean;
   showGuestSignupPrompt?: boolean;
   status: CharacterGameStatus;
   universeId: string;
@@ -56,6 +57,7 @@ export function CharacterGameBoard({
   secondaryActionLabel,
   showHintCount = false,
   showShareButton = true,
+  highlightPrimaryAction = false,
   showGuestSignupPrompt = false,
   status,
   universeId,
@@ -123,6 +125,7 @@ export function CharacterGameBoard({
           }}
           showHintCount={showHintCount}
           showShareButton={showShareButton}
+          highlightPrimaryAction={highlightPrimaryAction}
           primaryActionLabel={primaryActionLabel}
           primaryTitle="Correct"
           onPrimaryAction={onPrimaryAction ?? onViewLeaderboard}

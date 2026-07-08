@@ -80,6 +80,7 @@ export function CharacterGamePage({
   const [showDelayedGuestSignupPrompt, setShowDelayedGuestSignupPrompt] = useState(false);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const resultPanelRef = useRef<HTMLDivElement | null>(null);
   const pendingSubmissionKeysRef = useRef(new Set<string>());
   const syncedSubmissionKeysRef = useRef(new Set<string>());
@@ -307,6 +308,26 @@ export function CharacterGamePage({
       window.clearTimeout(scrollTimer);
     };
   }, [isComplete, resultScrollDelay]);
+
+  useEffect(() => {
+    if (
+      !isTemporaryGame
+      || isGameLoading
+      || isComplete
+      || isUnavailable
+      || !!error
+    ) {
+      return;
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+    };
+  }, [error, isComplete, isGameLoading, isTemporaryGame, isUnavailable, isQuoteMode, data?.id]);
 
   useEffect(() => {
     if (isTemporaryGame || !data) {
@@ -701,9 +722,57 @@ export function CharacterGamePage({
     : shouldOfferCharacterFollowUp
       ? () => onNavigate('leaderboard')
       : undefined;
+  const randomAdvanceAction = isQuoteMode ? quotePrimaryAction : characterPrimaryAction;
+  const isRandomAdvanceReady = isTemporaryGame
+    && isComplete
+    && !isHelpOpen
+    && !showLoadingOverlay
+    && !!randomAdvanceAction;
   const hintTooltipMessage = isTemporaryGame
     ? 'Random games are practice-only and never saved.'
     : 'Using hints makes this round unranked. Giving up still counts as a loss.';
+
+  useEffect(() => {
+    if (
+      !isTemporaryGame
+      || !isComplete
+      || !randomAdvanceAction
+      || isHelpOpen
+      || showLoadingOverlay
+    ) {
+      return;
+    }
+
+    function handleRandomAdvance(event: KeyboardEvent) {
+      if (event.key !== 'Enter' || event.repeat || event.defaultPrevented) {
+        return;
+      }
+
+      if (event.target instanceof HTMLElement) {
+        const tagName = event.target.tagName;
+
+        if (
+          tagName === 'A'
+          || tagName === 'BUTTON'
+          || tagName === 'INPUT'
+          || tagName === 'SELECT'
+          || tagName === 'TEXTAREA'
+          || event.target.isContentEditable
+        ) {
+          return;
+        }
+      }
+
+      event.preventDefault();
+      randomAdvanceAction();
+    }
+
+    window.addEventListener('keydown', handleRandomAdvance);
+
+    return () => {
+      window.removeEventListener('keydown', handleRandomAdvance);
+    };
+  }, [isComplete, isHelpOpen, isTemporaryGame, randomAdvanceAction, showLoadingOverlay]);
 
   const searchForm = (
     <form className="search-box" aria-label="Submit a guess" onSubmit={handleSubmit}>
@@ -711,11 +780,13 @@ export function CharacterGamePage({
       <div className="search-input-stack">
         <div className="search-input-row">
           <input
+            ref={searchInputRef}
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={searchPlaceholder}
             autoComplete="off"
+            autoFocus={isTemporaryGame}
             disabled={isLoading || !!error || isComplete || isUnavailable}
           />
           <button
@@ -898,6 +969,7 @@ export function CharacterGamePage({
               secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={isTemporaryGame || usesRemoteQuoteResult}
               showShareButton={!isTemporaryGame}
+              highlightPrimaryAction={isRandomAdvanceReady}
               showGuestSignupPrompt={!isTemporaryGame && showDelayedGuestSignupPrompt && displayedQuoteStatus === 'won'}
               status={displayedQuoteStatus}
               universeId={quoteGameData.universeId}
@@ -944,6 +1016,7 @@ export function CharacterGamePage({
               secondaryActionLabel={characterSecondaryActionLabel}
               showHintCount={isTemporaryGame || usesRemoteCharacterResult}
               showShareButton={!isTemporaryGame}
+              highlightPrimaryAction={isRandomAdvanceReady}
               showGuestSignupPrompt={!isTemporaryGame && showDelayedGuestSignupPrompt && displayedCharacterStatus === 'won'}
               status={displayedCharacterStatus}
               universeId={data?.universeId ?? selectedUniverse.id}

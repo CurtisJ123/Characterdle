@@ -90,10 +90,38 @@
   box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
+.primary-button.is-random-ready {
+  animation: random-ready-pulse 1.9s ease-in-out infinite;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent),
+    0 0 22px color-mix(in srgb, var(--primary) 18%, transparent),
+    0 8px 20px color-mix(in srgb, var(--primary) 24%, transparent);
+  filter: brightness(1.04);
+}
+
 .secondary-button {
   border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
   color: var(--on-surface);
   background: color-mix(in srgb, var(--surface-container-lowest) 82%, transparent);
+}
+
+@keyframes random-ready-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent),
+      0 0 16px color-mix(in srgb, var(--primary) 10%, transparent),
+      0 8px 20px color-mix(in srgb, var(--primary) 18%, transparent);
+    filter: brightness(1);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--primary) 34%, transparent),
+      0 0 26px color-mix(in srgb, var(--primary) 22%, transparent),
+      0 10px 24px color-mix(in srgb, var(--primary) 26%, transparent);
+    filter: brightness(1.07);
+  }
 }
 
 .large-button {

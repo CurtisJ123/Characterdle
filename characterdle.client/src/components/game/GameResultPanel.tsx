@@ -13,6 +13,7 @@ interface GameResultPanelProps {
   sharePayload?: GameSharePayload | null;
   showHintCount?: boolean;
   showShareButton?: boolean;
+  highlightPrimaryAction?: boolean;
   primaryActionLabel?: string;
   primaryTitle?: string;
   onPrimaryAction?: () => void;
@@ -41,6 +42,7 @@ export function GameResultPanel({
   sharePayload = null,
   showHintCount = false,
   showShareButton = true,
+  highlightPrimaryAction = false,
   primaryActionLabel,
   primaryTitle = 'Correct',
   onPrimaryAction,
@@ -79,7 +81,11 @@ export function GameResultPanel({
 
         <div className="button-stack">
           {showPrimaryAction && (
-            <button className="primary-button" type="button" onClick={onPrimaryAction}>
+            <button
+              className={highlightPrimaryAction ? 'primary-button is-random-ready' : 'primary-button'}
+              type="button"
+              onClick={onPrimaryAction}
+            >
               {primaryActionLabel}
             </button>
           )}
@@ -133,7 +139,11 @@ export function GameResultPanel({
 
       <div className="button-stack">
         {showPrimaryAction && (
-          <button className="primary-button" type="button" onClick={onPrimaryAction}>
+          <button
+            className={highlightPrimaryAction ? 'primary-button is-random-ready' : 'primary-button'}
+            type="button"
+            onClick={onPrimaryAction}
+          >
             {primaryActionLabel}
           </button>
         )}

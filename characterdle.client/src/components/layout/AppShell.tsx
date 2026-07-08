@@ -111,6 +111,7 @@ export function AppShell({
     : null;
   const currentStreak = liveStreakForScope?.currentStreak ?? resolvedProfile?.currentStreak ?? 0;
   const premiumAccess: PremiumAccess | null = premiumData?.access ?? null;
+  const isPremiumActive = premiumAccess?.isPremium === true;
   const showSupporterBadge = premiumAccess?.supporterBadge === true;
   const shouldWarmSignedInResults = isAuthenticated
     && (currentPage === 'launcher' || currentPage === 'leaderboard' || currentPage === 'profile');
@@ -215,6 +216,7 @@ export function AppShell({
         isPremiumLoading={isPremiumLoading}
       />
       <SiteHeader
+        isPremiumActive={isPremiumActive}
         isPremiumUser={showSupporterBadge}
         isPremiumLoading={isPremiumLoading}
         autoUseStreakSavers={premiumAccess?.autoUseStreakSavers ?? true}
