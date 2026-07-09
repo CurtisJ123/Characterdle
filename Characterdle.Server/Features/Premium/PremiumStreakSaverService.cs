@@ -29,8 +29,16 @@ public sealed class PremiumStreakSaverService(
                 )
                 or (
                   premium_status.status = 'canceled'
-                  and premium_status.cancel_at_period_end = true
-                  and premium_status.current_period_end > now()
+                  and (
+                    (
+                      premium_status.cancel_at_period_end = true
+                      and premium_status.current_period_end > now()
+                    )
+                    or (
+                      premium_status.cancel_at is not null
+                      and premium_status.cancel_at > now()
+                    )
+                  )
                   and (
                     premium_status.premium_ended_at is null
                     or premium_status.premium_ended_at > now()
@@ -99,8 +107,16 @@ public sealed class PremiumStreakSaverService(
                   )
                   or (
                     premium_status.status = 'canceled'
-                    and premium_status.cancel_at_period_end = true
-                    and premium_status.current_period_end > now()
+                    and (
+                      (
+                        premium_status.cancel_at_period_end = true
+                        and premium_status.current_period_end > now()
+                      )
+                      or (
+                        premium_status.cancel_at is not null
+                        and premium_status.cancel_at > now()
+                      )
+                    )
                     and (
                       premium_status.premium_ended_at is null
                       or premium_status.premium_ended_at > now()
@@ -256,8 +272,16 @@ public sealed class PremiumStreakSaverService(
                 )
                 or (
                   premium_status.status = 'canceled'
-                  and premium_status.cancel_at_period_end = true
-                  and premium_status.current_period_end > now()
+                  and (
+                    (
+                      premium_status.cancel_at_period_end = true
+                      and premium_status.current_period_end > now()
+                    )
+                    or (
+                      premium_status.cancel_at is not null
+                      and premium_status.cancel_at > now()
+                    )
+                  )
                   and (
                     premium_status.premium_ended_at is null
                     or premium_status.premium_ended_at > now()

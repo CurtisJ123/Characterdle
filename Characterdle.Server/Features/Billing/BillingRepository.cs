@@ -107,6 +107,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
               stripe_subscription_id,
               current_period_start,
               current_period_end,
+              cancel_at,
               cancel_at_period_end,
               premium_started_at,
               premium_ended_at,
@@ -120,6 +121,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
               @stripeSubscriptionId,
               @currentPeriodStart,
               @currentPeriodEnd,
+              @cancelAt,
               @cancelAtPeriodEnd,
               @premiumStartedAt,
               @premiumEndedAt,
@@ -133,6 +135,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
               stripe_subscription_id = excluded.stripe_subscription_id,
               current_period_start = excluded.current_period_start,
               current_period_end = excluded.current_period_end,
+              cancel_at = excluded.cancel_at,
               cancel_at_period_end = excluded.cancel_at_period_end,
               premium_started_at = case
                 when public."UserPremiumStatus".stripe_subscription_id is distinct from excluded.stripe_subscription_id
@@ -151,6 +154,7 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
         command.Parameters.AddWithValue("stripeSubscriptionId", (object?)snapshot.StripeSubscriptionId ?? DBNull.Value);
         command.Parameters.AddWithValue("currentPeriodStart", (object?)snapshot.CurrentPeriodStart ?? DBNull.Value);
         command.Parameters.AddWithValue("currentPeriodEnd", (object?)snapshot.CurrentPeriodEnd ?? DBNull.Value);
+        command.Parameters.AddWithValue("cancelAt", (object?)snapshot.CancelAt ?? DBNull.Value);
         command.Parameters.AddWithValue("cancelAtPeriodEnd", snapshot.CancelAtPeriodEnd);
         command.Parameters.AddWithValue("premiumStartedAt", (object?)snapshot.PremiumStartedAt ?? DBNull.Value);
         command.Parameters.AddWithValue("premiumEndedAt", (object?)snapshot.PremiumEndedAt ?? DBNull.Value);

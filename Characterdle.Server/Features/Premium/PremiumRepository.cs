@@ -29,6 +29,7 @@ public sealed class PremiumRepository(
               stripe_subscription_id,
               current_period_start,
               current_period_end,
+              cancel_at,
               cancel_at_period_end,
               premium_started_at,
               premium_ended_at,
@@ -51,13 +52,15 @@ public sealed class PremiumRepository(
         var status = reader.IsDBNull(1) ? null : reader.GetString(1);
         var currentPeriodStart = reader.IsDBNull(4) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(4);
         var currentPeriodEnd = reader.IsDBNull(5) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(5);
-        var cancelAtPeriodEnd = !reader.IsDBNull(6) && reader.GetBoolean(6);
-        var premiumEndedAt = reader.IsDBNull(8) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(8);
+        var cancelAt = reader.IsDBNull(6) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(6);
+        var cancelAtPeriodEnd = !reader.IsDBNull(7) && reader.GetBoolean(7);
+        var premiumEndedAt = reader.IsDBNull(9) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(9);
         var hasPremiumAccess = PremiumStatusEvaluator.HasPremiumAccess(
             isPremium,
             status,
             cancelAtPeriodEnd,
             currentPeriodEnd,
+            cancelAt,
             premiumEndedAt,
             DateTimeOffset.UtcNow);
 
@@ -69,6 +72,7 @@ public sealed class PremiumRepository(
             CurrencyCode: "USD",
             CurrentPeriodStart: currentPeriodStart,
             CurrentPeriodEnd: currentPeriodEnd,
+            CancelAt: cancelAt,
             CancelAtPeriodEnd: cancelAtPeriodEnd,
             BillingDiscountCode: null,
             AdFree: hasPremiumAccess,
@@ -79,8 +83,8 @@ public sealed class PremiumRepository(
             ArchiveLookbackDays: hasPremiumAccess ? 36500 : DefaultArchiveLookbackDays,
             StreakProtection: hasPremiumAccess,
             StreakSaversPerCycle: hasPremiumAccess ? 1 : 0,
-            AvailableStreakSavers: reader.IsDBNull(9) ? 0 : reader.GetInt32(9),
-            AutoUseStreakSavers: reader.IsDBNull(10) || reader.GetBoolean(10));
+            AvailableStreakSavers: reader.IsDBNull(10) ? 0 : reader.GetInt32(10),
+            AutoUseStreakSavers: reader.IsDBNull(11) || reader.GetBoolean(11));
     }
 
     public async Task<bool> HasActiveSubscriptionAsync(
@@ -92,6 +96,7 @@ public sealed class PremiumRepository(
             select
               premium_status.is_premium,
               premium_status.status,
+              premium_status.cancel_at,
               premium_status.cancel_at_period_end,
               premium_status.current_period_end,
               premium_status.premium_ended_at
@@ -111,11 +116,13 @@ public sealed class PremiumRepository(
         return PremiumStatusEvaluator.HasPremiumAccess(
             !reader.IsDBNull(0) && reader.GetBoolean(0),
             reader.IsDBNull(1) ? null : reader.GetString(1),
-            !reader.IsDBNull(2) && reader.GetBoolean(2),
-            reader.IsDBNull(3) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(3),
+            !reader.IsDBNull(3) && reader.GetBoolean(3),
             reader.IsDBNull(4) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(4),
+            reader.IsDBNull(2) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(2),
+            reader.IsDBNull(5) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(5),
             DateTimeOffset.UtcNow);
     }
+
     private static PremiumAccessResponse CreateDefaultPremiumAccess() =>
         new(
             IsPremium: false,
@@ -125,6 +132,7 @@ public sealed class PremiumRepository(
             CurrencyCode: null,
             CurrentPeriodStart: null,
             CurrentPeriodEnd: null,
+            CancelAt: null,
             CancelAtPeriodEnd: false,
             BillingDiscountCode: null,
             AdFree: false,

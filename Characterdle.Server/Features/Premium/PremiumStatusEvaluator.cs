@@ -7,6 +7,7 @@ public static class PremiumStatusEvaluator
         string? status,
         bool cancelAtPeriodEnd,
         DateTimeOffset? currentPeriodEnd,
+        DateTimeOffset? cancelAt,
         DateTimeOffset? premiumEndedAt,
         DateTimeOffset nowUtc)
     {
@@ -25,11 +26,25 @@ public static class PremiumStatusEvaluator
             "active" => true,
             "trialing" => true,
             "past_due" => true,
-            "canceled" => cancelAtPeriodEnd
-                && currentPeriodEnd.HasValue
-                && currentPeriodEnd.Value > nowUtc,
+            "canceled" => ResolveScheduledCancellationAt(cancelAtPeriodEnd, currentPeriodEnd, cancelAt) is { } scheduledCancellationAt
+                && scheduledCancellationAt > nowUtc,
             _ => false,
         };
+    }
+
+    public static DateTimeOffset? ResolveScheduledCancellationAt(
+        bool cancelAtPeriodEnd,
+        DateTimeOffset? currentPeriodEnd,
+        DateTimeOffset? cancelAt)
+    {
+        if (cancelAt.HasValue)
+        {
+            return cancelAt.Value;
+        }
+
+        return cancelAtPeriodEnd
+            ? currentPeriodEnd
+            : null;
     }
 
     private static string NormalizeStatus(string? status) =>

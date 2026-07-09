@@ -8,6 +8,7 @@ public sealed record PremiumAccessResponse(
     string? CurrencyCode,
     DateTimeOffset? CurrentPeriodStart,
     DateTimeOffset? CurrentPeriodEnd,
+    DateTimeOffset? CancelAt,
     bool CancelAtPeriodEnd,
     string? BillingDiscountCode,
     bool AdFree,

@@ -7,6 +7,7 @@ public sealed record StripePremiumStatusSnapshot(
     bool IsPremium,
     DateTimeOffset? CurrentPeriodStart,
     DateTimeOffset? CurrentPeriodEnd,
+    DateTimeOffset? CancelAt,
     bool CancelAtPeriodEnd,
     DateTimeOffset? PremiumStartedAt,
     DateTimeOffset? PremiumEndedAt);

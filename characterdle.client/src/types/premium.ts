@@ -6,6 +6,7 @@ export interface PremiumAccess {
   currencyCode: string | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
+  cancelAt: string | null;
   cancelAtPeriodEnd: boolean;
   billingDiscountCode: string | null;
   adFree: boolean;

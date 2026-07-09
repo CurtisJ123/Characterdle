@@ -330,6 +330,7 @@ public static class BillingEndpoints
             StringComparison.OrdinalIgnoreCase);
         var currentPeriodStart = subscription.Items?.Data?.FirstOrDefault()?.CurrentPeriodStart;
         var currentPeriodEnd = subscription.Items?.Data?.FirstOrDefault()?.CurrentPeriodEnd ?? subscription.TrialEnd;
+        var cancelAt = isDeletedEvent ? null : subscription.CancelAt;
         var premiumEndedAt = ResolvePremiumEndedAt(subscription, isDeletedEvent);
         var effectiveCurrentPeriodEnd = ResolveCurrentPeriodEnd(
             subscription,
@@ -339,6 +340,7 @@ public static class BillingEndpoints
         var isPremium = IsPremiumStatus(
             subscription.Status,
             effectiveCurrentPeriodEnd,
+            cancelAt,
             subscription.CancelAtPeriodEnd,
             premiumEndedAt,
             isDeletedEvent);
@@ -349,6 +351,7 @@ public static class BillingEndpoints
             IsPremium: isPremium,
             CurrentPeriodStart: currentPeriodStart,
             CurrentPeriodEnd: effectiveCurrentPeriodEnd,
+            CancelAt: cancelAt,
             CancelAtPeriodEnd: isDeletedEvent ? false : subscription.CancelAtPeriodEnd,
             PremiumStartedAt: isPremium ? currentPeriodStart ?? subscription.TrialStart ?? subscription.StartDate : subscription.StartDate,
             PremiumEndedAt: premiumEndedAt);
@@ -377,6 +380,7 @@ public static class BillingEndpoints
     private static bool IsPremiumStatus(
         string? status,
         DateTimeOffset? currentPeriodEnd,
+        DateTimeOffset? cancelAt,
         bool cancelAtPeriodEnd,
         DateTimeOffset? premiumEndedAt,
         bool isDeletedEvent)
@@ -401,9 +405,11 @@ public static class BillingEndpoints
             "active" => true,
             "trialing" => true,
             "past_due" => true,
-            "canceled" => cancelAtPeriodEnd
-                && currentPeriodEnd.HasValue
-                && currentPeriodEnd.Value > DateTimeOffset.UtcNow,
+            "canceled" => PremiumStatusEvaluator.ResolveScheduledCancellationAt(
+                    cancelAtPeriodEnd,
+                    currentPeriodEnd,
+                    cancelAt) is { } scheduledCancellationAt
+                && scheduledCancellationAt > DateTimeOffset.UtcNow,
             _ => false,
         };
     }
@@ -423,6 +429,7 @@ public static class BillingEndpoints
         var isPremium = IsPremiumStatus(
             subscription.Status,
             currentPeriodEnd,
+            subscription.CancelAt,
             subscription.CancelAtPeriodEnd,
             premiumEndedAt: null,
             isDeletedEvent: false);

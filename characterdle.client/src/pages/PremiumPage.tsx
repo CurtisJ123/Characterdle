@@ -68,9 +68,16 @@ export function PremiumPage({
     () => formatDate(premiumAccess?.currentPeriodEnd ?? null),
     [premiumAccess?.currentPeriodEnd],
   );
+  const scheduledCancellationDate = useMemo(
+    () => formatDate(
+      premiumAccess?.cancelAt
+      ?? (premiumAccess?.cancelAtPeriodEnd ? premiumAccess?.currentPeriodEnd ?? null : null),
+    ),
+    [premiumAccess?.cancelAt, premiumAccess?.cancelAtPeriodEnd, premiumAccess?.currentPeriodEnd],
+  );
   const premiumStatusCopy = isPremiumActive
-    ? premiumAccess?.cancelAtPeriodEnd && renewalDate
-      ? `Premium stays active through ${renewalDate}, and then it will end unless you renew.`
+    ? scheduledCancellationDate
+      ? `Premium stays active through ${scheduledCancellationDate}, and then it will end unless you renew.`
       : renewalDate
         ? `Premium is active. Your current billing period is set through ${renewalDate}.`
         : 'Premium is active on this account.'
