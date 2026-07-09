@@ -12,6 +12,7 @@
 @import './pages/AuthPage.css';
 @import './components/auth/AuthModeToggle.css';
 @import './components/auth/AuthForm.css';
+@import './components/auth/GoogleAuthButton.css';
 @import './components/auth/ForgotPasswordForm.css';
 @import './components/auth/ResetPasswordForm.css';
 @import './components/auth/AuthenticatedPanel.css';

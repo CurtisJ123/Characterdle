@@ -1,0 +1,43 @@
+.auth-form-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2px 0;
+  color: var(--outline);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.auth-form-divider::before {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  content: '';
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  transform: translateY(-50%);
+}
+
+.auth-form-divider span {
+  position: relative;
+  z-index: 1;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--surface-container) 92%, transparent);
+}
+
+.google-auth-button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.google-auth-button svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex: 0 0 auto;
+}

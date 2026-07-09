@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../../lib/authValidation';
 import type { AuthFormValues } from '../../types/auth';
 import type { PrimaryAuthMode } from '../../types/routes';
+import { GoogleAuthButton } from './GoogleAuthButton';
 import { PasswordVisibilityButton } from './PasswordVisibilityButton';
 
 interface AuthFormProps {
@@ -11,6 +12,7 @@ interface AuthFormProps {
   message?: string;
   mode: PrimaryAuthMode;
   onContinueAsGuest: () => void;
+  onContinueWithGoogle?: () => void;
   onForgotPassword?: () => void;
   onSubmit: (values: AuthFormValues) => Promise<void> | void;
 }
@@ -21,6 +23,7 @@ export function AuthForm({
   message,
   mode,
   onContinueAsGuest,
+  onContinueWithGoogle,
   onForgotPassword,
   onSubmit,
 }: AuthFormProps) {
@@ -152,6 +155,15 @@ export function AuthForm({
       <button className="primary-button large-button" disabled={isSubmitDisabled} type="submit">
         {isBusy ? 'Working...' : submitLabel}
       </button>
+
+      {onContinueWithGoogle && (
+        <>
+          <div className="auth-form-divider" aria-hidden="true">
+            <span>or</span>
+          </div>
+          <GoogleAuthButton disabled={isBusy} onClick={onContinueWithGoogle} />
+        </>
+      )}
 
       {!isSignup && onForgotPassword && (
         <button className="auth-inline-button" disabled={isBusy} type="button" onClick={onForgotPassword}>

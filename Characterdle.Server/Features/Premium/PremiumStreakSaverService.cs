@@ -19,11 +19,22 @@ public sealed class PremiumStreakSaverService(
                 premium_status.last_streak_saver_cycle_start
               from public."UserPremiumStatus" as premium_status
               where (
-                premium_status.is_premium = true
-                or premium_status.status in ('active', 'trialing', 'past_due')
+                (
+                  premium_status.is_premium = true
+                  or premium_status.status in ('active', 'trialing', 'past_due')
+                )
+                and (
+                  premium_status.premium_ended_at is null
+                  or premium_status.premium_ended_at > now()
+                )
                 or (
                   premium_status.status = 'canceled'
+                  and premium_status.cancel_at_period_end = true
                   and premium_status.current_period_end > now()
+                  and (
+                    premium_status.premium_ended_at is null
+                    or premium_status.premium_ended_at > now()
+                  )
                 )
               )
                 and coalesce(premium_status.premium_started_at, premium_status.current_period_start) is not null
@@ -78,11 +89,22 @@ public sealed class PremiumStreakSaverService(
               from public."UserPremiumStatus" as premium_status
               where premium_status.user_id = @userId
                 and (
-                  premium_status.is_premium = true
-                  or premium_status.status in ('active', 'trialing', 'past_due')
+                  (
+                    premium_status.is_premium = true
+                    or premium_status.status in ('active', 'trialing', 'past_due')
+                  )
+                  and (
+                    premium_status.premium_ended_at is null
+                    or premium_status.premium_ended_at > now()
+                  )
                   or (
                     premium_status.status = 'canceled'
+                    and premium_status.cancel_at_period_end = true
                     and premium_status.current_period_end > now()
+                    and (
+                      premium_status.premium_ended_at is null
+                      or premium_status.premium_ended_at > now()
+                    )
                   )
                 )
                 and coalesce(premium_status.premium_started_at, premium_status.current_period_start) is not null
@@ -224,11 +246,22 @@ public sealed class PremiumStreakSaverService(
               and streaks.current_streak > 0
               and streaks.last_credit_date < @minimumActiveDate
               and (
-                premium_status.is_premium = true
-                or premium_status.status in ('active', 'trialing', 'past_due')
+                (
+                  premium_status.is_premium = true
+                  or premium_status.status in ('active', 'trialing', 'past_due')
+                )
+                and (
+                  premium_status.premium_ended_at is null
+                  or premium_status.premium_ended_at > now()
+                )
                 or (
                   premium_status.status = 'canceled'
+                  and premium_status.cancel_at_period_end = true
                   and premium_status.current_period_end > now()
+                  and (
+                    premium_status.premium_ended_at is null
+                    or premium_status.premium_ended_at > now()
+                  )
                 )
               );
             """;

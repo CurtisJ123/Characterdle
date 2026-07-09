@@ -223,6 +223,7 @@ public static class BillingEndpoints
                     await HandleSubscriptionUpdatedAsync(
                         stripeEvent.Data.Object as Subscription,
                         billingRepository,
+                        stripeEvent.Type,
                         cancellationToken);
                     break;
             }
@@ -285,12 +286,18 @@ public static class BillingEndpoints
         }
 
         var subscription = await stripeBillingService.GetSubscriptionAsync(session.SubscriptionId, cancellationToken);
-        await HandleSubscriptionUpdatedAsync(subscription, billingRepository, cancellationToken, userId);
+        await HandleSubscriptionUpdatedAsync(
+            subscription,
+            billingRepository,
+            "checkout.session.completed",
+            cancellationToken,
+            userId);
     }
 
     private static async Task HandleSubscriptionUpdatedAsync(
         Subscription? subscription,
         IBillingRepository billingRepository,
+        string eventType,
         CancellationToken cancellationToken,
         Guid? fallbackUserId = null)
     {
@@ -317,20 +324,32 @@ public static class BillingEndpoints
             await billingRepository.UpsertStripeCustomerIdAsync(userId.Value, subscription.CustomerId, cancellationToken);
         }
 
+        var isDeletedEvent = string.Equals(
+            eventType,
+            "customer.subscription.deleted",
+            StringComparison.OrdinalIgnoreCase);
         var currentPeriodStart = subscription.Items?.Data?.FirstOrDefault()?.CurrentPeriodStart;
         var currentPeriodEnd = subscription.Items?.Data?.FirstOrDefault()?.CurrentPeriodEnd ?? subscription.TrialEnd;
-        var isPremium = IsPremiumStatus(subscription.Status, currentPeriodEnd);
-        var premiumEndedAt = isPremium
-            ? null
-            : subscription.CanceledAt ?? subscription.EndedAt ?? (DateTimeOffset?)DateTimeOffset.UtcNow;
+        var premiumEndedAt = ResolvePremiumEndedAt(subscription, isDeletedEvent);
+        var effectiveCurrentPeriodEnd = ResolveCurrentPeriodEnd(
+            subscription,
+            currentPeriodEnd,
+            premiumEndedAt,
+            isDeletedEvent);
+        var isPremium = IsPremiumStatus(
+            subscription.Status,
+            effectiveCurrentPeriodEnd,
+            subscription.CancelAtPeriodEnd,
+            premiumEndedAt,
+            isDeletedEvent);
         var snapshot = new StripePremiumStatusSnapshot(
             StripeCustomerId: subscription.CustomerId,
             StripeSubscriptionId: subscription.Id,
             Status: NormalizeStoredSubscriptionStatus(subscription.Status),
             IsPremium: isPremium,
             CurrentPeriodStart: currentPeriodStart,
-            CurrentPeriodEnd: currentPeriodEnd,
-            CancelAtPeriodEnd: subscription.CancelAtPeriodEnd,
+            CurrentPeriodEnd: effectiveCurrentPeriodEnd,
+            CancelAtPeriodEnd: isDeletedEvent ? false : subscription.CancelAtPeriodEnd,
             PremiumStartedAt: isPremium ? currentPeriodStart ?? subscription.TrialStart ?? subscription.StartDate : subscription.StartDate,
             PremiumEndedAt: premiumEndedAt);
 
@@ -355,8 +374,23 @@ public static class BillingEndpoints
         return false;
     }
 
-    private static bool IsPremiumStatus(string? status, DateTimeOffset? currentPeriodEnd)
+    private static bool IsPremiumStatus(
+        string? status,
+        DateTimeOffset? currentPeriodEnd,
+        bool cancelAtPeriodEnd,
+        DateTimeOffset? premiumEndedAt,
+        bool isDeletedEvent)
     {
+        if (isDeletedEvent)
+        {
+            return false;
+        }
+
+        if (premiumEndedAt.HasValue && premiumEndedAt.Value <= DateTimeOffset.UtcNow)
+        {
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(status))
         {
             return false;
@@ -367,9 +401,53 @@ public static class BillingEndpoints
             "active" => true,
             "trialing" => true,
             "past_due" => true,
-            "canceled" => currentPeriodEnd.HasValue && currentPeriodEnd.Value > DateTimeOffset.UtcNow,
+            "canceled" => cancelAtPeriodEnd
+                && currentPeriodEnd.HasValue
+                && currentPeriodEnd.Value > DateTimeOffset.UtcNow,
             _ => false,
         };
+    }
+
+    private static DateTimeOffset? ResolvePremiumEndedAt(
+        Subscription subscription,
+        bool isDeletedEvent)
+    {
+        if (isDeletedEvent)
+        {
+            return subscription.EndedAt
+                ?? subscription.CanceledAt
+                ?? DateTimeOffset.UtcNow;
+        }
+
+        var currentPeriodEnd = subscription.Items?.Data?.FirstOrDefault()?.CurrentPeriodEnd ?? subscription.TrialEnd;
+        var isPremium = IsPremiumStatus(
+            subscription.Status,
+            currentPeriodEnd,
+            subscription.CancelAtPeriodEnd,
+            premiumEndedAt: null,
+            isDeletedEvent: false);
+
+        return isPremium
+            ? null
+            : subscription.CanceledAt ?? subscription.EndedAt ?? (DateTimeOffset?)DateTimeOffset.UtcNow;
+    }
+
+    private static DateTimeOffset? ResolveCurrentPeriodEnd(
+        Subscription subscription,
+        DateTimeOffset? currentPeriodEnd,
+        DateTimeOffset? premiumEndedAt,
+        bool isDeletedEvent)
+    {
+        if (!isDeletedEvent)
+        {
+            return currentPeriodEnd;
+        }
+
+        return premiumEndedAt
+            ?? subscription.EndedAt
+            ?? subscription.CanceledAt
+            ?? currentPeriodEnd
+            ?? DateTimeOffset.UtcNow;
     }
 
     private static string NormalizeStoredSubscriptionStatus(string? status)

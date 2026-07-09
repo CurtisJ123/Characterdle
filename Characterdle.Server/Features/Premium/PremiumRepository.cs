@@ -49,25 +49,36 @@ public sealed class PremiumRepository(
 
         var isPremium = !reader.IsDBNull(0) && reader.GetBoolean(0);
         var status = reader.IsDBNull(1) ? null : reader.GetString(1);
+        var currentPeriodStart = reader.IsDBNull(4) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(4);
+        var currentPeriodEnd = reader.IsDBNull(5) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(5);
+        var cancelAtPeriodEnd = !reader.IsDBNull(6) && reader.GetBoolean(6);
+        var premiumEndedAt = reader.IsDBNull(8) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(8);
+        var hasPremiumAccess = PremiumStatusEvaluator.HasPremiumAccess(
+            isPremium,
+            status,
+            cancelAtPeriodEnd,
+            currentPeriodEnd,
+            premiumEndedAt,
+            DateTimeOffset.UtcNow);
 
         return new PremiumAccessResponse(
-            IsPremium: isPremium,
-            PlanCode: isPremium ? PremiumPlanCode : null,
+            IsPremium: hasPremiumAccess,
+            PlanCode: hasPremiumAccess ? PremiumPlanCode : null,
             SubscriptionStatus: status,
             BilledPriceCents: null,
             CurrencyCode: "USD",
-            CurrentPeriodStart: reader.IsDBNull(4) ? null : reader.GetFieldValue<DateTimeOffset>(4),
-            CurrentPeriodEnd: reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5),
-            CancelAtPeriodEnd: !reader.IsDBNull(6) && reader.GetBoolean(6),
+            CurrentPeriodStart: currentPeriodStart,
+            CurrentPeriodEnd: currentPeriodEnd,
+            CancelAtPeriodEnd: cancelAtPeriodEnd,
             BillingDiscountCode: null,
-            AdFree: isPremium,
-            PracticeMode: isPremium,
-            ProfileCustomization: isPremium,
-            SupporterBadge: isPremium,
-            FullArchiveAccess: isPremium,
-            ArchiveLookbackDays: isPremium ? 36500 : DefaultArchiveLookbackDays,
-            StreakProtection: isPremium,
-            StreakSaversPerCycle: isPremium ? 1 : 0,
+            AdFree: hasPremiumAccess,
+            PracticeMode: hasPremiumAccess,
+            ProfileCustomization: hasPremiumAccess,
+            SupporterBadge: hasPremiumAccess,
+            FullArchiveAccess: hasPremiumAccess,
+            ArchiveLookbackDays: hasPremiumAccess ? 36500 : DefaultArchiveLookbackDays,
+            StreakProtection: hasPremiumAccess,
+            StreakSaversPerCycle: hasPremiumAccess ? 1 : 0,
             AvailableStreakSavers: reader.IsDBNull(9) ? 0 : reader.GetInt32(9),
             AutoUseStreakSavers: reader.IsDBNull(10) || reader.GetBoolean(10));
     }
@@ -78,25 +89,32 @@ public sealed class PremiumRepository(
     {
         const string sql =
             """
-            select exists(
-              select 1
-              from public."UserPremiumStatus" as premium_status
-              where premium_status.user_id = @userId
-                and (
-                  premium_status.is_premium = true
-                  or premium_status.status in ('active', 'trialing', 'past_due')
-                  or (
-                    premium_status.status = 'canceled'
-                    and premium_status.current_period_end > timezone('utc', now())
-                  )
-                )
-            );
+            select
+              premium_status.is_premium,
+              premium_status.status,
+              premium_status.cancel_at_period_end,
+              premium_status.current_period_end,
+              premium_status.premium_ended_at
+            from public."UserPremiumStatus" as premium_status
+            where premium_status.user_id = @userId;
             """;
 
         await using var command = dataSource.CreateCommand(sql);
         command.Parameters.AddWithValue("userId", userId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        return await command.ExecuteScalarAsync(cancellationToken) is true;
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return false;
+        }
+
+        return PremiumStatusEvaluator.HasPremiumAccess(
+            !reader.IsDBNull(0) && reader.GetBoolean(0),
+            reader.IsDBNull(1) ? null : reader.GetString(1),
+            !reader.IsDBNull(2) && reader.GetBoolean(2),
+            reader.IsDBNull(3) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(3),
+            reader.IsDBNull(4) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(4),
+            DateTimeOffset.UtcNow);
     }
     private static PremiumAccessResponse CreateDefaultPremiumAccess() =>
         new(

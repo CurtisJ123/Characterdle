@@ -2,11 +2,19 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type { Session, User, UserAttributes } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { deriveDisplayNameFromUser, readStoredDisplayName } from '../lib/authIdentity';
+import {
+  buildOAuthRedirectUrl,
+  clearPendingOAuthRedirect,
+  hasPendingOAuthRedirectForCurrentPath,
+  markPendingOAuthRedirect,
+} from '../lib/oauthState';
 import type {
   AccountDeletionStatus,
   AccountSettingsValues,
   AuthActionResult,
   AuthFormValues,
+  OAuthProvider,
   PasswordResetRequestValues,
   PasswordUpdateValues,
   ResendConfirmationRequestValues,
@@ -32,6 +40,7 @@ interface AuthContextValue {
   resendConfirmationEmail: (values: ResendConfirmationRequestValues) => Promise<AuthActionResult>;
   session: Session | null;
   signIn: (values: AuthFormValues) => Promise<AuthActionResult>;
+  signInWithOAuth: (provider: OAuthProvider) => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (values: AuthFormValues) => Promise<AuthActionResult>;
   updateAccount: (values: AccountSettingsValues) => Promise<AuthActionResult>;
@@ -62,9 +71,7 @@ function readAdminFlag(user: User): boolean {
 }
 
 function buildUserProfile(user: User): UserProfile {
-  const displayName = typeof user.user_metadata.display_name === 'string' && user.user_metadata.display_name.trim()
-    ? user.user_metadata.display_name.trim()
-    : 'ERROR';
+  const displayName = deriveDisplayNameFromUser(user) ?? 'ERROR';
 
   return {
     avatarUrl: typeof user.user_metadata.avatar_url === 'string' && user.user_metadata.avatar_url.trim()
@@ -84,6 +91,17 @@ function normalizeError(error: unknown, fallbackMessage: string) {
   return error instanceof Error ? error : new Error(fallbackMessage);
 }
 
+function isResetPasswordPath(pathname: string): boolean {
+  return pathname === '/reset-password' || pathname.endsWith('/reset-password');
+}
+
+function isAuthPath(pathname: string): boolean {
+  return pathname === '/login'
+    || pathname === '/signup'
+    || pathname.endsWith('/login')
+    || pathname.endsWith('/signup');
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [authError, setAuthError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,6 +112,41 @@ export function AuthProvider({ children }: PropsWithChildren) {
   function applySession(nextSession: Session | null) {
     setSession(nextSession);
     setUser(nextSession ? buildUserProfile(nextSession.user) : null);
+  }
+
+  async function normalizeSessionUser(nextSession: Session | null): Promise<Session | null> {
+    if (!nextSession) {
+      return null;
+    }
+
+    const displayName = deriveDisplayNameFromUser(nextSession.user);
+
+    if (!displayName || readStoredDisplayName(nextSession.user)) {
+      return nextSession;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          display_name: displayName,
+        },
+      });
+
+      if (error) {
+        console.warn('Unable to persist the OAuth display name.', error);
+        return nextSession;
+      }
+
+      return data.user
+        ? {
+          ...nextSession,
+          user: data.user,
+        }
+        : nextSession;
+    } catch (error) {
+      console.warn('Unable to persist the OAuth display name.', error);
+      return nextSession;
+    }
   }
 
   useEffect(() => {
@@ -110,19 +163,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setAuthError(error);
       }
 
-      if (window.location.pathname === '/reset-password' && data.session) {
+      const normalizedSession = await normalizeSessionUser(data.session);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (isResetPasswordPath(window.location.pathname) && normalizedSession) {
         setIsPasswordRecovery(true);
       }
 
-      applySession(data.session);
+      applySession(normalizedSession);
       setIsLoading(false);
     }
 
     void loadSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    async function handleAuthStateChange(event: string, nextSession: Session | null) {
+      const normalizedSession = await normalizeSessionUser(nextSession);
+
       if (!isMounted) {
         return;
       }
@@ -131,13 +190,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setIsPasswordRecovery(true);
       } else if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
-      } else if (event === 'SIGNED_IN' && window.location.pathname !== '/reset-password') {
+        clearPendingOAuthRedirect();
+      } else if (event === 'SIGNED_IN' && !isResetPasswordPath(window.location.pathname)) {
         setIsPasswordRecovery(false);
+
+        if (
+          hasPendingOAuthRedirectForCurrentPath('google')
+          && !isAuthPath(window.location.pathname)
+        ) {
+          clearPendingOAuthRedirect();
+        }
       }
 
       setAuthError(null);
-      applySession(nextSession);
+      applySession(normalizedSession);
       setIsLoading(false);
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      void handleAuthStateChange(event, nextSession);
     });
 
     return () => {
@@ -160,6 +233,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
       message: 'Signed in successfully.',
       requiresEmailConfirmation: false,
     };
+  }
+
+  async function signInWithOAuth(provider: OAuthProvider): Promise<void> {
+    markPendingOAuthRedirect(provider);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: buildOAuthRedirectUrl(),
+      },
+    });
+
+    if (error) {
+      clearPendingOAuthRedirect();
+      throw normalizeError(error, `Unable to continue with ${provider}.`);
+    }
   }
 
   async function signUp({ displayName, email, password }: AuthFormValues): Promise<AuthActionResult> {
@@ -385,6 +474,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         resendConfirmationEmail,
         session,
         signIn,
+        signInWithOAuth,
         signOut,
         signUp,
         updateAccount,

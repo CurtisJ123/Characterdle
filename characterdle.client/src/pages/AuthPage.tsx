@@ -7,6 +7,7 @@ import { ResetPasswordForm } from '../components/auth/ResetPasswordForm';
 import { useAuth } from '../contexts/AuthContext';
 import type { AuthFormValues } from '../types/auth';
 import { AuthModeToggle } from '../components/auth/AuthModeToggle';
+import { consumePendingOAuthRedirect } from '../lib/oauthState';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 
 interface AuthPageProps {
@@ -39,6 +40,7 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
     requestPasswordReset,
     resendConfirmationEmail,
     signIn,
+    signInWithOAuth,
     signOut,
     signUp,
     user,
@@ -75,6 +77,16 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
       }
     }
   }, [initialMode, isPasswordRecovery, onAuthModeChange]);
+
+  useEffect(() => {
+    if (!isAuthenticated || mode === 'resetPassword') {
+      return;
+    }
+
+    if (consumePendingOAuthRedirect('google')) {
+      onNavigate('launcher');
+    }
+  }, [isAuthenticated, mode, onNavigate]);
 
   function handleModeChange(nextMode: AuthMode) {
     setErrorMessage(undefined);
@@ -196,6 +208,20 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
     }
   }
 
+  async function handleGoogleAuth() {
+    setErrorMessage(undefined);
+    setMessage(undefined);
+    setIsBusy(true);
+
+    try {
+      await signInWithOAuth('google');
+      setIsBusy(false);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to continue with Google right now.');
+      setIsBusy(false);
+    }
+  }
+
   async function handleReturnToLogin() {
     if (isAuthenticated && mode === 'resetPassword') {
       try {
@@ -265,6 +291,7 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
               message={message}
               mode={primaryMode}
               onContinueAsGuest={() => onNavigate('launcher')}
+              onContinueWithGoogle={handleGoogleAuth}
               onForgotPassword={() => handleModeChange('forgotPassword')}
               onSubmit={handleSubmit}
             />

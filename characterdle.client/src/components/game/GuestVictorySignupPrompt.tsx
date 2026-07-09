@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../../lib/authValidation';
+import { GoogleAuthButton } from '../auth/GoogleAuthButton';
 import { PasswordVisibilityButton } from '../auth/PasswordVisibilityButton';
 
 export function GuestVictorySignupPrompt() {
-  const { signUp } = useAuth();
+  const { signInWithOAuth, signUp } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,6 +50,20 @@ export function GuestVictorySignupPrompt() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to create your account right now.');
     } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleGoogleAuth() {
+    setErrorMessage(undefined);
+    setMessage(undefined);
+    setIsBusy(true);
+
+    try {
+      await signInWithOAuth('google');
+      setIsBusy(false);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to continue with Google right now.');
       setIsBusy(false);
     }
   }
@@ -155,16 +170,11 @@ export function GuestVictorySignupPrompt() {
         </button>
       </form>
 
-      <div className="guest-victory-signup-social" aria-label="More sign-up options coming soon">
-        <p className="guest-victory-signup-social-copy">Apple and Google sign up coming soon.</p>
-        <div className="guest-victory-signup-social-actions">
-          <button className="secondary-button" type="button" disabled aria-disabled="true">
-            Continue with Apple
-          </button>
-          <button className="secondary-button" type="button" disabled aria-disabled="true">
-            Continue with Google
-          </button>
+      <div className="guest-victory-signup-social" aria-label="Continue with Google">
+        <div className="auth-form-divider" aria-hidden="true">
+          <span>or</span>
         </div>
+        <GoogleAuthButton disabled={isBusy} onClick={handleGoogleAuth} />
       </div>
     </section>
   );

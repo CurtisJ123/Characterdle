@@ -32,3 +32,5 @@ export interface ResendConfirmationRequestValues {
 export interface PasswordUpdateValues {
   password: string;
 }
+
+export type OAuthProvider = 'google';
