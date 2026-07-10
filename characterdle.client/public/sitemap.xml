@@ -2,61 +2,79 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://characterdle.com/</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://characterdle.com/home</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://characterdle.com/got</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://characterdle.com/got/game/quote</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://characterdle.com/got/archive/character</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>daily</changefreq>
+    <lastmod>2026-07-10</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://characterdle.com/got/archive/quote</loc>
-    <lastmod>2026-06-30</lastmod>
-    <changefreq>daily</changefreq>
+    <lastmod>2026-07-10</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://characterdle.com/got/leaderboard</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-10</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://characterdle.com/premium</loc>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://characterdle.com/support</loc>
-    <lastmod>2026-07-03</lastmod>
+    <loc>https://characterdle.com/about</loc>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://characterdle.com/how-to-play</loc>
+    <lastmod>2026-07-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://characterdle.com/support</loc>
+    <lastmod>2026-07-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://characterdle.com/privacy-policy</loc>
-    <lastmod>2026-07-04</lastmod>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://characterdle.com/terms</loc>
-    <lastmod>2026-07-04</lastmod>
+    <lastmod>2026-07-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

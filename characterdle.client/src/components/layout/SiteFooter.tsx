@@ -1,3 +1,5 @@
+import type { MouseEvent } from 'react';
+import { buildRoutePath } from '../../lib/routePaths';
 import type { NavigateToPage } from '../../types/routes';
 
 interface SiteFooterProps {
@@ -5,6 +7,15 @@ interface SiteFooterProps {
 }
 
 export function SiteFooter({ onNavigate }: SiteFooterProps) {
+  function handleInternalNavigation(event: MouseEvent<HTMLAnchorElement>, page: Parameters<NavigateToPage>[0]) {
+    if (!onNavigate) {
+      return;
+    }
+
+    event.preventDefault();
+    onNavigate(page);
+  }
+
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
@@ -21,33 +32,41 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
             </svg>
             <span>GitHub</span>
           </a>
-          {onNavigate ? (
-            <button className="site-footer-link" type="button" onClick={() => onNavigate('support')}>
-              Support
-            </button>
-          ) : (
-            <a className="site-footer-link" href="/support">
-              Support
-            </a>
-          )}
-          {onNavigate ? (
-            <button className="site-footer-link" type="button" onClick={() => onNavigate('privacyPolicy')}>
-              Privacy
-            </button>
-          ) : (
-            <a className="site-footer-link" href="/privacy-policy">
-              Privacy
-            </a>
-          )}
-          {onNavigate ? (
-            <button className="site-footer-link" type="button" onClick={() => onNavigate('termsOfService')}>
-              Terms
-            </button>
-          ) : (
-            <a className="site-footer-link" href="/terms">
-              Terms
-            </a>
-          )}
+          <a
+            className="site-footer-link"
+            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'about', universeId: null })}
+            onClick={(event) => handleInternalNavigation(event, 'about')}
+          >
+            About
+          </a>
+          <a
+            className="site-footer-link"
+            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'howToPlay', universeId: null })}
+            onClick={(event) => handleInternalNavigation(event, 'howToPlay')}
+          >
+            How to Play
+          </a>
+          <a
+            className="site-footer-link"
+            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'support', universeId: null })}
+            onClick={(event) => handleInternalNavigation(event, 'support')}
+          >
+            Support
+          </a>
+          <a
+            className="site-footer-link"
+            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'privacyPolicy', universeId: null })}
+            onClick={(event) => handleInternalNavigation(event, 'privacyPolicy')}
+          >
+            Privacy
+          </a>
+          <a
+            className="site-footer-link"
+            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'termsOfService', universeId: null })}
+            onClick={(event) => handleInternalNavigation(event, 'termsOfService')}
+          >
+            Terms
+          </a>
         </div>
         <strong>Characterdle</strong>
       </div>

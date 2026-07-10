@@ -19,19 +19,9 @@
   text-transform: uppercase;
 }
 
-.account-avatar-picker__clear {
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-  border-radius: var(--radius-control);
-  padding: 10px 12px;
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.account-avatar-picker__change {
+.account-avatar-picker__change,
+.account-avatar-picker__clear,
+.account-avatar-picker-modal__close {
   border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
   border-radius: var(--radius-control);
   padding: 10px 12px;
@@ -77,7 +67,68 @@
   line-height: 1.3;
 }
 
-.account-avatar-picker__chooser {
+.account-avatar-picker-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.account-avatar-picker-modal__scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: color-mix(in srgb, var(--surface-container-lowest) 80%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.account-avatar-picker-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  height: min(720px, calc(100vh - 56px));
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 18px;
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  padding: 28px;
+}
+
+.account-avatar-picker-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.account-avatar-picker-modal__header .card-kicker {
+  margin-bottom: 8px;
+}
+
+.account-avatar-picker-modal__header h3 {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  line-height: 1;
+}
+
+.account-avatar-picker-modal__close {
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface-panel-strong) 82%, transparent);
+}
+
+.account-avatar-picker-modal__controls {
   display: grid;
   gap: 14px;
 }
@@ -114,11 +165,49 @@
     0 0 24px color-mix(in srgb, var(--primary-container) 20%, transparent);
 }
 
+.account-avatar-picker-modal__error,
+.account-avatar-picker-modal__body > .auth-feedback,
+.account-avatar-picker-modal__body > .muted-copy {
+  margin: 0;
+}
+
+.account-avatar-picker-modal__body {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  overflow: hidden;
+}
+
 .account-avatar-picker__grid {
+  height: 100%;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  align-content: start;
   gap: 12px;
-  padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 48%, transparent) color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
+  touch-action: pan-y;
+}
+
+.account-avatar-picker__grid::-webkit-scrollbar {
+  width: 10px;
+}
+
+.account-avatar-picker__grid::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
+}
+
+.account-avatar-picker__grid::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 66%, transparent);
+  background-clip: padding-box;
 }
 
 .account-avatar-option {
@@ -130,6 +219,7 @@
   color: var(--on-surface);
   background: color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
   text-align: left;
+  touch-action: pan-y;
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
@@ -143,10 +233,15 @@
 
 .account-avatar-picker__change:disabled,
 .account-avatar-picker__clear:disabled,
+.account-avatar-picker-modal__close:disabled,
 .account-avatar-option:disabled {
   cursor: wait;
   opacity: 0.64;
   transform: none;
+}
+
+.account-avatar-picker-modal__scrim:disabled {
+  cursor: wait;
 }
 
 .account-avatar-option.is-selected {
@@ -185,11 +280,27 @@
 
 @media (max-width: 640px) {
   .account-avatar-picker__header {
+    align-items: stretch;
     flex-direction: column;
   }
 
   .account-avatar-picker__selection {
     padding: 12px 14px;
+  }
+
+  .account-avatar-picker-modal {
+    align-items: flex-start;
+    padding: 26px 18px 18px;
+  }
+
+  .account-avatar-picker-modal__panel {
+    height: min(760px, calc(100vh - 44px));
+    gap: 16px;
+    padding: 22px 18px 18px;
+  }
+
+  .account-avatar-picker-modal__header {
+    align-items: center;
   }
 
   .account-avatar-picker__grid {

@@ -13,7 +13,9 @@ import {
   syncPersistedGameResultsToLocalProgress,
 } from '../../lib/characterGameProgress';
 import { AuthPage } from '../../pages/AuthPage';
+import { AboutPage } from '../../pages/AboutPage';
 import { CharacterGamePage } from '../../pages/CharacterGamePage';
+import { HowToPlayPage } from '../../pages/HowToPlayPage';
 import { LauncherPage } from '../../pages/LauncherPage';
 import { LeaderboardPage } from '../../pages/LeaderboardPage';
 import { LegalDocumentPage } from '../../pages/LegalDocumentPage';
@@ -166,9 +168,15 @@ export function AppShell({
   }
 
   async function handleSaveSettings(values: AccountSettingsValues) {
-    const currentDisplayName = user?.displayName ?? '';
+    const currentDisplayName = (user?.displayName ?? '').trim();
     const currentAvatarUrl = user?.avatarUrl ?? null;
-    const hasProfileChanges = values.displayName !== currentDisplayName || values.avatarUrl !== currentAvatarUrl;
+    const nextDisplayName = values.displayName.trim();
+    const hasAvatarUpdate = Object.prototype.hasOwnProperty.call(values, 'avatarUrl');
+    const nextAvatarUrl = hasAvatarUpdate
+      ? values.avatarUrl?.trim() || null
+      : null;
+    const hasProfileChanges = nextDisplayName !== currentDisplayName
+      || (hasAvatarUpdate && nextAvatarUrl !== currentAvatarUrl);
     const hasStreakSaverPreferenceChange = values.autoUseStreakSavers !== (premiumAccess?.autoUseStreakSavers ?? true);
     let profileMessage = 'No changes to save.';
 
@@ -318,6 +326,8 @@ export function AppShell({
         />
       )}
       {currentPage === 'support' && <SupportPage onNavigate={onNavigate} />}
+      {currentPage === 'about' && <AboutPage onNavigate={onNavigate} />}
+      {currentPage === 'howToPlay' && <HowToPlayPage onNavigate={onNavigate} />}
       {currentPage === 'privacyPolicy' && <LegalDocumentPage onNavigate={onNavigate} page="privacyPolicy" />}
       {currentPage === 'termsOfService' && <LegalDocumentPage onNavigate={onNavigate} page="termsOfService" />}
       <SiteFooter onNavigate={onNavigate} />

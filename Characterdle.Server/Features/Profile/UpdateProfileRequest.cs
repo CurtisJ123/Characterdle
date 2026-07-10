@@ -3,4 +3,5 @@ namespace Characterdle.Server.Features.Profile;
 public sealed record UpdateProfileRequest(
     string DisplayName,
     string? AvatarUrl,
-    bool AutoUseStreakSavers);
+    bool AutoUseStreakSavers,
+    bool UpdateAvatar);

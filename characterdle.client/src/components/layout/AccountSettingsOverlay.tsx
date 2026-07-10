@@ -73,6 +73,7 @@ export function AccountSettingsOverlay({
   const [isDeletionStatusLoading, setIsDeletionStatusLoading] = useState(true);
   const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
   const [isRequestingPasswordReset, setIsRequestingPasswordReset] = useState(false);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [isAvatarSaving, setIsAvatarSaving] = useState(false);
   const [message, setMessage] = useState<string>();
   const [isPremiumSaving, setIsPremiumSaving] = useState(false);
@@ -93,6 +94,10 @@ export function AccountSettingsOverlay({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        if (isAvatarPickerOpen) {
+          return;
+        }
+
         onClose();
       }
     }
@@ -102,7 +107,7 @@ export function AccountSettingsOverlay({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [isAvatarPickerOpen, onClose]);
 
   useEffect(() => {
     let isMounted = true;
@@ -186,7 +191,6 @@ export function AccountSettingsOverlay({
 
     try {
       await onSaveSettings({
-        avatarUrl: savedAvatarUrl,
         autoUseStreakSavers: savedAutoUseStreakSavers,
         displayName: normalizedDisplayName,
       });
@@ -200,9 +204,13 @@ export function AccountSettingsOverlay({
   }
 
   async function handleAvatarChange(nextAvatarUrl: string | null) {
-    if (nextAvatarUrl === savedAvatarUrl || isAvatarSaving) {
+    if (nextAvatarUrl === savedAvatarUrl) {
       setAvatarUrl(nextAvatarUrl);
       return;
+    }
+
+    if (isAvatarSaving) {
+      throw new Error('A profile picture update is already in progress.');
     }
 
     const previousAvatarUrl = savedAvatarUrl;
@@ -219,8 +227,13 @@ export function AccountSettingsOverlay({
       setSavedAvatarUrl(nextAvatarUrl);
       setMessage('Profile picture updated.');
     } catch (error) {
+      const normalizedError = error instanceof Error
+        ? error
+        : new Error('Unable to update your profile picture.');
+
       setAvatarUrl(previousAvatarUrl);
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to update your profile picture.');
+      setErrorMessage(normalizedError.message);
+      throw normalizedError;
     } finally {
       setIsAvatarSaving(false);
     }
@@ -268,7 +281,6 @@ export function AccountSettingsOverlay({
 
     try {
       const resultMessage = await onSaveSettings({
-        avatarUrl: savedAvatarUrl,
         autoUseStreakSavers,
         displayName: savedDisplayName,
       });
@@ -397,10 +409,12 @@ export function AccountSettingsOverlay({
                   </label>
 
                   <AccountAvatarPicker
+                    isOpen={isAvatarPickerOpen}
                     isSaving={isAvatarSaving}
                     selectedAvatarUrl={avatarUrl}
                     universeId="got"
-                    onChange={(nextAvatarUrl) => { void handleAvatarChange(nextAvatarUrl); }}
+                    onChange={handleAvatarChange}
+                    onOpenChange={setIsAvatarPickerOpen}
                   />
                 </section>
 

@@ -37,6 +37,7 @@
   color: var(--on-surface-variant);
   background: transparent;
   font-weight: 900;
+  text-decoration: none;
 }
 
 .ghost-link:hover {
@@ -114,6 +115,17 @@
   line-height: 1.6;
 }
 
+.landing-preview-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.landing-preview-text-link {
+  padding-inline: 0;
+}
+
 .landing-preview li::marker {
   color: var(--primary);
   font-weight: 900;
@@ -140,6 +152,11 @@
 
   .landing-actions {
     flex-direction: column;
+  }
+
+  .landing-preview-links {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

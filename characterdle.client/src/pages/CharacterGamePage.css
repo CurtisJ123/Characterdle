@@ -69,7 +69,8 @@
   display: block;
 }
 
-.random-game-button {
+.random-game-button,
+.current-game-button {
   position: relative;
   min-width: 154px;
   height: 38px;
@@ -101,12 +102,23 @@
   flex: 0 0 auto;
 }
 
-.random-game-icon {
+.current-game-icon-wrap {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.random-game-icon,
+.current-game-icon {
   width: 22px;
   height: 22px;
 }
 
-.random-game-label {
+.random-game-label,
+.current-game-label {
   color: var(--on-surface);
   font-size: 0.72rem;
   font-weight: 800;

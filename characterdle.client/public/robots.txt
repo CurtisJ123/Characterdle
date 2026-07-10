@@ -1,4 +1,19 @@
 User-agent: *
 Allow: /
 
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /*/login$
+Disallow: /*/signup$
+Disallow: /*/forgot-password$
+Disallow: /*/reset-password$
+Disallow: /profile
+Disallow: /*/profile$
+Disallow: /got/random
+Disallow: /got/random/quote
+Disallow: /*/random$
+Disallow: /*/random/*
+
 Sitemap: https://characterdle.com/sitemap.xml

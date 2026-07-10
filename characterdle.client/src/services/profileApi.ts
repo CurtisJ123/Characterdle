@@ -75,9 +75,11 @@ export async function getGameResults(
 export async function updateProfileSettings(
   accessToken: string,
   displayName: string,
-  avatarUrl: string | null,
+  avatarUrl: string | null | undefined,
   autoUseStreakSavers: boolean,
 ): Promise<void> {
+  const shouldUpdateAvatar = avatarUrl !== undefined;
+
   const response = await fetch(buildApiUrl('/api/profile'), {
     method: 'PATCH',
     headers: {
@@ -86,9 +88,10 @@ export async function updateProfileSettings(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
-      avatarUrl,
       autoUseStreakSavers,
       displayName,
+      ...(shouldUpdateAvatar ? { avatarUrl } : {}),
+      updateAvatar: shouldUpdateAvatar,
     }),
   });
 

@@ -68,12 +68,18 @@
 
 .primary-button,
 .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-control);
   padding: 12px 18px;
   font-family: var(--body-font);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.18em;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
   text-transform: uppercase;
   transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
 }

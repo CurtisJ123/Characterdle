@@ -24,6 +24,7 @@ public interface IProfileRepository
         string email,
         string displayName,
         string? avatarUrl,
+        bool updateAvatar,
         bool autoUseStreakSavers,
         CancellationToken cancellationToken);
 

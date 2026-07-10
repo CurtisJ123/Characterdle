@@ -4,6 +4,7 @@ import { MiniLeaderboardCard } from '../components/launcher/MiniLeaderboardCard'
 import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
 import { useUniverse } from '../hooks/useUniverse';
+import { getUniverseGamePath } from '../lib/siteRouting';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 import type { UserProfile } from '../types/user';
@@ -57,6 +58,8 @@ export function LauncherPage({
           {universes.map((universe) => (
             <UniverseCard
               key={universe.id}
+              playHref={getUniverseGamePath(universe.id, 'character', null)}
+              quoteHref={universe.isPlayable ? getUniverseGamePath(universe.id, 'quote', null) : undefined}
               universe={universe}
               onPlay={() => handleOpenUniverseGame(universe.id, 'character')}
               onPlayQuote={universe.isPlayable ? () => handleOpenUniverseGame(universe.id, 'quote') : undefined}

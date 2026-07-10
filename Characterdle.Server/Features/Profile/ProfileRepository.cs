@@ -161,6 +161,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         string email,
         string displayName,
         string? avatarUrl,
+        bool updateAvatar,
         bool autoUseStreakSavers,
         CancellationToken cancellationToken)
     {
@@ -181,7 +182,10 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             on conflict (user_id) do update
             set
               display_name = excluded.display_name,
-              avatar_url = excluded.avatar_url,
+              avatar_url = case
+                when @updateAvatar then excluded.avatar_url
+                else public."PlayerProfiles".avatar_url
+              end,
               updated_at = timezone('utc', now());
 
             insert into public."UserPremiumStatus" (
@@ -209,6 +213,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         command.Parameters.AddWithValue("displayName", displayName);
         command.Parameters.AddWithValue("email", email);
         command.Parameters.AddWithValue("avatarUrl", (object?)avatarUrl ?? DBNull.Value);
+        command.Parameters.AddWithValue("updateAvatar", updateAvatar);
         command.Parameters.AddWithValue("autoUseStreakSavers", autoUseStreakSavers);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

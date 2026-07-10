@@ -176,13 +176,15 @@
   gap: 10px;
 }
 
-.card-footer button {
+.card-footer button,
+.card-footer a {
   border: 0;
   border-radius: var(--radius-control);
   padding: 9px 14px;
   color: var(--on-primary);
   background: var(--accent);
   font-weight: 900;
+  text-decoration: none;
   transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
@@ -199,6 +201,7 @@
   box-shadow: none;
 }
 
+.card-footer a:hover,
 .card-footer button:not(:disabled):hover {
   transform: translateY(-2px);
 }

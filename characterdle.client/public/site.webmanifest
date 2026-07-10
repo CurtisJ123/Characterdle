@@ -1,12 +1,14 @@
 {
   "name": "Characterdle",
   "short_name": "Characterdle",
-  "description": "Daily Game of Thrones guessing game with character and quote rounds.",
+  "description": "Daily Game of Thrones character and quote guessing game with archives, leaderboards, and profile tracking.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#140f18",
   "theme_color": "#140f18",
+  "categories": ["games", "entertainment"],
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

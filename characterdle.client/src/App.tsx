@@ -1,20 +1,14 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import { AppShell } from './components/layout/AppShell';
+import { SeoManager } from './components/seo/SeoManager';
 import { defaultUniverseId } from './data/universeCatalog';
 import { useUniverse } from './hooks/useUniverse';
+import { buildRoutePath, isUniverseScopedPage } from './lib/routePaths';
 import { getUniverseIdFromPathname, getUniverseSubdomainUniverseId } from './lib/siteRouting';
 import { LandingPage } from './pages/LandingPage';
 import type { GameMode } from './types/game';
-import type { AuthMode, Page } from './types/routes';
-
-interface AppRoute {
-  authMode: AuthMode;
-  gameId: number | null;
-  gameMode: GameMode;
-  page: Page;
-  universeId: string | null;
-}
+import type { AppRoute, AuthMode, Page } from './types/routes';
 
 const mainSiteDefaultRoute: AppRoute = {
   authMode: 'login',
@@ -23,10 +17,6 @@ const mainSiteDefaultRoute: AppRoute = {
   page: 'landing',
   universeId: null,
 };
-
-function isUniverseScopedPage(page: Page): boolean {
-  return page === 'game' || page === 'random' || page === 'history' || page === 'leaderboard' || page === 'profile';
-}
 
 function applyUniverseScope(
   route: Omit<AppRoute, 'universeId'>,
@@ -197,6 +187,20 @@ function readRouteFromSegments(segments: string[]): AppRoute | null {
         gameMode: 'character',
         page: 'support',
       }, explicitUniverseId);
+    case 'about':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'about',
+      }, explicitUniverseId);
+    case 'how-to-play':
+      return applyUniverseScope({
+        authMode: 'login',
+        gameId: null,
+        gameMode: 'character',
+        page: 'howToPlay',
+      }, explicitUniverseId);
     case 'privacy-policy':
       return applyUniverseScope({
         authMode: 'login',
@@ -260,70 +264,6 @@ function readRouteFromLocation(): AppRoute {
   return readRouteFromSegments(normalizedPathname.split('/')) ?? getDefaultRoute();
 }
 
-function buildBrowserUrl(route: AppRoute): string {
-  const universePrefix = route.universeId ? `/${route.universeId}` : '';
-
-  switch (route.page) {
-    case 'landing':
-      return route.universeId
-        ? `${universePrefix}/landing`
-        : '/';
-    case 'launcher':
-      return route.universeId
-        ? `${universePrefix}/home`
-        : '/home';
-    case 'auth': {
-      const authPath = route.authMode === 'signup'
-        ? '/signup'
-        : route.authMode === 'forgotPassword'
-          ? '/forgot-password'
-          : route.authMode === 'resetPassword'
-            ? '/reset-password'
-            : '/login';
-
-      return route.universeId
-        ? `${universePrefix}${authPath}`
-        : authPath;
-    }
-    case 'game':
-      if (route.universeId && route.gameMode === 'character' && route.gameId === null) {
-        return universePrefix;
-      }
-
-      return route.gameId === null
-        ? `${universePrefix}/game/${route.gameMode}`
-        : `${universePrefix}/game/${route.gameMode}/${route.gameId}`;
-    case 'random':
-      return route.gameMode === 'quote'
-        ? `${universePrefix}/random/quote`
-        : `${universePrefix}/random`;
-    case 'history':
-      return `${universePrefix}/archive/${route.gameMode}`;
-    case 'leaderboard':
-      return `${universePrefix}/leaderboard`;
-    case 'premium':
-      return route.universeId
-        ? `${universePrefix}/premium`
-        : '/premium';
-    case 'profile':
-      return `${universePrefix}/profile`;
-    case 'support':
-      return route.universeId
-        ? `${universePrefix}/support`
-        : '/support';
-    case 'privacyPolicy':
-      return route.universeId
-        ? `${universePrefix}/privacy-policy`
-        : '/privacy-policy';
-    case 'termsOfService':
-      return route.universeId
-        ? `${universePrefix}/terms`
-        : '/terms';
-    default:
-      return '/';
-  }
-}
-
 function App() {
   const [route, setRoute] = useState<AppRoute>(() => readRouteFromLocation());
   const { selectedUniverseId, setSelectedUniverseId } = useUniverse();
@@ -342,7 +282,7 @@ function App() {
       setRoute(nextRoute);
 
       const currentPathAndSearch = `${window.location.pathname}${window.location.search}`;
-      const canonicalPathAndSearch = `${buildBrowserUrl(nextRoute)}${window.location.search}`;
+      const canonicalPathAndSearch = `${buildRoutePath(nextRoute)}${window.location.search}`;
 
       if (readLegacyHashRoute(window.location.hash) || currentPathAndSearch !== canonicalPathAndSearch) {
         window.history.replaceState(null, '', canonicalPathAndSearch);
@@ -361,7 +301,7 @@ function App() {
   function navigateToRoute(nextRoute: AppRoute) {
     setRoute(nextRoute);
 
-    const nextUrl = buildBrowserUrl(nextRoute);
+    const nextUrl = buildRoutePath(nextRoute);
     const currentUrl = `${window.location.pathname}${window.location.search}`;
 
     if (currentUrl === nextUrl) {
@@ -372,7 +312,7 @@ function App() {
   }
 
   function getScopedUniverseId(nextPage: Page): string | null {
-    if (route.universeId) {
+    if (route.universeId && (isUniverseScopedPage(nextPage) || nextPage === 'auth')) {
       return route.universeId;
     }
 
@@ -434,21 +374,29 @@ function App() {
   }
 
   if (route.page === 'landing') {
-    return <LandingPage onNavigate={handleNavigate} onAuthNavigate={openAuth} />;
+    return (
+      <>
+        <SeoManager route={route} />
+        <LandingPage onNavigate={handleNavigate} onAuthNavigate={openAuth} />
+      </>
+    );
   }
 
   return (
-    <AppShell
-      authMode={route.authMode}
-      currentGameId={route.gameId}
-      currentGameMode={route.gameMode}
-      currentPage={route.page}
-      onAuthNavigate={openAuth}
-      onNavigate={handleNavigate}
-      onOpenGame={openGame}
-      onOpenHistory={openHistory}
-      onOpenRandomGame={openRandomGame}
-    />
+    <>
+      <SeoManager route={route} />
+      <AppShell
+        authMode={route.authMode}
+        currentGameId={route.gameId}
+        currentGameMode={route.gameMode}
+        currentPage={route.page}
+        onAuthNavigate={openAuth}
+        onNavigate={handleNavigate}
+        onOpenGame={openGame}
+        onOpenHistory={openHistory}
+        onOpenRandomGame={openRandomGame}
+      />
+    </>
   );
 }
 

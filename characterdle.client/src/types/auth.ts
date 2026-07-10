@@ -10,7 +10,7 @@ export interface AuthFormValues {
 }
 
 export interface AccountSettingsValues {
-  avatarUrl: string | null;
+  avatarUrl?: string | null;
   autoUseStreakSavers: boolean;
   displayName: string;
 }

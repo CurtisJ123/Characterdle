@@ -11,6 +11,8 @@ export type Page =
   | 'premium'
   | 'profile'
   | 'support'
+  | 'about'
+  | 'howToPlay'
   | 'privacyPolicy'
   | 'termsOfService';
 
@@ -21,3 +23,11 @@ export type PrimaryAuthMode = 'login' | 'signup';
 export type AuthMode = PrimaryAuthMode | 'forgotPassword' | 'resetPassword';
 
 export type RouteGameMode = GameMode;
+
+export interface AppRoute {
+  authMode: AuthMode;
+  gameId: number | null;
+  gameMode: GameMode;
+  page: Page;
+  universeId: string | null;
+}

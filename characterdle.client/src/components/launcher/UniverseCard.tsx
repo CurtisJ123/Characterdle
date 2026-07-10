@@ -1,13 +1,16 @@
+import type { MouseEvent } from 'react';
 import type { CSSProperties } from 'react';
 import type { Universe } from '../../types/game';
 
 interface UniverseCardProps {
+  playHref: string;
+  quoteHref?: string;
   universe: Universe;
   onPlay: () => void;
   onPlayQuote?: () => void;
 }
 
-export function UniverseCard({ universe, onPlay, onPlayQuote }: UniverseCardProps) {
+export function UniverseCard({ playHref, quoteHref, universe, onPlay, onPlayQuote }: UniverseCardProps) {
   const accentStyle = { '--accent': universe.accent } as CSSProperties;
   const cardClassName = [
     'universe-card',
@@ -17,6 +20,11 @@ export function UniverseCard({ universe, onPlay, onPlayQuote }: UniverseCardProp
     universe.isFeatured ? 'is-featured' : '',
     universe.isPlayable ? 'is-playable' : 'is-disabled',
   ].join(' ');
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>, action: () => void) {
+    event.preventDefault();
+    action();
+  }
 
   return (
     <article className={cardClassName} style={accentStyle} aria-disabled={!universe.isPlayable}>
@@ -36,13 +44,23 @@ export function UniverseCard({ universe, onPlay, onPlayQuote }: UniverseCardProp
         <div className="card-footer">
           <span>{universe.status}</span>
           <div className="card-action-group">
-            <button type="button" onClick={onPlay} disabled={!universe.isPlayable}>
-              {universe.buttonLabel}
-            </button>
-            {onPlayQuote && (
-              <button className="universe-secondary-button" type="button" onClick={onPlayQuote}>
-                Quote
+            {universe.isPlayable ? (
+              <a href={playHref} onClick={(event) => handleClick(event, onPlay)}>
+                {universe.buttonLabel}
+              </a>
+            ) : (
+              <button type="button" disabled>
+                {universe.buttonLabel}
               </button>
+            )}
+            {onPlayQuote && quoteHref && (
+              <a
+                className="universe-secondary-button"
+                href={quoteHref}
+                onClick={(event) => handleClick(event, onPlayQuote)}
+              >
+                Quote
+              </a>
             )}
           </div>
         </div>

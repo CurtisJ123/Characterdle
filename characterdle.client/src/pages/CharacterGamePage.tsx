@@ -868,41 +868,59 @@ export function CharacterGamePage({
         >
           <img src={questionMarkCircleIcon} alt="" aria-hidden="true" />
         </button>
-        <button
-          className={`game-action-button random-game-button${isRandomGameLocked ? ' is-locked' : ''}`}
-          type="button"
-          aria-disabled={isRandomGameLocked}
-          aria-describedby={isRandomGameLocked ? 'random-game-premium-tooltip' : undefined}
-          aria-label={isRandomGameLocked ? `Requires premium to play a random ${selectedGameMode} game` : `Play a random ${selectedGameMode} game`}
-          title={isRandomGameLocked ? undefined : isTemporaryGame ? 'Load another random game' : 'Play a random game'}
-          onClick={() => {
-            if (isRandomGameLocked) {
-              return;
-            }
-
-            if (isTemporaryGame && onRefreshRandomGame) {
-              onRefreshRandomGame();
-              return;
-            }
-
-            onOpenRandomGame(selectedGameMode);
-          }}
-        >
-          <span className="random-game-icon-wrap" aria-hidden="true">
-            <DiceIcon className="random-game-icon" />
-          </span>
-          <span className="random-game-label">Random Game</span>
-          {isRandomGameLocked && (
-            <span className="random-game-lock" aria-hidden="true">
-              <img src={lockClosedIcon} alt="" />
+        {isTemporaryGame ? (
+          <button
+            className="game-action-button current-game-button"
+            type="button"
+            aria-label={`Go back to current ${selectedGameMode} game`}
+            title="Go back to current game"
+            onClick={() => onOpenGame(selectedGameMode, null, selectedUniverse.id)}
+          >
+            <span className="current-game-icon-wrap" aria-hidden="true">
+              <svg className="current-game-icon" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </span>
-          )}
-          {isRandomGameLocked && (
-            <span id="random-game-premium-tooltip" className="random-game-premium-tooltip" role="tooltip">
-              Requires premium
+            <span className="current-game-label">Current Game</span>
+          </button>
+        ) : (
+          <button
+            className={`game-action-button random-game-button${isRandomGameLocked ? ' is-locked' : ''}`}
+            type="button"
+            aria-disabled={isRandomGameLocked}
+            aria-describedby={isRandomGameLocked ? 'random-game-premium-tooltip' : undefined}
+            aria-label={isRandomGameLocked ? `Requires premium to play a random ${selectedGameMode} game` : `Play a random ${selectedGameMode} game`}
+            title={isRandomGameLocked ? undefined : 'Play a random game'}
+            onClick={() => {
+              if (isRandomGameLocked) {
+                return;
+              }
+
+              onOpenRandomGame(selectedGameMode);
+            }}
+          >
+            <span className="random-game-icon-wrap" aria-hidden="true">
+              <DiceIcon className="random-game-icon" />
             </span>
-          )}
-        </button>
+            <span className="random-game-label">Random Game</span>
+            {isRandomGameLocked && (
+              <span className="random-game-lock" aria-hidden="true">
+                <img src={lockClosedIcon} alt="" />
+              </span>
+            )}
+            {isRandomGameLocked && (
+              <span id="random-game-premium-tooltip" className="random-game-premium-tooltip" role="tooltip">
+                Requires premium
+              </span>
+            )}
+          </button>
+        )}
         <button
           className="game-action-button game-mode-switch-button"
           type="button"

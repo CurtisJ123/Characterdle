@@ -1,3 +1,5 @@
+import type { MouseEvent } from 'react';
+import { buildRoutePath } from '../lib/routePaths';
 import type { NavigateToPage } from '../types/routes';
 
 interface SupportPageProps {
@@ -7,6 +9,11 @@ interface SupportPageProps {
 const supportEmail = 'support@characterdle.com';
 
 export function SupportPage({ onNavigate }: SupportPageProps) {
+  function handlePageLinkClick(event: MouseEvent<HTMLAnchorElement>, page: Parameters<NavigateToPage>[0]) {
+    event.preventDefault();
+    onNavigate(page);
+  }
+
   return (
     <main className="page support-page">
       <section className="glass-card support-hero">
@@ -60,15 +67,45 @@ export function SupportPage({ onNavigate }: SupportPageProps) {
         </article>
 
         <article className="glass-card support-card">
+          <p className="card-kicker">Guides</p>
+          <h2>Helpful reading</h2>
+          <div className="support-policy-links">
+            <a
+              className="secondary-button support-policy-button"
+              href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'howToPlay', universeId: null })}
+              onClick={(event) => handlePageLinkClick(event, 'howToPlay')}
+            >
+              How to Play
+            </a>
+            <a
+              className="secondary-button support-policy-button"
+              href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'about', universeId: null })}
+              onClick={(event) => handlePageLinkClick(event, 'about')}
+            >
+              About Characterdle
+            </a>
+          </div>
+          <p className="muted-copy">Start with the rules page if you are learning the game, then use support for account or bug issues.</p>
+        </article>
+
+        <article className="glass-card support-card">
           <p className="card-kicker">Policies</p>
           <h2>Important legal pages</h2>
           <div className="support-policy-links">
-            <button className="secondary-button support-policy-button" type="button" onClick={() => onNavigate('privacyPolicy')}>
+            <a
+              className="secondary-button support-policy-button"
+              href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'privacyPolicy', universeId: null })}
+              onClick={(event) => handlePageLinkClick(event, 'privacyPolicy')}
+            >
               Privacy Policy
-            </button>
-            <button className="secondary-button support-policy-button" type="button" onClick={() => onNavigate('termsOfService')}>
+            </a>
+            <a
+              className="secondary-button support-policy-button"
+              href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'termsOfService', universeId: null })}
+              onClick={(event) => handlePageLinkClick(event, 'termsOfService')}
+            >
               Terms of Service
-            </button>
+            </a>
           </div>
           <p className="muted-copy">Subscription cancellation and refund terms are included inside the Terms of Service page.</p>
         </article>

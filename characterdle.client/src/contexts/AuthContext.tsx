@@ -390,17 +390,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const normalizedDisplayName = values.displayName.trim();
-    const normalizedAvatarUrl = values.avatarUrl?.trim() || null;
+    const shouldUpdateAvatar = Object.prototype.hasOwnProperty.call(values, 'avatarUrl');
+    const normalizedAvatarUrl = shouldUpdateAvatar
+      ? values.avatarUrl?.trim() || null
+      : undefined;
     const updatePayload: UserAttributes = {};
 
     if (!normalizedDisplayName) {
       throw new Error('Display name is required.');
     }
 
-    if (normalizedDisplayName !== user?.displayName || normalizedAvatarUrl !== user?.avatarUrl) {
+    if (
+      normalizedDisplayName !== user?.displayName
+      || (shouldUpdateAvatar && normalizedAvatarUrl !== user?.avatarUrl)
+    ) {
       updatePayload.data = {
         display_name: normalizedDisplayName,
-        avatar_url: normalizedAvatarUrl,
+        ...(shouldUpdateAvatar ? { avatar_url: normalizedAvatarUrl } : {}),
       };
     }
 

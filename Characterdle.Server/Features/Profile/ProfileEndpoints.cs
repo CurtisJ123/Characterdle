@@ -134,11 +134,13 @@ public static class ProfileEndpoints
                 return Results.Unauthorized();
             }
 
-            var normalizedAvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl)
-                ? null
-                : request.AvatarUrl.Trim();
+            var normalizedAvatarUrl = request.UpdateAvatar
+                ? string.IsNullOrWhiteSpace(request.AvatarUrl)
+                    ? null
+                    : request.AvatarUrl.Trim()
+                : user.AvatarUrl;
 
-            if (normalizedAvatarUrl is not null)
+            if (request.UpdateAvatar && normalizedAvatarUrl is not null)
             {
                 var isAvailable = await profileRepository.IsAvatarUrlAvailableAsync(
                     avatarUniverse,
@@ -159,6 +161,7 @@ public static class ProfileEndpoints
                 user.Email,
                 request.DisplayName.Trim(),
                 normalizedAvatarUrl,
+                request.UpdateAvatar,
                 request.AutoUseStreakSavers,
                 cancellationToken);
 
@@ -340,7 +343,7 @@ public static class ProfileEndpoints
             errors["displayName"] = ["Display name is required."];
         }
 
-        if (request.AvatarUrl is not null && request.AvatarUrl.Trim().Length > 512)
+        if (request.UpdateAvatar && request.AvatarUrl is not null && request.AvatarUrl.Trim().Length > 512)
         {
             errors["avatarUrl"] = ["Avatar url is too long."];
         }
