@@ -14,6 +14,10 @@ const attributeHelpTextOverrides: Partial<Record<string, string>> = {
   lastSeason: 'Last season seen alive, not including flashbacks.',
 };
 
+function getAttributeHelpText(definition: UniverseAttributeDefinition): string | undefined {
+  return attributeHelpTextOverrides[definition.key] ?? definition.helpText ?? undefined;
+}
+
 interface CharacterGameBoardProps {
   answerName: string;
   answerPortraitUrl?: string | null;
@@ -69,7 +73,7 @@ export function CharacterGameBoard({
         <div className="guess-header" style={gridStyle}>
           <span>Character</span>
           {attributeDefinitions.map((definition) => {
-            const helpText = attributeHelpTextOverrides[definition.key] ?? definition.helpText;
+            const helpText = getAttributeHelpText(definition);
 
             return (
               <span
@@ -89,7 +93,13 @@ export function CharacterGameBoard({
         </div>
         {rows.length > 0 ? (
           rows.map((guess) => (
-            <CharacterGuessRow key={guess.name} gridStyle={gridStyle} guess={guess} />
+            <CharacterGuessRow
+              key={guess.name}
+              attributeDefinitions={attributeDefinitions}
+              getAttributeHelpText={getAttributeHelpText}
+              gridStyle={gridStyle}
+              guess={guess}
+            />
           ))
         ) : (
           <div className="empty-guess-state">

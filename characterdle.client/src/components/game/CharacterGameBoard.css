@@ -196,3 +196,46 @@
     display: none;
   }
 }
+
+@media (max-width: 640px) {
+  .character-board {
+    gap: 14px;
+  }
+
+  .guess-table {
+    display: grid;
+    gap: 12px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .guess-header {
+    display: none;
+  }
+
+  .guess-table .guess-row {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .empty-guess-state {
+    min-height: 170px;
+    border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+    border-radius: var(--radius-panel);
+    padding: 32px 18px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-board) 96%, transparent),
+      color-mix(in srgb, var(--surface-container-lowest) 98%, transparent)
+    );
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--black) 16%, transparent);
+  }
+
+  .empty-guess-state-copy {
+    max-width: 280px;
+  }
+}

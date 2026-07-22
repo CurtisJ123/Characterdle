@@ -12,6 +12,7 @@ import {
   getGameProgressOwnerKey,
   syncPersistedGameResultsToLocalProgress,
 } from '../../lib/characterGameProgress';
+import { flushUniverseGameResultOutbox } from '../../lib/gameResultOutbox';
 import { AuthPage } from '../../pages/AuthPage';
 import { AboutPage } from '../../pages/AboutPage';
 import { CharacterGamePage } from '../../pages/CharacterGamePage';
@@ -150,6 +151,71 @@ export function AppShell({
       isDisposed = true;
     };
   }, [selectedUniverse.id, session?.access_token, shouldWarmSignedInResults, user]);
+
+  useEffect(() => {
+    const currentUserId = user?.id;
+    const currentAccessToken = session?.access_token;
+
+    if (!currentUserId || !currentAccessToken) {
+      return;
+    }
+
+    const userId = currentUserId;
+    const accessToken = currentAccessToken;
+    let isDisposed = false;
+    let hasLoggedFailure = false;
+    const universeId = selectedUniverse.id;
+
+    async function flushPendingResults() {
+      try {
+        const outcomes = await flushUniverseGameResultOutbox(userId, accessToken);
+
+        if (isDisposed) {
+          return;
+        }
+
+        hasLoggedFailure = false;
+
+        for (const outcome of outcomes) {
+          if (outcome.universeId === universeId) {
+            setLiveStreak({
+              scope: `${userId}:${universeId}`,
+              streak: outcome.streak,
+            });
+          }
+        }
+      } catch (error) {
+        if (!isDisposed && !hasLoggedFailure) {
+          console.error('Game results are queued and will be retried.', error);
+          hasLoggedFailure = true;
+        }
+      }
+    }
+
+    function retryPendingResults() {
+      void flushPendingResults();
+    }
+
+    function retryWhenVisible() {
+      if (document.visibilityState === 'visible') {
+        retryPendingResults();
+      }
+    }
+
+    retryPendingResults();
+    window.addEventListener('focus', retryPendingResults);
+    window.addEventListener('online', retryPendingResults);
+    document.addEventListener('visibilitychange', retryWhenVisible);
+    const retryTimer = window.setInterval(retryPendingResults, 30_000);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(retryTimer);
+      window.removeEventListener('focus', retryPendingResults);
+      window.removeEventListener('online', retryPendingResults);
+      document.removeEventListener('visibilitychange', retryWhenVisible);
+    };
+  }, [selectedUniverse.id, session?.access_token, user?.id]);
 
   function handleStreakUpdated(streak: UniverseStreak) {
     setLiveStreak({

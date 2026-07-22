@@ -188,3 +188,41 @@
     animation: none;
   }
 }
+
+@media (max-width: 640px) {
+  .guess-row .attribute-chip {
+    min-height: 76px;
+    height: 100%;
+    aspect-ratio: auto;
+    padding: 10px;
+    font-size: 1rem;
+    line-height: 1.12;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  .guess-row .attribute-chip-label {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .guess-row .attribute-chip.is-small {
+    font-size: 0.9rem;
+  }
+
+  .guess-row .attribute-chip.is-xsmall {
+    font-size: 0.82rem;
+  }
+
+  .guess-row .attribute-chip.is-xxsmall {
+    font-size: 0.74rem;
+  }
+
+  .guess-row .attribute-chip.is-numeric,
+  .guess-row .attribute-chip-direction-value {
+    font-size: 1.75rem;
+  }
+}

@@ -1,4 +1,7 @@
 import type { PersistedGameResult } from '../types/profile';
+import type { GameMode } from '../types/game';
+import type { SubmitUniverseGameResultPayload } from '../types/leaderboard';
+import { enqueueUniverseGameResult } from './gameResultOutbox';
 
 interface StoredGameStats {
   guessCounts: number[];
@@ -19,6 +22,22 @@ const QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX = 'quote-game-stats';
 const QUOTE_GAME_STATE_STORAGE_KEY_PREFIX = 'quote-game-state';
 const UNIVERSE_GAME_RESULTS_CACHE_KEY_PREFIX = 'universe-game-results';
 const GIVE_UP_RESET_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface GuestVictoryState {
+  completionRecorded?: boolean;
+  firstLetterRevealed?: boolean;
+  guessCount?: number;
+  guessedCharacterIds?: unknown;
+  revealedHintKeys?: unknown;
+}
+
+interface GuestVictoryMigrationCandidate {
+  gameId: number;
+  mode: GameMode;
+  sourceStorageKey: string;
+  state: GuestVictoryState;
+  universeId: string;
+}
 
 export function getGameProgressOwnerKey(userId: string | null | undefined): string {
   return userId ? `user:${userId}` : 'guest';
@@ -58,6 +77,151 @@ export function getQuoteGameStatsStorageKey(universeId: string, gameId: number):
 
 export function getUniverseGameResultsCacheKey(ownerKey: string, universeId: string): string {
   return `${UNIVERSE_GAME_RESULTS_CACHE_KEY_PREFIX}:${ownerKey}:${universeId}`;
+}
+
+function readGuestVictoryCandidates(): GuestVictoryMigrationCandidate[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  let storageKeys: string[];
+
+  try {
+    storageKeys = Array.from(
+      { length: window.localStorage.length },
+      (_, index) => window.localStorage.key(index),
+    ).filter((key): key is string => key !== null);
+  } catch {
+    return [];
+  }
+  const storagePrefixes: Array<{ mode: GameMode; prefix: string }> = [
+    { mode: 'character', prefix: `${GAME_STATE_STORAGE_KEY_PREFIX}:guest:` },
+    { mode: 'quote', prefix: `${QUOTE_GAME_STATE_STORAGE_KEY_PREFIX}:guest:` },
+  ];
+  const candidates: GuestVictoryMigrationCandidate[] = [];
+
+  for (const storageKey of storageKeys) {
+    const matchingPrefix = storagePrefixes.find(({ prefix }) => storageKey.startsWith(prefix));
+
+    if (!matchingPrefix) {
+      continue;
+    }
+
+    const keySuffix = storageKey.slice(matchingPrefix.prefix.length);
+    const separatorIndex = keySuffix.lastIndexOf(':');
+
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const universeId = keySuffix.slice(0, separatorIndex).trim();
+    const gameId = Number(keySuffix.slice(separatorIndex + 1));
+
+    if (!universeId || !Number.isSafeInteger(gameId) || gameId <= 0) {
+      continue;
+    }
+
+    try {
+      const rawValue = window.localStorage.getItem(storageKey);
+      const state = rawValue ? JSON.parse(rawValue) as GuestVictoryState : null;
+
+      if (!state || state.completionRecorded !== true) {
+        continue;
+      }
+
+      candidates.push({
+        gameId,
+        mode: matchingPrefix.mode,
+        sourceStorageKey: storageKey,
+        state,
+        universeId,
+      });
+    } catch {
+      // Leave malformed guest data untouched rather than deleting recoverable browser state.
+    }
+  }
+
+  return candidates;
+}
+
+function buildGuestVictoryPayload(
+  candidate: GuestVictoryMigrationCandidate,
+): SubmitUniverseGameResultPayload {
+  const guessedCharacterIds = Array.isArray(candidate.state.guessedCharacterIds)
+    ? candidate.state.guessedCharacterIds.filter((id): id is number => Number.isInteger(id) && id > 0)
+    : [];
+  const revealedHintKeys = Array.isArray(candidate.state.revealedHintKeys)
+    ? candidate.state.revealedHintKeys.filter((key): key is string => typeof key === 'string' && key.trim().length > 0)
+    : [];
+
+  if (candidate.state.firstLetterRevealed === true && !revealedHintKeys.includes('first-letter')) {
+    revealedHintKeys.push('first-letter');
+  }
+
+  return {
+    gameId: candidate.gameId,
+    guessCount: typeof candidate.state.guessCount === 'number' && candidate.state.guessCount >= 0
+      ? Math.max(Math.floor(candidate.state.guessCount), guessedCharacterIds.length)
+      : guessedCharacterIds.length,
+    guessedCharacterIds,
+    hintCount: revealedHintKeys.length,
+    mode: candidate.mode,
+    revealedHintKeys,
+    status: 'won',
+    universeId: candidate.universeId,
+  };
+}
+
+export function migrateGuestGameVictoriesToUser(userId: string): number {
+  if (typeof window === 'undefined' || !userId.trim()) {
+    return 0;
+  }
+
+  const ownerKey = getGameProgressOwnerKey(userId);
+  let migratedCount = 0;
+
+  for (const candidate of readGuestVictoryCandidates()) {
+    const payload = buildGuestVictoryPayload(candidate);
+
+    if (!enqueueUniverseGameResult(userId, payload)) {
+      continue;
+    }
+
+    const targetStorageKey = candidate.mode === 'quote'
+      ? getQuoteGameStorageKey(ownerKey, candidate.universeId, candidate.gameId)
+      : getCharacterGameStorageKey(ownerKey, candidate.universeId, candidate.gameId);
+
+    try {
+      const existingTargetValue = window.localStorage.getItem(targetStorageKey);
+      let targetAlreadyCompleted = false;
+
+      if (existingTargetValue) {
+        try {
+          const existingTargetState = JSON.parse(existingTargetValue) as GuestVictoryState;
+          targetAlreadyCompleted = existingTargetState.completionRecorded === true;
+        } catch {
+          // A valid guest victory can replace malformed account-scoped progress.
+        }
+      }
+
+      if (!targetAlreadyCompleted) {
+        const sourceValue = window.localStorage.getItem(candidate.sourceStorageKey);
+
+        if (!sourceValue) {
+          continue;
+        }
+
+        window.localStorage.setItem(targetStorageKey, sourceValue);
+      }
+
+      window.localStorage.removeItem(candidate.sourceStorageKey);
+      migratedCount += 1;
+    } catch {
+      // Keep the guest copy so migration can be attempted again on the next session refresh.
+    }
+  }
+
+  return migratedCount;
 }
 
 function readGuessCounts(storageKey: string): number[] {

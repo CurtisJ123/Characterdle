@@ -498,3 +498,148 @@
     grid-column: auto;
   }
 }
+
+@media (max-width: 640px) {
+  html:has(.game-page),
+  body:has(.game-page) {
+    min-width: 0;
+  }
+
+  .game-page {
+    padding-top: 12px;
+  }
+
+  .game-top-actions {
+    position: static;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 44px 44px minmax(0, 1fr);
+    gap: 8px;
+    justify-content: initial;
+    margin: 0 0 18px;
+  }
+
+  .history-button,
+  .help-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .history-button {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .help-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .game-mode-switch-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .random-game-button,
+  .current-game-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+    padding-inline: 12px;
+  }
+
+  .debug-reset-button {
+    min-height: 44px;
+    grid-column: 1 / -1;
+    padding: 10px 12px;
+  }
+
+  .game-hero {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .game-hero h1 {
+    font-size: clamp(2rem, 11vw, 2.65rem);
+    line-height: 1;
+  }
+
+  .game-hero h1::after {
+    width: 82px;
+    margin-top: 10px;
+  }
+
+  .search-box {
+    width: 100%;
+    gap: 8px;
+    margin: 20px 0 18px;
+  }
+
+  .search-input-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .search-input-row input {
+    min-height: 52px;
+    grid-column: 1 / -1;
+    padding: 14px 15px;
+    font-size: 1rem;
+  }
+
+  .search-submit,
+  .hint-trigger-button {
+    min-height: 48px;
+    padding-inline: 12px;
+  }
+
+  .hint-trigger-tooltip {
+    right: 0;
+    left: auto;
+    width: min(260px, calc(100vw - 32px));
+    transform: translateY(6px);
+  }
+
+  .hint-trigger-tooltip::before {
+    right: 28px;
+    left: auto;
+    transform: rotate(45deg);
+  }
+
+  .hint-trigger-wrap:hover .hint-trigger-tooltip,
+  .hint-trigger-button:focus-visible + .hint-trigger-tooltip {
+    transform: translateY(0);
+  }
+
+  .search-suggestions {
+    max-height: min(360px, 48vh);
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .suggestion-row {
+    min-height: 72px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+    padding: 7px 10px;
+  }
+
+  .suggestion-copy strong {
+    font-size: 0.94rem;
+  }
+
+  .search-feedback {
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  .quote-mode-layout .quote-prompt-card + .search-box {
+    margin-top: 16px;
+  }
+}

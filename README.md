@@ -1,8 +1,19 @@
 # Characterdle
 
-Characterdle is a full-stack daily guessing game built around fictional characters, with **Game of Thrones** as the first live universe. The project combines game logic, account-backed progression, archives, leaderboards, and daily content rotation in a production-style web app.
+[Characterdle](https://characterdle.com) is a full-stack daily guessing game built around fictional characters. The live experience currently focuses on **Game of Thrones**, with separate character and quote boards, account-backed progress, streaks, archives, leaderboards, and non-persistent practice rounds.
 
-This repository is intended to showcase the product, architecture, and technical work behind the project.
+The repository is a portfolio-focused view of the product and the engineering behind it: a React and TypeScript client, an ASP.NET Core API, Supabase data and authentication, Stripe subscriptions, and production deployment through Cloudflare and Render.
+
+## Product
+
+- **Daily character game:** identify a hidden character through gender, species, house, role, season, and status comparisons.
+- **Daily quote game:** identify a quote's speaker with progressive episode, role, and first-letter hints.
+- **Player progression:** save results across devices, build daily streaks, review recent games, customize a profile, and compare character, quote, and streak leaderboards.
+- **Archives:** browse every previous board; free accounts can replay the three most recent games and Premium unlocks the full history.
+- **Random practice:** Premium members can generate unlimited temporary character and quote rounds directly from source content without affecting daily stats, streaks, archives, or analytics.
+- **Premium membership:** Stripe-powered monthly and yearly subscriptions provide ad-free play, full archive access, random practice, streak protection, and supporter styling.
+- **Accessible account flows:** email/password and Google sign-in, email confirmation, password recovery, profile management, and guarded account deletion.
+- **Shareable results:** compact social results summarize guesses, hints, and streak progress without revealing the answer.
 
 ## Screenshots
 
@@ -10,127 +21,74 @@ This repository is intended to showcase the product, architecture, and technical
 
 ![Characterdle landing page](docs/screenshots/landing.png)
 
-### Universe Launcher
+### Random Character Practice
 
-![Characterdle universe launcher](docs/screenshots/launcher.png)
+![Random Character game with multiple guesses and revealed hints](docs/screenshots/random-character-game.png)
 
-### Daily Character Game
+### Character Archive
 
-![Characterdle daily character game](docs/screenshots/character-game.png)
-
-### Archive
-
-![Characterdle archive page](docs/screenshots/archive.png)
+![Characterdle character archive](docs/screenshots/archive.png)
 
 ### Leaderboard
 
-![Characterdle leaderboard](docs/screenshots/leaderboard.png)
+![Characterdle character leaderboard](docs/screenshots/leaderboard.png)
 
-## Project Overview
-
-Characterdle is designed as a replayable daily game with two distinct modes:
-
-- **Character Game:** guess the hidden character through attribute comparisons such as gender, species, house, role, debut season, last season, and status
-- **Quote Game:** identify the speaker of a quote using a shared character search flow and progressive hints
-
-The app also includes:
-
-- Account-backed progress across devices
-- Archive browsing for previous daily games
-- Profile stats and global leaderboard ranking
-- Admin/debug tooling for development and content management
-- Daily game scheduling and automatic archive rollover
-
-## Technical Highlights
-
-- **Two linked but separate game modes**
-  Character and quote boards share search, profile, leaderboard, and archive infrastructure, but maintain separate state, results, and ranking flows.
-
-- **Hybrid persistence model**
-  Completed game results are stored in Supabase for cross-device continuity, while richer per-board guess history is preserved locally when available.
-
-- **Daily content lifecycle**
-  The backend is responsible for current-game selection, archive history, and filling missed dates if the service was offline during a scheduled window.
-
-- **Expandable universe model**
-  The app is structured so additional universes can be added without rewriting the entire frontend flow. Universe metadata, game endpoints, and attribute definitions are modeled for extension.
-
-- **Production-style frontend behavior**
-  The client handles startup recovery, loading states, sleeping-backend wakeup behavior, auth flows, archive routing, and persistent game state.
-
-## Architecture
+## Technical Architecture
 
 ### Frontend
 
-- React
-- TypeScript
-- Vite
-
-The frontend handles:
-
-- Routing between landing, auth, launcher, game, archive, leaderboard, and profile views
-- Character and quote game state
-- Search suggestions and guess submission UX
-- Local board-history persistence
-- Auth session integration and account UI
+- React 19, TypeScript 6, and Vite 8
+- Path-based client routing with universe-scoped game, archive, leaderboard, profile, and random-practice routes
+- Modular pages, hooks, services, and component-scoped styles
+- Supabase browser authentication with email/password and Google OAuth
+- Local board recovery plus a durable result outbox that retries authenticated submissions after network interruptions
+- Guest victory migration when a player creates an account after completing a board
+- Route-aware titles, descriptions, canonical URLs, Open Graph metadata, JSON-LD, sitemap generation, and public informational pages
 
 ### Backend
 
-- ASP.NET Core
-- C#
+- ASP.NET Core Minimal APIs on .NET 10
+- Direct PostgreSQL access through Npgsql
+- Centralized Supabase bearer-token verification; protected APIs derive the user identity from the verified token rather than frontend-supplied IDs
+- Daily game retrieval, archive access, random content selection, play analytics, profiles, result persistence, leaderboards, and streak calculation
+- Eastern-time scheduling and catch-up logic with PostgreSQL advisory locking for safe daily game generation
+- Server-enforced Premium access for full archives, random practice, billing, and streak savers
+- Stripe Checkout, customer portal, signed webhooks, subscription-state synchronization, and one-time monthly-trial eligibility
 
-The backend handles:
+### Data and Integrations
 
-- Game retrieval for active and archived boards
-- Leaderboard and profile APIs
-- Supabase-backed persistence
-- Daily game scheduling and recovery logic
-- Public runtime configuration for the client
+- **Supabase Postgres:** characters, quotes, daily games, results, profiles, premium status, and streaks
+- **Supabase Auth:** sessions, Google OAuth, confirmation, and password recovery
+- **Stripe:** monthly and yearly subscriptions, billing portal, and webhook-driven entitlements
+- **Google AdSense:** advertising for eligible free sessions, suppressed for Premium members
 
-### Data / Auth
+## Notable Engineering Decisions
 
-- Supabase
-- Postgres
+- Character and quote modes share reusable search, navigation, account, archive, and leaderboard infrastructure while preserving mode-specific rules and results.
+- Universe definitions isolate character attributes and source tables so future universes can extend the platform without duplicating the full game flow.
+- Random practice reads directly from character or quote source tables and never creates daily-game records or changes competitive statistics.
+- Result submissions are idempotent and retryable, protecting completed games from transient API or hosting failures.
+- Stripe webhooks are the source of truth for Premium state; account deletion is blocked while an active subscription still requires cancellation.
+- Public content, legal pages, robots rules, and generated SEO assets are separated from private account and practice routes.
 
-Supabase is used for:
+## Deployment
 
-- Authentication
-- Player profiles
-- Game results
-- Character and quote content
-- Leaderboard queries
+- **Frontend:** Cloudflare Workers Static Assets
+- **Backend:** Dockerized ASP.NET Core service on Render
+- **Database and authentication:** Supabase
+- **Billing:** Stripe
 
-## Notable Product Behavior
-
-- Character and quote leaderboards are tracked separately
-- Hint usage makes a run unranked
-- Archive tiles reflect completed games using account-backed result data
-- Archived boards can still show solved outcomes even when detailed local guess history is unavailable
-- Search prioritizes display-name matches first, then aliases, then last-name matches
-
-## Tech Stack
-
-- **Frontend:** React, TypeScript, Vite
-- **Backend:** ASP.NET Core (.NET)
-- **Database/Auth:** Supabase / Postgres
-- **Hosting:** Cloudflare frontend, Render backend
+The landing page warms the API and prefetches the current Game of Thrones board without blocking navigation, reducing the impact of a sleeping backend instance.
 
 ## Repository Layout
 
 ```text
 Characterdle/
-|-- Characterdle.Server/      # ASP.NET Core API, scheduling, profiles, results, and game endpoints
-|-- characterdle.client/      # React frontend, game UI, auth flows, archive, leaderboard, profile
-|-- docs/screenshots/         # README images
-`-- Characterdle.slnx         # Solution entry point
+|-- Characterdle.Server/      # ASP.NET Core API, auth, games, billing, profiles, and scheduling
+|-- characterdle.client/      # React application, routes, game UI, account flows, and SEO assets
+|-- docs/screenshots/         # Current live-product screenshots used by this README
+|-- render.yaml               # Render service definition
+`-- Characterdle.slnx         # Visual Studio solution
 ```
 
-## Current Scope
-
-The live product currently focuses on:
-
-- **Universe:** Game of Thrones
-- **Modes:** Character Game and Quote Game
-- **Core systems:** auth, leaderboard, profile, archive, daily scheduling, and portrait-backed search
-
-The codebase is intentionally structured to support future universes without replacing the underlying product flow.
+Characterdle is a fan-made project and is not affiliated with or endorsed by HBO, Warner Bros. Discovery, George R. R. Martin, or related rights holders.

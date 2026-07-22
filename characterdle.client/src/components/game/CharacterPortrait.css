@@ -54,6 +54,13 @@
     0 8px 18px color-mix(in srgb, var(--black) 22%, transparent);
 }
 
+@media (max-width: 640px) {
+  .suggestion-avatar {
+    width: 48px;
+    height: 62px;
+  }
+}
+
 .character-orb.is-placeholder {
   box-shadow:
     inset -10px -12px 16px color-mix(in srgb, var(--black) 20%, transparent),

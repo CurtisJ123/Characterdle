@@ -20,6 +20,8 @@ import type {
   ResendConfirmationRequestValues,
 } from '../types/auth';
 import { MIN_PASSWORD_LENGTH, meetsMinimumPasswordLength } from '../lib/authValidation';
+import { migrateGuestGameVictoriesToUser } from '../lib/characterGameProgress';
+import { clearUniverseGameResultOutbox } from '../lib/gameResultOutbox';
 import type { UserProfile } from '../types/user';
 import {
   deleteProfileAccount,
@@ -110,6 +112,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   function applySession(nextSession: Session | null) {
+    if (nextSession) {
+      migrateGuestGameVictoriesToUser(nextSession.user.id);
+    }
+
     setSession(nextSession);
     setUser(nextSession ? buildUserProfile(nextSession.user) : null);
   }
@@ -449,6 +455,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     await deleteProfileAccount(session.access_token);
+    clearUniverseGameResultOutbox(session.user.id);
 
     const { error } = await supabase.auth.signOut();
 

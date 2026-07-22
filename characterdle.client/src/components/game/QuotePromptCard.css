@@ -33,3 +33,16 @@
     font-size: 1.6rem;
   }
 }
+
+@media (max-width: 640px) {
+  .quote-prompt-card {
+    padding: 18px;
+  }
+
+  .quote-prompt-card-text {
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+    line-height: 1.14;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+}

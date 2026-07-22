@@ -21,12 +21,12 @@ import { useUniverse } from '../hooks/useUniverse';
 import { getAnonymousParticipantKey } from '../lib/anonymousParticipant';
 import { getGameProgressOwnerKey, getRemoteGameOutcome } from '../lib/characterGameProgress';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
+import { enqueueUniverseGameResult, flushUniverseGameResultOutbox } from '../lib/gameResultOutbox';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
 import { compareAttributeValue } from '../lib/universeAttributes';
 import { createBillingCheckoutSession } from '../services/billingApi';
 import { trackUniverseGamePlay } from '../services/gamePlayTrackingApi';
-import { submitUniverseGameResult } from '../services/leaderboardApi';
 import { UniverseGameApiError } from '../services/universeGameApi';
 import type { GameMode } from '../types/game';
 import type { UniverseStreak } from '../types/leaderboard';
@@ -409,9 +409,10 @@ export function CharacterGamePage({
 
     const currentGame = data;
     const accessToken = session.access_token;
+    const userId = user.id;
     const finalizedStatus = characterGame.status;
     const submissionKey = [
-      user.id,
+      userId,
       currentGame.universeId,
       currentGame.id,
       'character',
@@ -428,23 +429,36 @@ export function CharacterGamePage({
     }
 
     pendingSubmissionKeysRef.current.add(submissionKey);
+    const payload = {
+      gameId: currentGame.id,
+      guessCount: characterGame.guessCount,
+      guessedCharacterIds: characterGame.guessedCharacterIds,
+      hintCount: characterGame.hintCount,
+      mode: 'character' as const,
+      revealedHintKeys: characterGame.revealedHints.map((hint) => hint.id),
+      status: finalizedStatus,
+      universeId: currentGame.universeId,
+    };
+
+    if (!enqueueUniverseGameResult(userId, payload)) {
+      pendingSubmissionKeysRef.current.delete(submissionKey);
+      console.error('Unable to queue the character game result for persistence.');
+      return;
+    }
+
+    syncedSubmissionKeysRef.current.add(submissionKey);
 
     async function syncResult() {
       try {
-        const streak = await submitUniverseGameResult(accessToken, {
-          gameId: currentGame.id,
-          guessCount: characterGame.guessCount,
-          guessedCharacterIds: characterGame.guessedCharacterIds,
-          hintCount: characterGame.hintCount,
-          mode: 'character',
-          revealedHintKeys: characterGame.revealedHints.map((hint) => hint.id),
-          status: finalizedStatus,
-          universeId: currentGame.universeId,
-        });
-        onStreakUpdated(streak);
-        syncedSubmissionKeysRef.current.add(submissionKey);
+        const outcomes = await flushUniverseGameResultOutbox(userId, accessToken);
+
+        for (const outcome of outcomes) {
+          if (outcome.universeId === currentGame.universeId) {
+            onStreakUpdated(outcome.streak);
+          }
+        }
       } catch (submissionError) {
-        console.error(submissionError);
+        console.error('Character game result is queued and will be retried.', submissionError);
       } finally {
         pendingSubmissionKeysRef.current.delete(submissionKey);
       }
@@ -544,9 +558,10 @@ export function CharacterGamePage({
 
     const currentQuoteGame = quoteGameData;
     const accessToken = session.access_token;
+    const userId = user.id;
     const finalizedStatus = quoteGame.status;
     const submissionKey = [
-      user.id,
+      userId,
       currentQuoteGame.universeId,
       currentQuoteGame.gameId,
       'quote',
@@ -563,23 +578,36 @@ export function CharacterGamePage({
     }
 
     pendingSubmissionKeysRef.current.add(submissionKey);
+    const payload = {
+      gameId: currentQuoteGame.gameId,
+      guessCount: quoteGame.guessCount,
+      guessedCharacterIds: quoteGame.guessedCharacterIds,
+      hintCount: quoteGame.hintCount,
+      mode: 'quote' as const,
+      revealedHintKeys: quoteGame.revealedHints.map((hint) => hint.id),
+      status: finalizedStatus,
+      universeId: currentQuoteGame.universeId,
+    };
+
+    if (!enqueueUniverseGameResult(userId, payload)) {
+      pendingSubmissionKeysRef.current.delete(submissionKey);
+      console.error('Unable to queue the quote game result for persistence.');
+      return;
+    }
+
+    syncedSubmissionKeysRef.current.add(submissionKey);
 
     async function syncResult() {
       try {
-        const streak = await submitUniverseGameResult(accessToken, {
-          gameId: currentQuoteGame.gameId,
-          guessCount: quoteGame.guessCount,
-          guessedCharacterIds: quoteGame.guessedCharacterIds,
-          hintCount: quoteGame.hintCount,
-          mode: 'quote',
-          revealedHintKeys: quoteGame.revealedHints.map((hint) => hint.id),
-          status: finalizedStatus,
-          universeId: currentQuoteGame.universeId,
-        });
-        onStreakUpdated(streak);
-        syncedSubmissionKeysRef.current.add(submissionKey);
+        const outcomes = await flushUniverseGameResultOutbox(userId, accessToken);
+
+        for (const outcome of outcomes) {
+          if (outcome.universeId === currentQuoteGame.universeId) {
+            onStreakUpdated(outcome.streak);
+          }
+        }
       } catch (submissionError) {
-        console.error(submissionError);
+        console.error('Quote game result is queued and will be retried.', submissionError);
       } finally {
         pendingSubmissionKeysRef.current.delete(submissionKey);
       }
@@ -983,6 +1011,7 @@ export function CharacterGamePage({
               onSecondaryAction={quoteSecondaryAction}
               onViewLeaderboard={() => onNavigate('leaderboard')}
               primaryActionLabel={quotePrimaryActionLabel}
+              quoteText={quoteGameData.prompt.text}
               rows={displayedQuoteRows}
               secondaryActionLabel={quoteSecondaryActionLabel}
               showHintCount={isTemporaryGame || usesRemoteQuoteResult}

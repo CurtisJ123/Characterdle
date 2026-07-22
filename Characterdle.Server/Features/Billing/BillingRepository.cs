@@ -40,6 +40,28 @@ public sealed class BillingRepository(NpgsqlDataSource dataSource) : IBillingRep
         return result is Guid userId ? userId : null;
     }
 
+    public async Task<bool> HasStartedPremiumAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        const string sql =
+            """
+            select exists(
+              select 1
+              from public."UserPremiumStatus"
+              where user_id = @userId
+                and (
+                  premium_started_at is not null
+                  or stripe_subscription_id is not null
+                )
+            );
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("userId", userId);
+        return await command.ExecuteScalarAsync(cancellationToken) is true;
+    }
+
     public async Task<bool> HasProcessedWebhookEventAsync(
         string eventId,
         CancellationToken cancellationToken)

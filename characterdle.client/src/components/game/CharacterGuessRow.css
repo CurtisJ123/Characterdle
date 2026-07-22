@@ -27,3 +27,134 @@
   overflow-wrap: anywhere;
   line-height: 1.16;
 }
+
+.guess-attribute-cell {
+  display: contents;
+}
+
+.guess-attribute-heading,
+.guess-attribute-tooltip {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .guess-row {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+    border-radius: var(--radius-panel);
+    padding: 12px;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface-board) 96%, transparent),
+        color-mix(in srgb, var(--surface-container-lowest) 98%, transparent)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--white) 3%, transparent),
+      0 12px 24px color-mix(in srgb, var(--black) 18%, transparent);
+  }
+
+  .guess-row + .guess-row {
+    border-top: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  }
+
+  .character-cell {
+    grid-column: 1 / -1;
+    gap: 14px;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
+    padding: 0 2px 12px;
+  }
+
+  .guess-row .character-orb {
+    width: 78px;
+    height: 98px;
+  }
+
+  .character-cell strong {
+    font-size: clamp(1.08rem, 5.5vw, 1.35rem);
+    line-height: 1.08;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .guess-attribute-cell {
+    position: relative;
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto minmax(76px, 1fr);
+    gap: 5px;
+  }
+
+  .guess-attribute-cell--house,
+  .guess-attribute-cell--occupation,
+  .guess-attribute-cell--alive {
+    grid-column: 1 / -1;
+  }
+
+  .guess-attribute-heading {
+    position: relative;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    padding-inline: 2px;
+    color: var(--primary);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .guess-attribute-heading.has-tooltip {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 0.2em;
+  }
+
+  .guess-attribute-heading.has-tooltip:focus-visible {
+    border-radius: 3px;
+    outline: 1px solid var(--primary);
+    outline-offset: 3px;
+  }
+
+  .guess-attribute-tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 20;
+    width: min(220px, calc(100vw - 56px));
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+    border-radius: var(--radius-control);
+    color: var(--on-surface);
+    background: color-mix(in srgb, var(--surface-panel-strong) 98%, transparent);
+    box-shadow: 0 14px 32px color-mix(in srgb, var(--black) 34%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(5px);
+    transition: opacity 140ms ease, transform 140ms ease;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.4;
+    text-transform: none;
+  }
+
+  .guess-attribute-cell--species .guess-attribute-tooltip,
+  .guess-attribute-cell--lastSeason .guess-attribute-tooltip {
+    right: 0;
+    left: auto;
+  }
+
+  .guess-attribute-heading.has-tooltip:hover .guess-attribute-tooltip,
+  .guess-attribute-heading.has-tooltip:focus-visible .guess-attribute-tooltip {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -8,6 +8,7 @@ import type {
 
 const MAX_VISIBLE_SHARE_ROWS = 10;
 const MAX_X_TEXT_LENGTH = 250;
+const X_HASHTAGS = '#GameOfThrones #HOTD';
 const X_HEADER_EMOJI = '🐉';
 const QUOTE_HEADER_EMOJI = '🗨️';
 type ShareableStatus = Extract<CharacterGameStatus, 'won' | 'lost'>;
@@ -29,6 +30,7 @@ interface CharacterSharePayload extends BaseSharePayload {
 
 interface QuoteSharePayload extends BaseSharePayload {
   mode: 'quote';
+  quoteText: string;
   rows: QuoteGameRow[];
 }
 
@@ -57,7 +59,11 @@ function getGuessSummary(payload: GameSharePayload): string {
     return 'X';
   }
 
-  return `${payload.guessCount} ${payload.guessCount === 1 ? 'guess' : 'guesses'}`;
+  return getGuessCountSummary(payload.guessCount);
+}
+
+function getGuessCountSummary(guessCount: number): string {
+  return `${guessCount} ${guessCount === 1 ? 'guess' : 'guesses'}`;
 }
 
 function getHintSummary(hintCount: number): string {
@@ -97,6 +103,54 @@ function buildRows(payload: GameSharePayload, maxRows: number): string[] {
   return payload.mode === 'character'
     ? buildCharacterRows(payload.rows, maxRows)
     : buildQuoteRows(payload.rows, maxRows);
+}
+
+function buildXCharacterShareText(payload: CharacterSharePayload, maxRows: number): string {
+  const rows = buildCharacterRows(payload.rows, maxRows);
+  const resultSummary = [
+    `${getGuessCountSummary(payload.guessCount)} ·${getHintSummary(payload.hintCount)}`,
+    getStreakSummary(payload.streak),
+  ].join('\n');
+  const sections = [
+    `${getHeaderIcon(payload.mode)} ${getTitle(payload)}`,
+    resultSummary,
+  ];
+
+  if (rows.length > 0) {
+    sections.push(rows.join('\n'));
+  }
+
+  sections.push(X_HASHTAGS);
+  return sections.join('\n\n');
+}
+
+function truncateToCharacterCount(value: string, maxLength: number): string {
+  const characters = Array.from(value);
+
+  if (characters.length <= maxLength) {
+    return value;
+  }
+
+  if (maxLength <= 1) {
+    return '\u2026'.slice(0, maxLength);
+  }
+
+  return `${characters.slice(0, maxLength - 1).join('')}\u2026`;
+}
+
+function buildXQuoteShareText(payload: QuoteSharePayload, maxLength: number): string {
+  const header = `${getHeaderIcon(payload.mode)} ${getTitle(payload)}`;
+  const callToAction = `Think you know who said it? \u{1F440}\nMake your guess`;
+  const fixedText = [header, '\u201C\u201D', callToAction, X_HASHTAGS].join('\n\n');
+  const availableQuoteLength = Math.max(0, maxLength - getCharacterCount(fixedText));
+  const quoteText = truncateToCharacterCount(payload.quoteText.trim(), availableQuoteLength);
+
+  return [
+    header,
+    `\u201C${quoteText}\u201D`,
+    callToAction,
+    X_HASHTAGS,
+  ].join('\n\n');
 }
 
 function buildShareText(
@@ -177,34 +231,6 @@ export function getShareUrl(payload: GameSharePayload): string {
   return shareUrl.toString();
 }
 
-function buildConstrainedShareText(
-  payload: GameSharePayload,
-  footerText: string,
-  maxLength: number,
-): string {
-  const maxShareRows = Math.min(MAX_VISIBLE_SHARE_ROWS, payload.rows.length);
-
-  for (const includeHintLine of [true, false]) {
-    for (let rowCount = maxShareRows; rowCount >= 0; rowCount -= 1) {
-      const text = buildShareText(payload, {
-        footerText,
-        includeHintLine,
-        maxRows: rowCount,
-      });
-
-      if (getCharacterCount(text) <= maxLength) {
-        return text;
-      }
-    }
-  }
-
-  return buildShareText(payload, {
-    footerText,
-    includeHintLine: false,
-    maxRows: 0,
-  });
-}
-
 export function buildClipboardShareText(payload: GameSharePayload, shareUrl: string): string {
   return buildShareText(payload, {
     footerText: shareUrl,
@@ -222,6 +248,23 @@ export function buildNativeShareText(payload: GameSharePayload, shareUrl: string
 }
 
 export function buildXShareText(payload: GameSharePayload, _shareUrl: string): string {
-  const shareText = buildConstrainedShareText(payload, '', MAX_X_TEXT_LENGTH - 2);
+  void _shareUrl;
+  const maxTextLength = MAX_X_TEXT_LENGTH - 2;
+
+  if (payload.mode === 'quote') {
+    return `${buildXQuoteShareText(payload, maxTextLength)}\n\n`;
+  }
+
+  const maxShareRows = Math.min(MAX_VISIBLE_SHARE_ROWS, payload.rows.length);
+
+  for (let rowCount = maxShareRows; rowCount >= 0; rowCount -= 1) {
+    const shareText = buildXCharacterShareText(payload, rowCount);
+
+    if (getCharacterCount(shareText) <= maxTextLength) {
+      return `${shareText}\n\n`;
+    }
+  }
+
+  const shareText = buildXCharacterShareText(payload, 0);
   return `${shareText}\n\n`;
 }

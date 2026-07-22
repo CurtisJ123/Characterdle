@@ -10,6 +10,10 @@ public interface IBillingRepository
         string stripeCustomerId,
         CancellationToken cancellationToken);
 
+    Task<bool> HasStartedPremiumAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
     Task<bool> HasProcessedWebhookEventAsync(
         string eventId,
         CancellationToken cancellationToken);

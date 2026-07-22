@@ -20,6 +20,7 @@ interface QuoteGameBoardProps {
   onSecondaryAction?: () => void;
   onViewLeaderboard: () => void;
   primaryActionLabel?: string;
+  quoteText: string;
   rows: QuoteGameRow[];
   secondaryActionLabel?: string;
   showHintCount?: boolean;
@@ -54,6 +55,7 @@ export function QuoteGameBoard({
   onSecondaryAction,
   onViewLeaderboard,
   primaryActionLabel,
+  quoteText,
   rows,
   secondaryActionLabel,
   showHintCount = false,
@@ -162,6 +164,7 @@ export function QuoteGameBoard({
                   guessCount,
                   hintCount,
                   mode: 'quote',
+                  quoteText,
                   rows,
                   streak: currentStreak,
                   status: status as Extract<CharacterGameStatus, 'won' | 'lost'>,

@@ -213,3 +213,70 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .quote-history-card,
+  .quote-summary-card {
+    padding: 14px;
+  }
+
+  .quote-history-header {
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .quote-history-header span {
+    font-size: 0.68rem;
+  }
+
+  .quote-history-row {
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .quote-history-player {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .quote-history-player strong {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .quote-history-status {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+  }
+
+  .quote-summary-card {
+    gap: 18px;
+    text-align: center;
+  }
+
+  .quote-summary-main {
+    gap: 12px;
+    justify-items: center;
+  }
+
+  .quote-summary-main .character-orb {
+    width: 94px;
+    height: 118px;
+  }
+
+  .quote-summary-stats {
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+    gap: 8px;
+  }
+
+  .quote-summary-stat {
+    padding: 12px 8px;
+  }
+
+  .quote-summary-actions .primary-button,
+  .quote-summary-actions .secondary-button {
+    min-height: 48px;
+  }
+}

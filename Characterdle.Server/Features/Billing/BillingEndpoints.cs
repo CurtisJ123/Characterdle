@@ -72,6 +72,9 @@ public static class BillingEndpoints
                 });
             }
 
+            var includeMonthlyTrial = plan == BillingCheckoutPlan.Monthly
+                && !await billingRepository.HasStartedPremiumAsync(user.UserId, cancellationToken);
+
             await leaderboardRepository.EnsurePlayerProfileAsync(user, cancellationToken);
 
             var stripeCustomerId = await billingRepository.GetStripeCustomerIdAsync(user.UserId, cancellationToken);
@@ -82,7 +85,12 @@ public static class BillingEndpoints
                 await billingRepository.UpsertStripeCustomerIdAsync(user.UserId, stripeCustomerId, cancellationToken);
             }
 
-            var session = await stripeBillingService.CreateCheckoutSessionAsync(user, stripeCustomerId, plan, cancellationToken);
+            var session = await stripeBillingService.CreateCheckoutSessionAsync(
+                user,
+                stripeCustomerId,
+                plan,
+                includeMonthlyTrial,
+                cancellationToken);
             return Results.Ok(session);
         }
         catch (InvalidOperationException exception)

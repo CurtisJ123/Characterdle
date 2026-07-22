@@ -46,6 +46,7 @@ public sealed class StripeBillingService(IOptions<StripeOptions> options)
         VerifiedSupabaseUser user,
         string stripeCustomerId,
         BillingCheckoutPlan plan,
+        bool includeMonthlyTrial,
         CancellationToken cancellationToken)
     {
         EnsureBillingConfigured();
@@ -80,7 +81,7 @@ public sealed class StripeBillingService(IOptions<StripeOptions> options)
             },
         };
 
-        if (plan == BillingCheckoutPlan.Monthly && options.Value.MonthlyTrialDays > 0)
+        if (plan == BillingCheckoutPlan.Monthly && includeMonthlyTrial && options.Value.MonthlyTrialDays > 0)
         {
             checkoutOptions.SubscriptionData.TrialPeriodDays = options.Value.MonthlyTrialDays;
         }
