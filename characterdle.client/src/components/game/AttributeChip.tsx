@@ -23,6 +23,10 @@ interface DirectionArrowGlyphProps {
   direction: 'up' | 'down';
 }
 
+interface AttributeChipProps extends CharacterAttribute {
+  mobileLabel?: string;
+}
+
 function DirectionArrowGlyph({ direction }: DirectionArrowGlyphProps) {
   return (
     <svg
@@ -45,9 +49,10 @@ export function AttributeChip({
   isNewlyDiscovered,
   isRevealing,
   label,
+  mobileLabel,
   revealOrder,
   tone,
-}: CharacterAttribute) {
+}: AttributeChipProps) {
   const sizeClass = getSizeClass(label);
   const variantClass = displayVariant === 'numeric' ? 'is-numeric' : '';
   const revealClass = isRevealing ? 'is-revealing' : '';
@@ -73,10 +78,16 @@ export function AttributeChip({
   return (
     <span
       className={`attribute-chip ${tone} ${variantClass} ${sizeClass} ${revealClass} ${newCorrectRevealClass}`.trim()}
+      aria-label={mobileLabel ? label : undefined}
       style={revealStyle}
       title={label}
     >
-      <span className="attribute-chip-label">{label}</span>
+      <span className={`attribute-chip-label${mobileLabel ? ' has-mobile-alternate' : ''}`}>{label}</span>
+      {mobileLabel && (
+        <span className="attribute-chip-label attribute-chip-mobile-label" aria-hidden="true">
+          {mobileLabel}
+        </span>
+      )}
     </span>
   );
 }

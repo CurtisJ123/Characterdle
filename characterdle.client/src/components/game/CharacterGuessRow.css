@@ -32,6 +32,32 @@
   display: contents;
 }
 
+.guess-attribute-cell--identity {
+  min-width: 0;
+  display: grid;
+}
+
+.guess-identity-values {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.guess-identity-value {
+  min-width: 0;
+  min-height: 0;
+}
+
+.guess-identity-values .attribute-chip {
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+  padding: 5px 7px;
+  font-size: 0.9rem;
+}
+
 .guess-attribute-heading,
 .guess-attribute-tooltip {
   display: none;
@@ -91,8 +117,21 @@
 
   .guess-attribute-cell--house,
   .guess-attribute-cell--occupation,
-  .guess-attribute-cell--alive {
+  .guess-attribute-cell--alive,
+  .guess-attribute-cell--identity {
     grid-column: 1 / -1;
+  }
+
+  .guess-identity-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(76px, 1fr);
+    gap: 10px;
+  }
+
+  .guess-row .guess-identity-values .attribute-chip {
+    min-height: 76px;
+    padding: 10px;
+    font-size: 1rem;
   }
 
   .guess-attribute-heading {

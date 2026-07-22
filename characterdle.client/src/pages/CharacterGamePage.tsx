@@ -19,6 +19,7 @@ import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverseGame } from '../hooks/useUniverseGame';
 import { useUniverse } from '../hooks/useUniverse';
 import { getAnonymousParticipantKey } from '../lib/anonymousParticipant';
+import { getCharacterBoardAttributeColumnCount } from '../lib/characterBoardLayout';
 import { getGameProgressOwnerKey, getRemoteGameOutcome } from '../lib/characterGameProgress';
 import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { enqueueUniverseGameResult, flushUniverseGameResultOutbox } from '../lib/gameResultOutbox';
@@ -161,7 +162,7 @@ export function CharacterGamePage({
     ? getOrderedCharacterPrefixMatches(guessableCharacters, deferredQuery).slice(0, 8)
     : [];
 
-  const attributeCount = data?.attributeDefinitions.length ?? 0;
+  const attributeCount = getCharacterBoardAttributeColumnCount(data?.attributeDefinitions ?? []);
   const tableGridStyle = useMemo<CSSProperties>(() => {
     const resolvedAttributeCount = Math.max(attributeCount, 1);
     const minCharacterWidth = 212;

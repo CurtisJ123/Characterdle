@@ -42,6 +42,10 @@
   overflow-wrap: anywhere;
 }
 
+.attribute-chip-mobile-label {
+  display: none;
+}
+
 .attribute-chip.is-small {
   font-size: 0.98rem;
   line-height: 1.04;
@@ -207,6 +211,14 @@
     -webkit-line-clamp: unset;
     overflow-wrap: break-word;
     word-break: normal;
+  }
+
+  .guess-row .attribute-chip-label.has-mobile-alternate {
+    display: none;
+  }
+
+  .guess-row .attribute-chip-mobile-label {
+    display: block;
   }
 
   .guess-row .attribute-chip.is-small {

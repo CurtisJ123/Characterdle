@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { CharacterGuessRow } from './CharacterGuessRow';
 import { GameResultPanel } from './GameResultPanel';
 import { GuestVictorySignupOverlay } from './GuestVictorySignupOverlay';
+import { getCharacterBoardAttributeGroups } from '../../lib/characterBoardLayout';
 import type {
   CharacterGameRow,
   CharacterGameStatus,
@@ -67,21 +68,28 @@ export function CharacterGameBoard({
   universeId,
   universeName,
 }: CharacterGameBoardProps) {
+  const attributeGroups = getCharacterBoardAttributeGroups(attributeDefinitions);
+
   return (
     <section className="character-board" aria-label="Character game board">
       <section className="guess-table" aria-label="Character guesses">
         <div className="guess-header" style={gridStyle}>
           <span>Character</span>
-          {attributeDefinitions.map((definition) => {
-            const helpText = getAttributeHelpText(definition);
+          {attributeGroups.map((group) => {
+            const definition = group.entries.length === 1
+              ? group.entries[0].definition
+              : null;
+            const helpText = definition
+              ? getAttributeHelpText(definition)
+              : undefined;
 
             return (
               <span
-                key={definition.key}
+                key={group.key}
                 className={helpText ? 'guess-header-label has-tooltip' : 'guess-header-label'}
                 tabIndex={helpText ? 0 : undefined}
               >
-                <span className="guess-header-label-text">{definition.label}</span>
+                <span className="guess-header-label-text">{group.label}</span>
                 {helpText && (
                   <span className="guess-header-tooltip" role="tooltip">
                     {helpText}
@@ -95,7 +103,7 @@ export function CharacterGameBoard({
           rows.map((guess) => (
             <CharacterGuessRow
               key={guess.name}
-              attributeDefinitions={attributeDefinitions}
+              attributeGroups={attributeGroups}
               getAttributeHelpText={getAttributeHelpText}
               gridStyle={gridStyle}
               guess={guess}
