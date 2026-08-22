@@ -945,7 +945,8 @@ export function CharacterGamePage({
             )}
             {isRandomGameLocked && (
               <span id="random-game-premium-tooltip" className="random-game-premium-tooltip" role="tooltip">
-                Requires premium
+                <strong>Requires Premium</strong>
+                <span>Play a randomly generated game.</span>
               </span>
             )}
           </button>

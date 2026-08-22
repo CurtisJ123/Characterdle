@@ -5,10 +5,11 @@ import type { PreviousUniverseGame } from '../../types/universeGame';
 
 interface PreviousGamesGridProps {
   accessibleGameCount: number;
+  currentGameId: number;
   games: PreviousUniverseGame[];
   gameMode: GameMode;
   gameOutcomes: ReadonlyMap<number, StoredGameOutcome>;
-  onOpenGame: (gameId: number) => void;
+  onOpenGame: (gameId: number | null) => void;
   universeTitle: string;
 }
 
@@ -22,6 +23,7 @@ function formatGameDate(value: string): string {
 
 export function PreviousGamesGrid({
   accessibleGameCount,
+  currentGameId,
   games,
   gameMode,
   gameOutcomes,
@@ -31,10 +33,12 @@ export function PreviousGamesGrid({
   const modeLabel = gameMode === 'quote' ? 'quote' : 'character';
 
   return (
-    <section className="archive-grid-shell glass-card" aria-label={`Previous ${universeTitle} ${modeLabel} games`}>
+    <section className="archive-grid-shell glass-card" aria-label={`${universeTitle} ${modeLabel} games`}>
       <div className="archive-grid">
       {games.map((game, index) => {
-        const isLocked = accessibleGameCount >= 0 && index >= accessibleGameCount;
+        const isCurrentGame = game.id === currentGameId;
+        const archiveIndex = isCurrentGame ? -1 : index - 1;
+        const isLocked = !isCurrentGame && accessibleGameCount >= 0 && archiveIndex >= accessibleGameCount;
         const outcome = gameOutcomes.get(game.id) ?? 'pending';
         const tileClassName = outcome === 'won'
           ? 'archive-tile is-completed'
@@ -44,7 +48,9 @@ export function PreviousGamesGrid({
         const resolvedTileClassName = `${tileClassName}${isLocked ? ' is-locked' : ''}`;
         const accessibleGameDescription = isLocked
           ? `Premium required to play archived ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`
-          : `Play archived ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`;
+          : isCurrentGame
+            ? `Play current ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`
+            : `Play archived ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`;
 
         return (
         <button
@@ -52,9 +58,9 @@ export function PreviousGamesGrid({
           className={resolvedTileClassName}
           type="button"
           aria-label={accessibleGameDescription}
-          title={isLocked ? 'Premium required' : formatGameDate(game.dateTime)}
+          title={isLocked ? 'Premium required' : isCurrentGame ? `Current Game - ${formatGameDate(game.dateTime)}` : formatGameDate(game.dateTime)}
           disabled={isLocked}
-          onClick={() => onOpenGame(game.id)}
+          onClick={() => onOpenGame(isCurrentGame ? null : game.id)}
         >
           {isLocked && (
             <span className="archive-tile-lock" aria-hidden="true">

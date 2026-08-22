@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const siteOrigin = 'https://characterdle.com';
 const publisherId = 'pub-2618219034381751';
 const currentDate = new Date().toISOString().slice(0, 10);
+const isStagingBuild = process.env.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
 
 const sitemapEntries = [
   { path: '/', changefreq: 'daily', priority: '1.0' },
@@ -22,13 +23,19 @@ const sitemapEntries = [
   { path: '/terms', changefreq: 'monthly', priority: '0.5' },
 ];
 
-const robotsLines = [
-  'User-agent: *',
-  'Allow: /',
-  '',
-  `Sitemap: ${siteOrigin}/sitemap.xml`,
-  '',
-];
+const robotsLines = isStagingBuild
+  ? [
+      'User-agent: *',
+      'Allow: /',
+      '',
+    ]
+  : [
+      'User-agent: *',
+      'Allow: /',
+      '',
+      `Sitemap: ${siteOrigin}/sitemap.xml`,
+      '',
+    ];
 
 function buildSitemapXml() {
   const urls = sitemapEntries.map((entry) => `  <url>

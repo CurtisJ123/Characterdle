@@ -156,13 +156,15 @@
   top: calc(100% + 9px);
   right: 0;
   z-index: 4;
-  width: max-content;
+  width: 190px;
   padding: 7px 10px;
   border: 1px solid color-mix(in srgb, #ffd54a 42%, transparent);
   border-radius: var(--radius-control);
   color: var(--on-surface);
   background: color-mix(in srgb, var(--surface-container-lowest) 98%, transparent);
   box-shadow: 0 12px 28px color-mix(in srgb, var(--black) 34%, transparent);
+  display: grid;
+  gap: 3px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(4px);
@@ -174,7 +176,16 @@
   letter-spacing: 0;
   line-height: 1.2;
   text-transform: none;
-  white-space: nowrap;
+  text-align: left;
+}
+
+.random-game-premium-tooltip strong {
+  color: var(--primary);
+}
+
+.random-game-premium-tooltip span {
+  color: var(--on-surface-variant);
+  font-weight: 600;
 }
 
 .random-game-premium-tooltip::before {

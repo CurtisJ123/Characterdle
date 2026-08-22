@@ -1,6 +1,7 @@
 import { PreviousGamesGrid } from '../components/history/PreviousGamesGrid';
 import { useAuth } from '../hooks/useAuth';
 import { usePreviousUniverseGames } from '../hooks/usePreviousUniverseGames';
+import { useUniverseGame } from '../hooks/useUniverseGame';
 import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
 import { useUniverse } from '../hooks/useUniverse';
 import {
@@ -33,6 +34,16 @@ export function PreviousGamesPage({
   const progressOwnerKey = getGameProgressOwnerKey(user?.id);
   const requestScope = user?.id ?? 'guest';
   const { data, error, isLoading } = usePreviousUniverseGames(selectedUniverse.id, session?.access_token ?? null, requestScope);
+  const {
+    data: currentGame,
+    error: currentGameError,
+    isLoading: isCurrentGameLoading,
+  } = useUniverseGame(
+    selectedUniverse.id,
+    null,
+    session?.access_token ?? null,
+    requestScope,
+  );
   const { data: gameResults } = useUniverseGameResults(
     session?.access_token ?? null,
     selectedUniverse.id,
@@ -44,8 +55,13 @@ export function PreviousGamesPage({
   const accessibleGameCount = hasFullArchiveAccess
     ? Number.MAX_SAFE_INTEGER
     : archiveLookbackDays;
+  const games = currentGame
+    ? [{ id: currentGame.id, dateTime: currentGame.dateTime }, ...(data?.games ?? [])]
+    : data?.games ?? [];
+  const archiveError = error ?? currentGameError;
+  const isArchiveLoading = isLoading || isCurrentGameLoading;
   const gameOutcomes = new Map(
-    (data?.games ?? []).map((game) => {
+    games.map((game) => {
       const localOutcome = selectedGameMode === 'quote'
         ? getQuoteGameOutcome(progressOwnerKey, selectedUniverse.id, game.id)
         : getCharacterGameOutcome(progressOwnerKey, selectedUniverse.id, game.id);
@@ -69,20 +85,13 @@ export function PreviousGamesPage({
             <p className="eyebrow">{selectedUniverse.title}</p>
             <h1>{modeLabel} Archive</h1>
           </div>
-          <button
-            className="primary-button archive-nav-button"
-            type="button"
-            onClick={() => onOpenGame(selectedGameMode, null)}
-          >
-            Current Game
-          </button>
         </div>
 
         <div className="archive-status-bar glass-card" aria-label="Archive status">
           <div className="archive-status-copy">
             <p className="card-kicker">{modeLabel} archive</p>
-            <h2>{isLoading ? 'Loading games...' : `${data?.games.length ?? 0} archived ${modeLabel.toLowerCase()} boards`}</h2>
-            {error && <p className="muted-copy">Unable to load archive.</p>}
+            <h2>{isArchiveLoading ? 'Loading games...' : `${games.length} ${modeLabel.toLowerCase()} boards`}</h2>
+            {archiveError && <p className="muted-copy">Unable to load archive.</p>}
           </div>
           <div className="archive-mode-toggle" aria-label="Archive mode">
             <button
@@ -102,10 +111,11 @@ export function PreviousGamesPage({
           </div>
         </div>
 
-        {!isLoading && !error && data && data.games.length > 0 && (
+        {!isArchiveLoading && !archiveError && currentGame && games.length > 0 && (
           <PreviousGamesGrid
             accessibleGameCount={accessibleGameCount}
-            games={data.games}
+            currentGameId={currentGame.id}
+            games={games}
             gameMode={selectedGameMode}
             gameOutcomes={gameOutcomes}
             onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}
@@ -113,7 +123,7 @@ export function PreviousGamesPage({
           />
         )}
 
-        {!isLoading && !error && data && data.games.length === 0 && (
+        {!isArchiveLoading && !archiveError && games.length === 0 && (
           <section className="empty-state glass-card" aria-label="No previous games">
             <h2>No games yet.</h2>
           </section>

@@ -8,6 +8,7 @@ const SITE_ORIGIN = 'https://characterdle.com';
 const DEFAULT_IMAGE_URL = `${SITE_ORIGIN}/android-chrome-512x512.png`;
 const INDEX_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
 const NOINDEX_ROBOTS = 'noindex,nofollow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+const IS_STAGING_BUILD = import.meta.env.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
 
 interface SeoDefinition {
   canonicalUrl: string;
@@ -341,11 +342,12 @@ function ensureStructuredDataScript(): HTMLScriptElement {
 export function SeoManager({ route }: { route: AppRoute }) {
   useEffect(() => {
     const seo = resolveSeo(route);
+    const robots = IS_STAGING_BUILD ? NOINDEX_ROBOTS : seo.robots;
 
     document.title = seo.title;
 
     ensureMeta('meta[name="description"]', 'name', 'description').setAttribute('content', seo.description);
-    ensureMeta('meta[name="robots"]', 'name', 'robots').setAttribute('content', seo.robots);
+    ensureMeta('meta[name="robots"]', 'name', 'robots').setAttribute('content', robots);
     ensureMeta('meta[property="og:title"]', 'property', 'og:title').setAttribute('content', seo.title);
     ensureMeta('meta[property="og:description"]', 'property', 'og:description').setAttribute('content', seo.description);
     ensureMeta('meta[property="og:url"]', 'property', 'og:url').setAttribute('content', seo.canonicalUrl);

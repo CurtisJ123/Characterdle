@@ -59,6 +59,12 @@ builder.Services.AddCors(options =>
 
 var supabaseConnectionString = builder.Configuration.GetConnectionString("Supabase");
 var supabaseOptions = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new();
+var stripeOptions = builder.Configuration.GetSection(StripeOptions.SectionName).Get<StripeOptions>() ?? new();
+
+if (builder.Environment.IsDevelopment())
+{
+    EnsureLocalDevelopmentUsesNonProductionServices(supabaseConnectionString, supabaseOptions, stripeOptions);
+}
 
 if (string.IsNullOrWhiteSpace(supabaseConnectionString))
 {
@@ -153,3 +159,24 @@ app.MapProfileEndpoints();
 app.MapFallbackToFile("/index.html");
 
 app.Run();
+
+static void EnsureLocalDevelopmentUsesNonProductionServices(
+    string? supabaseConnectionString,
+    SupabaseOptions supabaseOptions,
+    StripeOptions stripeOptions)
+{
+    const string productionSupabaseProjectReference = "lvdybelcnbrrkwwktbys";
+
+    if ((supabaseConnectionString?.Contains(productionSupabaseProjectReference, StringComparison.OrdinalIgnoreCase) ?? false)
+        || supabaseOptions.Url.Contains(productionSupabaseProjectReference, StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "Local Development is blocked from using the production Supabase project. Configure staging values with dotnet user-secrets.");
+    }
+
+    if (stripeOptions.SecretKey.StartsWith("sk_live_", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            "Local Development is blocked from using a live Stripe key. Configure Stripe test-mode values with dotnet user-secrets.");
+    }
+}
