@@ -5,6 +5,7 @@ import questionMarkCircleIcon from '../assets/question-mark-circle-heroicons.svg
 import { CharacterGameBoard } from '../components/game/CharacterGameBoard';
 import { CharacterHintPanel } from '../components/game/CharacterHintPanel';
 import { CharacterPortrait } from '../components/game/CharacterPortrait';
+import { GameComments } from '../components/game/GameComments';
 import { QuoteGameBoard } from '../components/game/QuoteGameBoard';
 import { QuoteHintPills } from '../components/game/QuoteHintPills';
 import { QuotePromptCard } from '../components/game/QuotePromptCard';
@@ -241,6 +242,8 @@ export function CharacterGamePage({
     && error instanceof UniverseGameApiError
     && error.status === 403;
   const isRandomGameLocked = premiumAccess?.practiceMode !== true;
+  const showGameComments = !isTemporaryGame && !isAuthLoading && isAuthenticated
+    && !!user && !!session?.access_token && !!data && !error && isComplete;
 
   async function handleStartCheckout(plan: 'monthly' | 'yearly') {
     if (!session?.access_token) {
@@ -279,6 +282,14 @@ export function CharacterGamePage({
     wasCompleteRef.current = true;
 
     const scrollTimer = window.setTimeout(() => {
+      const resultPanel = resultPanelRef.current?.querySelector<HTMLElement>('[data-result-panel="true"]');
+
+      // Comments extend the page below the result; keep the completion scroll on the result itself.
+      if (showGameComments && resultPanel) {
+        resultPanel.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        return;
+      }
+
       const footer = document.querySelector<HTMLElement>('footer.site-footer');
 
       if (footer) {
@@ -288,8 +299,6 @@ export function CharacterGamePage({
         });
         return;
       }
-
-      const resultPanel = resultPanelRef.current?.querySelector<HTMLElement>('[data-result-panel="true"]');
 
       if (resultPanel) {
         resultPanel.scrollIntoView({
@@ -308,7 +317,7 @@ export function CharacterGamePage({
     return () => {
       window.clearTimeout(scrollTimer);
     };
-  }, [isComplete, resultScrollDelay]);
+  }, [isComplete, resultScrollDelay, showGameComments]);
 
   useEffect(() => {
     if (
@@ -945,7 +954,8 @@ export function CharacterGamePage({
             )}
             {isRandomGameLocked && (
               <span id="random-game-premium-tooltip" className="random-game-premium-tooltip" role="tooltip">
-                Requires premium
+                <strong>Requires Premium</strong>
+                <span>Play a randomly generated game.</span>
               </span>
             )}
           </button>
@@ -1072,6 +1082,16 @@ export function CharacterGamePage({
             />
           </div>
         </>
+      )}
+      {showGameComments && user && session && data && (
+        <GameComments
+          key={`${user.id}:${data.universeId}:${data.id}:${selectedGameMode}`}
+          accessToken={session.access_token}
+          userId={user.id}
+          universeId={data.universeId}
+          gameId={data.id}
+          mode={selectedGameMode}
+        />
       )}
     </main>
   );

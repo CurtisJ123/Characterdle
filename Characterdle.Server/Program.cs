@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Characterdle.Server.Configuration;
 using Characterdle.Server.Features.Billing;
+using Characterdle.Server.Features.GameComments;
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.Premium;
 using Characterdle.Server.Features.Profile;
@@ -59,6 +60,12 @@ builder.Services.AddCors(options =>
 
 var supabaseConnectionString = builder.Configuration.GetConnectionString("Supabase");
 var supabaseOptions = builder.Configuration.GetSection(SupabaseOptions.SectionName).Get<SupabaseOptions>() ?? new();
+var stripeOptions = builder.Configuration.GetSection(StripeOptions.SectionName).Get<StripeOptions>() ?? new();
+
+if (builder.Environment.IsDevelopment())
+{
+    EnsureLocalDevelopmentUsesNonProductionServices(supabaseConnectionString, supabaseOptions, stripeOptions);
+}
 
 if (string.IsNullOrWhiteSpace(supabaseConnectionString))
 {
@@ -76,6 +83,7 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(supabaseConnectionStr
 builder.Services.AddSingleton(UniverseCatalog.CreateDefault());
 builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameRepository>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+builder.Services.AddScoped<IGameCommentRepository, GameCommentRepository>();
 builder.Services.AddScoped<IBillingRepository, BillingRepository>();
 builder.Services.AddScoped<IPremiumRepository, PremiumRepository>();
 builder.Services.AddScoped<IPremiumStreakSaverService, PremiumStreakSaverService>();
@@ -146,6 +154,7 @@ app.MapGet("/api/client-config", (HttpContext httpContext, IOptions<SupabaseOpti
     .ExcludeFromDescription();
 app.MapUniverseGameEndpoints();
 app.MapLeaderboardEndpoints();
+app.MapGameCommentEndpoints();
 app.MapBillingEndpoints();
 app.MapPremiumEndpoints();
 app.MapProfileEndpoints();
@@ -153,3 +162,24 @@ app.MapProfileEndpoints();
 app.MapFallbackToFile("/index.html");
 
 app.Run();
+
+static void EnsureLocalDevelopmentUsesNonProductionServices(
+    string? supabaseConnectionString,
+    SupabaseOptions supabaseOptions,
+    StripeOptions stripeOptions)
+{
+    const string productionSupabaseProjectReference = "lvdybelcnbrrkwwktbys";
+
+    if ((supabaseConnectionString?.Contains(productionSupabaseProjectReference, StringComparison.OrdinalIgnoreCase) ?? false)
+        || supabaseOptions.Url.Contains(productionSupabaseProjectReference, StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "Local Development is blocked from using the production Supabase project. Configure staging values with dotnet user-secrets.");
+    }
+
+    if (stripeOptions.SecretKey.StartsWith("sk_live_", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            "Local Development is blocked from using a live Stripe key. Configure Stripe test-mode values with dotnet user-secrets.");
+    }
+}

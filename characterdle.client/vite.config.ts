@@ -7,10 +7,26 @@ import path from 'path';
 import child_process from 'child_process';
 import { env } from 'process';
 
+const STAGING_NOINDEX_ROBOTS = 'noindex,nofollow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
+    const isStagingBuild = env.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
     const configuration = {
-        plugins: [plugin()],
+        plugins: [
+            plugin(),
+            {
+                name: 'characterdle-staging-noindex',
+                transformIndexHtml(html: string) {
+                    return isStagingBuild
+                        ? html.replace(
+                            /(<meta\s+name="robots"\s+content=")[^"]*("\s*\/>)/,
+                            `$1${STAGING_NOINDEX_ROBOTS}$2`,
+                        )
+                        : html;
+                },
+            },
+        ],
         resolve: {
             alias: {
                 '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -50,7 +66,7 @@ export default defineConfig(({ command }) => {
     }
 
     const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}` :
-        env.ASPNETCORE_URLS ? env.ASPNETCORE_URLS.split(';')[0] : 'https://localhost:7105';
+        env.ASPNETCORE_URLS ? env.ASPNETCORE_URLS.split(';')[0] : 'https://localhost:8105';
 
     return {
         ...configuration,

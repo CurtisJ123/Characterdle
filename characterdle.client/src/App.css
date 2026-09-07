@@ -31,6 +31,7 @@
 @import './components/game/CharacterGameBoard.css';
 @import './components/game/QuoteGameBoard.css';
 @import './components/game/GameResultPanel.css';
+@import './components/game/GameComments.css';
 @import './components/game/GuestVictorySignupPrompt.css';
 @import './components/game/GuestVictorySignupOverlay.css';
 @import './components/game/PremiumArchiveGateOverlay.css';

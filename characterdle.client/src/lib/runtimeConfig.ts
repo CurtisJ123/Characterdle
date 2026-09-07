@@ -4,8 +4,27 @@ export interface CharacterdlePublicConfig {
   supabaseUrl: string;
 }
 
+const PRODUCTION_API_ORIGIN = 'https://characterdle-api-vtnh.onrender.com';
+const PRODUCTION_SUPABASE_PROJECT_REFERENCE = 'lvdybelcnbrrkwwktbys';
+
 function normalizeApiBaseUrl(value: string | undefined): string {
   return value?.trim().replace(/\/+$/, '') ?? '';
+}
+
+export function assertSafeLocalPublicConfig(config: CharacterdlePublicConfig): CharacterdlePublicConfig {
+  if (!import.meta.env.DEV) {
+    return config;
+  }
+
+  const apiBaseUrl = normalizeApiBaseUrl(config.apiBaseUrl);
+  const usesProductionSupabase = config.supabaseUrl.includes(PRODUCTION_SUPABASE_PROJECT_REFERENCE);
+  const usesProductionApi = apiBaseUrl.startsWith(PRODUCTION_API_ORIGIN);
+
+  if (usesProductionSupabase || usesProductionApi) {
+    throw new Error('Local development is blocked from using Characterdle production services. Configure staging values instead.');
+  }
+
+  return config;
 }
 
 function readBuildTimeConfig(): CharacterdlePublicConfig | null {
@@ -24,7 +43,9 @@ function readBuildTimeConfig(): CharacterdlePublicConfig | null {
 }
 
 export function getBuildTimePublicConfig(): CharacterdlePublicConfig | null {
-  return readBuildTimeConfig();
+  const config = readBuildTimeConfig();
+
+  return config ? assertSafeLocalPublicConfig(config) : null;
 }
 
 export function readPublicConfig(): CharacterdlePublicConfig {
@@ -34,11 +55,11 @@ export function readPublicConfig(): CharacterdlePublicConfig {
     throw new Error('Characterdle runtime config is missing Supabase settings.');
   }
 
-  return {
+  return assertSafeLocalPublicConfig({
     apiBaseUrl: normalizeApiBaseUrl(runtimeConfig.apiBaseUrl),
     supabasePublishableKey: runtimeConfig.supabasePublishableKey,
     supabaseUrl: runtimeConfig.supabaseUrl,
-  };
+  });
 }
 
 export function buildApiUrl(path: string): string {

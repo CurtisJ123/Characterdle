@@ -80,6 +80,16 @@ The repository is a portfolio-focused view of the product and the engineering be
 
 The landing page warms the API and prefetches the current Game of Thrones board without blocking navigation, reducing the impact of a sleeping backend instance.
 
+## Release Workflow
+
+Characterdle uses a branch-based continuous-delivery workflow so changes can be exercised without putting the live game, accounts, or billing flow at risk.
+
+- **Local development:** uses staging credentials and fails closed if configured with the production Supabase project or a live Stripe secret.
+- **Staging:** pushes to `development` deploy to the staging Cloudflare frontend and Render API, backed by an isolated Supabase project. Staging builds send `noindex, nofollow` directives so test pages are not indexed by search engines.
+- **Production:** reviewed staging changes are merged into `main`, which deploys the production Cloudflare frontend and Render API.
+
+This workflow keeps daily-game generation, authentication, Stripe webhooks, and Premium changes testable in an environment separate from live players. Service credentials remain configured as deployment secrets rather than committed to the repository.
+
 ## Repository Layout
 
 ```text

@@ -13,6 +13,7 @@ declare global {
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_DEBUG_GAME_LOAD_DELAY_MS?: string;
+  readonly VITE_DEPLOYMENT_ENVIRONMENT?: string;
   readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
   readonly VITE_SUPABASE_URL?: string;
 }

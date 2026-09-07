@@ -1,7 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import './index.css';
-import { getBuildTimePublicConfig, type CharacterdlePublicConfig } from './lib/runtimeConfig';
+import {
+  assertSafeLocalPublicConfig,
+  getBuildTimePublicConfig,
+  type CharacterdlePublicConfig,
+} from './lib/runtimeConfig';
 import { getUniverseHostRedirectUrl } from './lib/siteRouting';
 
 const RECOVERY_POLL_INTERVAL_MS = 3000;
@@ -49,7 +53,7 @@ function startBackendWarmup(config: CharacterdlePublicConfig | null): void {
 
 async function resolveRuntimeConfig(): Promise<CharacterdlePublicConfig> {
   if (window.__CHARACTERDLE_PUBLIC_CONFIG__) {
-    return window.__CHARACTERDLE_PUBLIC_CONFIG__;
+    return assertSafeLocalPublicConfig(window.__CHARACTERDLE_PUBLIC_CONFIG__);
   }
 
   const buildTimePublicConfig = getBuildTimePublicConfig();
@@ -66,7 +70,7 @@ async function resolveRuntimeConfig(): Promise<CharacterdlePublicConfig> {
     throw new Error(`Failed to load runtime config (${runtimeConfigResponse.status}).`);
   }
 
-  return await runtimeConfigResponse.json() as CharacterdlePublicConfig;
+  return assertSafeLocalPublicConfig(await runtimeConfigResponse.json() as CharacterdlePublicConfig);
 }
 
 function delay(milliseconds: number): Promise<void> {

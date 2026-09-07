@@ -16,6 +16,11 @@
   align-items: center;
 }
 
+.archive-header-row::after {
+  content: '';
+  width: 148px;
+}
+
 .archive-title-block {
   text-align: center;
 }
@@ -86,6 +91,10 @@
 @media (max-width: 760px) {
   .archive-header-row {
     grid-template-columns: 1fr;
+  }
+
+  .archive-header-row::after {
+    display: none;
   }
 
   .archive-title-block {
