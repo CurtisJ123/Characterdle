@@ -1,0 +1,183 @@
+.game-comments {
+  width: min(1050px, 100%);
+  min-width: 0;
+  margin: 24px auto 0;
+  padding: 24px;
+  border-radius: var(--radius-panel);
+  text-align: left;
+}
+
+.game-comments h2 {
+  margin: 0 0 18px;
+  color: var(--on-surface);
+  font-size: 1.1rem;
+}
+
+.game-comments-list {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.game-comment {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.game-comment:first-child {
+  padding-top: 0;
+}
+
+.game-comment:last-child {
+  padding-bottom: 0;
+}
+
+.game-comment + .game-comment {
+  border-top: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.game-comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 5px;
+}
+
+.game-comment-author {
+  min-width: 0;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.game-comment-copy p {
+  margin: 0;
+  color: var(--on-surface);
+  font-family: var(--body-font);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.game-comment-meta time,
+.game-comments-count,
+.game-comments-pagination > span {
+  color: var(--on-surface-variant);
+  font-family: var(--body-font);
+  font-size: 0.72rem;
+}
+
+.game-comment-meta time {
+  flex-shrink: 0;
+}
+
+.game-comments-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.game-comments-input {
+  min-width: 0;
+  display: grid;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  border-radius: var(--radius-control);
+  background: var(--surface-container-lowest);
+}
+
+.game-comments-input:focus-within {
+  border-color: var(--primary);
+}
+
+.game-comments-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  margin: 0;
+  padding: 12px 14px 4px;
+  border: 0;
+  border-radius: var(--radius-control);
+  outline: none;
+  background: transparent;
+  color: var(--on-surface);
+  font-family: var(--body-font);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.game-comments-form textarea::placeholder {
+  color: var(--on-surface-variant);
+  opacity: 0.75;
+}
+
+.game-comments button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.game-comments-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.game-comments-count {
+  padding: 4px 14px 4px;
+}
+
+.game-comments-pagination {
+  margin: 0 0 18px;
+}
+
+.game-comments button {
+  min-height: 44px;
+  padding: 10px 16px;
+  letter-spacing: 0.08em;
+}
+
+.game-comments-form .primary-button {
+  min-width: 76px;
+  box-shadow: none;
+}
+
+.game-comments button:disabled {
+  opacity: 0.45;
+  transform: none;
+  cursor: not-allowed;
+}
+
+.game-comments-error .error-copy {
+  margin: 0 0 12px;
+}
+
+.game-comments-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .game-comments {
+    margin-top: 18px;
+    padding: 16px;
+  }
+
+  .game-comment-meta {
+    flex-direction: column;
+    gap: 2px;
+  }
+}

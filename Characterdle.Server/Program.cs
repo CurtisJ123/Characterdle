@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Characterdle.Server.Configuration;
 using Characterdle.Server.Features.Billing;
+using Characterdle.Server.Features.GameComments;
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.Premium;
 using Characterdle.Server.Features.Profile;
@@ -82,6 +83,7 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(supabaseConnectionStr
 builder.Services.AddSingleton(UniverseCatalog.CreateDefault());
 builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameRepository>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+builder.Services.AddScoped<IGameCommentRepository, GameCommentRepository>();
 builder.Services.AddScoped<IBillingRepository, BillingRepository>();
 builder.Services.AddScoped<IPremiumRepository, PremiumRepository>();
 builder.Services.AddScoped<IPremiumStreakSaverService, PremiumStreakSaverService>();
@@ -152,6 +154,7 @@ app.MapGet("/api/client-config", (HttpContext httpContext, IOptions<SupabaseOpti
     .ExcludeFromDescription();
 app.MapUniverseGameEndpoints();
 app.MapLeaderboardEndpoints();
+app.MapGameCommentEndpoints();
 app.MapBillingEndpoints();
 app.MapPremiumEndpoints();
 app.MapProfileEndpoints();

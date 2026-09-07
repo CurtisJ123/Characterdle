@@ -4,4 +4,5 @@
     <Deploy />
   </Project>
   <Project Path="Characterdle.Server/Characterdle.Server.csproj" />
+  <Project Path="Characterdle.Server.Tests/Characterdle.Server.Tests.csproj" />
 </Solution>
