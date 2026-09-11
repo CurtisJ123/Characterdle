@@ -103,10 +103,27 @@
   transform: translateX(-50%) rotate(45deg);
 }
 
+.guess-header-label:last-child .guess-header-tooltip {
+  right: calc(50% - 14px);
+  left: auto;
+  transform: translateY(6px);
+}
+
+.guess-header-label:last-child .guess-header-tooltip::before {
+  right: 7px;
+  left: auto;
+  transform: rotate(45deg);
+}
+
 .guess-header-label.has-tooltip:hover .guess-header-tooltip,
 .guess-header-label.has-tooltip:focus-visible .guess-header-tooltip {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.guess-header-label.has-tooltip:last-child:hover .guess-header-tooltip,
+.guess-header-label.has-tooltip:last-child:focus-visible .guess-header-tooltip {
+  transform: translateY(0);
 }
 
 .empty-guess-state {

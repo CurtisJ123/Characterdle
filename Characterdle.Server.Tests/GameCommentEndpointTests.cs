@@ -88,6 +88,7 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
         var comment = await response.Content.ReadFromJsonAsync<GameCommentResponse>();
         Assert.Equal("Hello\nworld", comment!.Body);
         Assert.Equal("Player", comment.DisplayName);
+        Assert.True(comment.ShowSupporterBadge);
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.True(response.Headers.CacheControl.Private);
         Assert.Contains("Authorization", response.Headers.Vary);
@@ -213,7 +214,7 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
             {
                 return Task.FromResult<GameCommentResponse?>(null);
             }
-            var comment = new GameCommentResponse(Guid.NewGuid(), "Player", null, body, DateTimeOffset.UtcNow);
+            var comment = new GameCommentResponse(Guid.NewGuid(), "Player", null, true, body, DateTimeOffset.UtcNow);
             Comments.Add(comment);
             return Task.FromResult<GameCommentResponse?>(comment);
         }

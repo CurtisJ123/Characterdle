@@ -21,7 +21,7 @@
   overflow: hidden;
   display: inline-grid;
   place-items: center;
-  border-radius: inherit;
+  border-radius: 7px;
   background: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
@@ -33,7 +33,11 @@
 .user-avatar--header {
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-pill);
+  border-radius: 6px;
+}
+
+.user-avatar--header .user-avatar__inner {
+  border-radius: 5px;
 }
 
 .user-avatar--card {
@@ -74,11 +78,16 @@
 }
 
 .user-avatar.is-premium {
+  padding: 0;
   border: 2px solid #ffd54a;
   box-shadow:
     inset 0 0 12px color-mix(in srgb, #ffd54a 10%, transparent),
     0 0 6px color-mix(in srgb, #ffd54a 54%, transparent),
     0 0 14px color-mix(in srgb, #ffd54a 20%, transparent);
+}
+
+.user-avatar--header.is-premium {
+  border-width: 1px;
 }
 
 .user-avatar.is-premium::before {

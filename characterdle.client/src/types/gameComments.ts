@@ -2,6 +2,7 @@ export interface GameComment {
   id: string;
   displayName: string;
   avatarUrl: string | null;
+  showSupporterBadge: boolean;
   body: string;
   createdAt: string;
 }

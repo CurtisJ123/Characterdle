@@ -13,7 +13,8 @@ public sealed class GameCommentRepository(NpgsqlDataSource dataSource) : IGameCo
     {
         var sql = $"""
             with authorized as ({CompletedGameSql(universe, mode)})
-            select comments.id, profiles.display_name, profiles.avatar_url, comments.body, comments.created_at
+            select comments.id, profiles.display_name, profiles.avatar_url,
+              coalesce(premium_status.is_premium, false), comments.body, comments.created_at
             from authorized
             left join lateral (
               select id, user_id, body, created_at
@@ -23,6 +24,7 @@ public sealed class GameCommentRepository(NpgsqlDataSource dataSource) : IGameCo
               offset @offset limit @limit
             ) as comments on true
             left join public."PlayerProfiles" as profiles on profiles.user_id = comments.user_id
+            left join public."UserPremiumStatus" as premium_status on premium_status.user_id = comments.user_id
             order by comments.created_at asc, comments.id asc;
             """;
 
@@ -61,9 +63,11 @@ public sealed class GameCommentRepository(NpgsqlDataSource dataSource) : IGameCo
               from authorized
               returning id, user_id, body, created_at
             )
-            select inserted.id, profiles.display_name, profiles.avatar_url, inserted.body, inserted.created_at
+            select inserted.id, profiles.display_name, profiles.avatar_url,
+              coalesce(premium_status.is_premium, false), inserted.body, inserted.created_at
             from inserted
-            join public."PlayerProfiles" as profiles on profiles.user_id = inserted.user_id;
+            join public."PlayerProfiles" as profiles on profiles.user_id = inserted.user_id
+            left join public."UserPremiumStatus" as premium_status on premium_status.user_id = inserted.user_id;
             """;
 
         await using var command = CreateCommand(sql, userId, universe, gameId, mode);
@@ -109,8 +113,9 @@ public sealed class GameCommentRepository(NpgsqlDataSource dataSource) : IGameCo
         reader.GetGuid(0),
         reader.GetString(1),
         reader.IsDBNull(2) ? null : SafeAvatarUrl(reader.GetString(2)),
-        reader.GetString(3),
-        reader.GetFieldValue<DateTimeOffset>(4));
+        reader.GetBoolean(3),
+        reader.GetString(4),
+        reader.GetFieldValue<DateTimeOffset>(5));
 
     private static string? SafeAvatarUrl(string value)
     {

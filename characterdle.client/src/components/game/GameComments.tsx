@@ -45,7 +45,11 @@ export function GameComments({ accessToken, userId, universeId, gameId, mode }: 
             <ol className="game-comments-list" aria-label="Game comments, oldest first">
               {comments.data.comments.map(comment => (
                 <li key={comment.id} className="game-comment">
-                  <UserAvatar avatarUrl={comment.avatarUrl} displayName={comment.displayName} />
+                  <UserAvatar
+                    avatarUrl={comment.avatarUrl}
+                    displayName={comment.displayName}
+                    isPremium={comment.showSupporterBadge}
+                  />
                   <div className="game-comment-copy">
                     <div className="game-comment-meta">
                       <span className="game-comment-author">{comment.displayName}</span>
