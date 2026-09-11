@@ -768,7 +768,7 @@ export function CharacterGamePage({
     && !!randomAdvanceAction;
   const hintTooltipMessage = isTemporaryGame
     ? 'Random games are practice-only and never saved.'
-    : 'Using hints makes this round unranked. Giving up still counts as a loss.';
+    : 'Using a hint makes it not count as a win. Giving up counts as a loss.';
 
   useEffect(() => {
     if (
@@ -969,7 +969,7 @@ export function CharacterGamePage({
               return;
             }
 
-            onOpenGame(isQuoteMode ? 'character' : 'quote', null);
+            onOpenGame(isQuoteMode ? 'character' : 'quote', selectedGameId);
           }}
         >
           {isQuoteMode ? 'Characterdle' : 'Quote'}

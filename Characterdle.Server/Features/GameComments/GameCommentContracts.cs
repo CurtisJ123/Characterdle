@@ -6,6 +6,7 @@ public sealed record GameCommentResponse(
     Guid Id,
     string DisplayName,
     string? AvatarUrl,
+    bool ShowSupporterBadge,
     string Body,
     DateTimeOffset CreatedAt);
 
