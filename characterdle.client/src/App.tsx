@@ -51,7 +51,7 @@ function getDefaultRoute(): AppRoute {
 }
 
 function parseGameMode(value: string | undefined): GameMode | null {
-  return value === 'quote' || value === 'character'
+  return value === 'quote' || value === 'character' || value === 'episode_ladder'
     ? value
     : null;
 }

@@ -58,6 +58,7 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
     [Theory]
     [InlineData("character", 10)]
     [InlineData("quote", 10)]
+    [InlineData("episode_ladder", 10)]
     public async Task CompletionOfAnotherGameOrModeDoesNotGrantAccess(string mode, int gameId)
     {
         SignIn("player");
@@ -74,6 +75,7 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
     [Theory]
     [InlineData("character")]
     [InlineData("quote")]
+    [InlineData("episode_ladder")]
     public async Task PostUsesTokenIdentityAndReturnsPrivateResponse(string mode)
     {
         SignIn("player");

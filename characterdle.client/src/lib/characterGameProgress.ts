@@ -380,7 +380,7 @@ function normalizePersistedGameResult(value: unknown): PersistedGameResult | nul
 
   if (
     typeof candidate.gameId !== 'number'
-    || (candidate.mode !== 'character' && candidate.mode !== 'quote')
+    || (candidate.mode !== 'character' && candidate.mode !== 'quote' && candidate.mode !== 'episode_ladder')
     || !isPersistedGameStatus(candidate.status)
   ) {
     return null;
@@ -474,6 +474,7 @@ export function syncPersistedGameResultsToLocalProgress(
   }
 
   for (const result of results) {
+    if (result.mode === 'episode_ladder') continue;
     const storageKey = result.mode === 'quote'
       ? getQuoteGameStorageKey(ownerKey, universeId, result.gameId)
       : getCharacterGameStorageKey(ownerKey, universeId, result.gameId);

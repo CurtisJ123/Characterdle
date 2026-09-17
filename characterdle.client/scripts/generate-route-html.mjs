@@ -7,6 +7,13 @@ const socialImagePath = '/brand/characterdle-logo.png';
 
 const routePages = [
   {
+    description: 'Arrange five Game of Thrones events in on-screen order. Solve the daily Episode Ladder in four attempts, with correct events locked in place.',
+    outputPath: 'got/game/episode_ladder.html',
+    path: '/got/game/episode_ladder',
+    socialImageVersion: 'daily-episode-ladder-v1',
+    title: 'Daily Game of Thrones Episode Ladder | Characterdle',
+  },
+  {
     description: 'Play today\'s Game of Thrones character guessing game in Characterdle and deduce the hidden answer through attributes, seasons, and status clues.',
     outputPath: 'got.html',
     path: '/got',

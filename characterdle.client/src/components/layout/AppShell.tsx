@@ -16,6 +16,9 @@ import { flushUniverseGameResultOutbox } from '../../lib/gameResultOutbox';
 import { AuthPage } from '../../pages/AuthPage';
 import { AboutPage } from '../../pages/AboutPage';
 import { CharacterGamePage } from '../../pages/CharacterGamePage';
+import { EpisodeLadderPage } from '../../pages/EpisodeLadderPage';
+import { RandomEpisodeLadderPage } from '../../pages/RandomEpisodeLadderPage';
+import { migrateGuestLadderVictories } from '../../lib/episodeLadderProgress';
 import { HowToPlayPage } from '../../pages/HowToPlayPage';
 import { LauncherPage } from '../../pages/LauncherPage';
 import { LeaderboardPage } from '../../pages/LeaderboardPage';
@@ -168,6 +171,7 @@ export function AppShell({
 
     async function flushPendingResults() {
       try {
+        void migrateGuestLadderVictories(userId, accessToken);
         const outcomes = await flushUniverseGameResultOutbox(userId, accessToken);
 
         if (isDisposed) {
@@ -329,7 +333,19 @@ export function AppShell({
           user={user}
         />
       )}
-      {currentPage === 'game' && (
+      {currentPage === 'game' && currentGameMode === 'episode_ladder' && (
+        <EpisodeLadderPage
+          key={`ladder:${user?.id ?? 'guest'}:${currentGameId ?? 'current'}`}
+          onOpenRandomGame={onOpenRandomGame}
+          premiumAccess={premiumAccess}
+          selectedGameId={currentGameId}
+          onNavigate={onNavigate}
+          onOpenGame={onOpenGame}
+          onOpenHistory={onOpenHistory}
+          onStartCheckout={handleStartCheckout}
+        />
+      )}
+      {currentPage === 'game' && currentGameMode !== 'episode_ladder' && (
         <CharacterGamePage
           key={user?.id ?? 'guest'}
           premiumAccess={premiumAccess}
@@ -343,7 +359,12 @@ export function AppShell({
           selectedGameMode={currentGameMode}
         />
       )}
-      {currentPage === 'random' && (
+      {currentPage === 'random' && currentGameMode === 'episode_ladder' && (
+        <RandomEpisodeLadderPage key={`random-ladder:${user?.id ?? 'guest'}`} onNavigate={onNavigate}
+          onOpenGame={onOpenGame} onOpenHistory={onOpenHistory} onOpenRandomGame={onOpenRandomGame}
+          onStartCheckout={handleStartCheckout} premiumAccess={premiumAccess} />
+      )}
+      {currentPage === 'random' && currentGameMode !== 'episode_ladder' && (
         <RandomGamePage
           accessToken={session?.access_token ?? null}
           currentStreak={currentStreak}

@@ -30,7 +30,7 @@ export function PreviousGamesGrid({
   onOpenGame,
   universeTitle,
 }: PreviousGamesGridProps) {
-  const modeLabel = gameMode === 'quote' ? 'quote' : 'character';
+  const modeLabel = gameMode === 'episode_ladder' ? 'Episode Ladder' : gameMode === 'quote' ? 'quote' : 'character';
 
   return (
     <section className="archive-grid-shell glass-card" aria-label={`${universeTitle} ${modeLabel} games`}>

@@ -8,9 +8,10 @@ The repository is a portfolio-focused view of the product and the engineering be
 
 - **Daily character game:** identify a hidden character through gender, species, house, role, season, and status comparisons.
 - **Daily quote game:** identify a quote's speaker with progressive episode, role, and first-letter hints.
+- **Episode Ladder (feature branch):** five daily difficulties from Easy to Impossible, each with five events, four attempts, locked correct positions, saved progress, and spoiler-free sharing. See the [mode guide](docs/EPISODE_LADDER.md); its current event catalog is test content.
 - **Player progression:** save results across devices, build daily streaks, review recent games, customize a profile, and compare character, quote, and streak leaderboards.
 - **Archives:** browse every previous board; free accounts can replay the three most recent games and Premium unlocks the full history.
-- **Random practice:** Premium members can generate unlimited temporary character and quote rounds directly from source content without affecting daily stats, streaks, archives, or analytics.
+- **Random practice:** Premium members can generate unlimited temporary character, quote, and Episode Ladder (feature branch) rounds directly from source content without affecting daily stats, streaks, archives, or analytics.
 - **Premium membership:** Stripe-powered monthly and yearly subscriptions provide ad-free play, full archive access, random practice, streak protection, and supporter styling.
 - **Accessible account flows:** email/password and Google sign-in, email confirmation, password recovery, profile management, and guarded account deletion.
 - **Shareable results:** compact social results summarize guesses, hints, and streak progress without revealing the answer.
@@ -66,7 +67,7 @@ The repository is a portfolio-focused view of the product and the engineering be
 
 - Character and quote modes share reusable search, navigation, account, archive, and leaderboard infrastructure while preserving mode-specific rules and results.
 - Universe definitions isolate character attributes and source tables so future universes can extend the platform without duplicating the full game flow.
-- Random practice reads directly from character or quote source tables and never creates daily-game records or changes competitive statistics.
+- Random practice reads directly from character, quote, or event source tables and never creates daily-game records or changes competitive statistics.
 - Result submissions are idempotent and retryable, protecting completed games from transient API or hosting failures.
 - Stripe webhooks are the source of truth for Premium state; account deletion is blocked while an active subscription still requires cancellation.
 - Public content, legal pages, robots rules, and generated SEO assets are separated from private account and practice routes.

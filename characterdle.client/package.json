@@ -9,6 +9,7 @@
     "build": "npm run seo:generate && tsc -b && vite build",
     "postbuild": "node ./scripts/generate-route-html.mjs",
     "lint": "eslint .",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

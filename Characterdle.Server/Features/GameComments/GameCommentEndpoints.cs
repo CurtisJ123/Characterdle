@@ -106,7 +106,8 @@ public static class GameCommentEndpoints
         out UniverseDefinition universe)
     {
         universe = null!;
-        return gameId > 0 && mode is "character" or "quote" && catalog.TryGet(universeId, out universe)
+        return gameId > 0 && mode is "character" or "quote" or "episode_ladder" && catalog.TryGet(universeId, out universe)
+            && (mode != "episode_ladder" || universe.Id == "got")
             && (mode != "quote" || !string.IsNullOrWhiteSpace(universe.QuoteTableName));
     }
 

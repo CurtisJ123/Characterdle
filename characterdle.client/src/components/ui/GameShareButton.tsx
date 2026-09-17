@@ -115,7 +115,9 @@ export function GameShareButton({ payload }: GameShareButtonProps) {
     try {
       const shareUrl = resolveShareUrl();
       await navigator.share({
-        title: payload.mode === 'character'
+        title: payload.mode === 'episode_ladder'
+          ? `Game of Thrones Episode Ladder #${payload.gameId}`
+          : payload.mode === 'character'
           ? `${payload.universeName} Characterdle #${payload.gameId}`
           : `${payload.universeName} Quote #${payload.gameId}`,
         text: buildNativeShareText(payload, shareUrl),

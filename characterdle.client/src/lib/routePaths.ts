@@ -44,9 +44,9 @@ export function buildRoutePath(route: AppRoute): string {
         ? `${universePrefix}/game/${route.gameMode}`
         : `${universePrefix}/game/${route.gameMode}/${route.gameId}`;
     case 'random':
-      return route.gameMode === 'quote'
-        ? `${universePrefix}/random/quote`
-        : `${universePrefix}/random`;
+      return route.gameMode === 'character'
+        ? `${universePrefix}/random`
+        : `${universePrefix}/random/${route.gameMode}`;
     case 'history':
       return `${universePrefix}/archive/${route.gameMode}`;
     case 'leaderboard':

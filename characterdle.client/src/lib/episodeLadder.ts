@@ -1,0 +1,25 @@
+import type { EpisodeLadderGame } from '../types/episodeLadder';
+
+export const LADDER_DIFFICULTIES = ['Easy', 'Medium', 'Hard', 'Expert', 'Impossible'];
+
+// Reorder only the free slots, never shifting an event out of a locked position.
+export function moveLadderEvent(order: number[], from: number, to: number, locked: readonly number[]): number[] {
+  if (from === to || from < 0 || to < 0 || from >= order.length || to >= order.length
+    || locked.includes(from) || locked.includes(to)) return order;
+  const slots = order.map((_, index) => index).filter(index => !locked.includes(index));
+  const values = slots.map(index => order[index]);
+  values.splice(slots.indexOf(to), 0, values.splice(slots.indexOf(from), 1)[0]);
+  const next = [...order];
+  slots.forEach((slot, index) => { next[slot] = values[index]; });
+  return next;
+}
+
+export function buildLadderShareText(game: Pick<EpisodeLadderGame, 'gameId' | 'attempts' | 'difficulty' | 'status' | 'maxAttempts'>): string {
+  const grid = game.attempts.map(attempt => attempt.feedback.map(tone =>
+    tone === 'correct' ? '\u{1F7E9}' : tone === 'adjacent' ? '\u{1F7E8}' : '\u2B1B').join('')).join('\n');
+  return [
+    `Game of Thrones Episode Ladder #${game.gameId}`,
+    `${LADDER_DIFFICULTIES[game.difficulty - 1]} \u00b7 ${game.status === 'won' ? game.attempts.length : 'X'}/${game.maxAttempts}`,
+    grid,
+  ].join('\n\n');
+}

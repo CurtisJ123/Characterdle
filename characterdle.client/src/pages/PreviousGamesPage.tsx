@@ -1,4 +1,5 @@
 import { PreviousGamesGrid } from '../components/history/PreviousGamesGrid';
+import { readLadderProgress } from '../lib/episodeLadderProgress';
 import { useAuth } from '../hooks/useAuth';
 import { usePreviousUniverseGames } from '../hooks/usePreviousUniverseGames';
 import { useUniverseGame } from '../hooks/useUniverseGame';
@@ -49,7 +50,7 @@ export function PreviousGamesPage({
     selectedUniverse.id,
     progressOwnerKey,
   );
-  const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
+  const modeLabel = selectedGameMode === 'episode_ladder' ? 'Episode Ladder' : selectedGameMode === 'quote' ? 'Quote' : 'Character';
   const hasFullArchiveAccess = premiumAccess?.fullArchiveAccess === true;
   const archiveLookbackDays = Math.max(premiumAccess?.archiveLookbackDays ?? 3, 0);
   const accessibleGameCount = hasFullArchiveAccess
@@ -62,7 +63,10 @@ export function PreviousGamesPage({
   const isArchiveLoading = isLoading || isCurrentGameLoading;
   const gameOutcomes = new Map(
     games.map((game) => {
-      const localOutcome = selectedGameMode === 'quote'
+      const ladderStatus = selectedGameMode === 'episode_ladder' ? readLadderProgress(progressOwnerKey, game.id)?.status : null;
+      const localOutcome = selectedGameMode === 'episode_ladder'
+        ? ladderStatus === 'won' || ladderStatus === 'lost' ? ladderStatus : 'pending'
+        : selectedGameMode === 'quote'
         ? getQuoteGameOutcome(progressOwnerKey, selectedUniverse.id, game.id)
         : getCharacterGameOutcome(progressOwnerKey, selectedUniverse.id, game.id);
       const remoteResult = gameResults.find((result) => result.mode === selectedGameMode && result.gameId === game.id);
@@ -108,6 +112,9 @@ export function PreviousGamesPage({
             >
               Quote
             </button>
+            {selectedUniverse.id === 'got' && <button
+              className={selectedGameMode === 'episode_ladder' ? 'is-active' : ''}
+              type="button" onClick={() => onOpenHistory('episode_ladder')}>Episode Ladder</button>}
           </div>
         </div>
 

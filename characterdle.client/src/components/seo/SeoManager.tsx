@@ -143,6 +143,12 @@ function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'game': {
+      if (route.gameMode === 'episode_ladder') {
+        const title = `${universeTitle} Episode Ladder${route.gameId ? ` #${route.gameId}` : ''} | Characterdle`;
+        const description = 'Put five Game of Thrones events in on-screen order. Solve the daily Episode Ladder in four attempts, with correct events locked in place.';
+        return { canonicalUrl, title, description, robots: INDEX_ROBOTS,
+          structuredData: resolveStructuredData(route, title, description, canonicalUrl) };
+      }
       const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
       const archivePrefix = route.gameId ? 'Archive ' : 'Daily ';
       const title = route.gameId
@@ -160,9 +166,9 @@ function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'history': {
-      const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
+      const modeLabel = route.gameMode === 'episode_ladder' ? 'Episode Ladder' : route.gameMode === 'quote' ? 'Quote' : 'Character';
       const title = `${universeTitle} ${modeLabel} Archive | Characterdle`;
-      const description = `Browse archived ${universeTitle.toLowerCase()} ${route.gameMode} boards in Characterdle and replay older daily rounds from the public archive.`;
+      const description = `Browse archived ${universeTitle.toLowerCase()} ${modeLabel.toLowerCase()} boards in Characterdle and replay older daily rounds from the public archive.`;
       return {
         canonicalUrl,
         description,
@@ -277,9 +283,9 @@ function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'random': {
-      const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
+      const modeLabel = route.gameMode === 'episode_ladder' ? 'Episode Ladder' : route.gameMode === 'quote' ? 'Quote' : 'Character';
       const title = `${universeTitle} Random ${modeLabel} Practice | Characterdle`;
-      const description = `Play a random ${universeTitle} ${route.gameMode} practice round in Characterdle without affecting daily archives or leaderboard results.`;
+      const description = `Play a random ${universeTitle} ${modeLabel} practice round in Characterdle without affecting daily archives or leaderboard results.`;
       return {
         canonicalUrl,
         description,

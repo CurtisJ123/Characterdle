@@ -974,6 +974,12 @@ export function CharacterGamePage({
         >
           {isQuoteMode ? 'Characterdle' : 'Quote'}
         </button>
+        {!isTemporaryGame && selectedUniverse.id === 'got' && (
+          <button className="game-action-button game-mode-switch-button episode-ladder-button" type="button"
+            onClick={() => onOpenGame('episode_ladder', selectedGameId, 'got')}>
+            Episode Ladder
+          </button>
+        )}
         {user?.isAdmin && (
           <button className="game-action-button debug-reset-button" type="button" onClick={handleResetGame}>
             Debug Reset
