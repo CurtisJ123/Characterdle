@@ -337,6 +337,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
               and results.user_id = @userId
+              and results.mode in ('character', 'quote')
               and results.status in ('won', 'lost');
             """;
 
@@ -391,6 +392,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               join public."UniverseGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
                 and results.hint_count = 0
               group by profiles.user_id, profiles.display_name
@@ -477,6 +479,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             where universe_id = @universeId
               and user_id = @userId
               and status in ('won', 'lost')
+              and mode in ('character', 'quote')
             order by completed_at desc
             """;
 

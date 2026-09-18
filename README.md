@@ -87,10 +87,13 @@ Characterdle uses a branch-based continuous-delivery workflow so changes can be 
 - **Local development:** uses staging credentials and fails closed if configured with the production Supabase project or a live Stripe secret.
 - **Staging:** pushes to `development` deploy to the staging Cloudflare frontend and Render API, backed by an isolated Supabase project. Staging builds send `noindex, nofollow` directives so test pages are not indexed by search engines.
 - **Production:** reviewed staging changes are merged into `main`, which deploys the production Cloudflare frontend and Render API.
+- **Unreleased features:** Episode Ladder is isolated on `feature/episode-ladder` and is not part of the current development release.
 
 This workflow keeps daily-game generation, authentication, Stripe webhooks, and Premium changes testable in an environment separate from live players. Service credentials remain configured as deployment secrets rather than committed to the repository.
 
 ## Repository Layout
+
+News posts and announcement popups are managed through a protected publishing and moderation area.
 
 ```text
 Characterdle/

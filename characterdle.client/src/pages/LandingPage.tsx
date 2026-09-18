@@ -25,6 +25,7 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
       <nav className="landing-nav" aria-label="Landing navigation">
         <BrandButton onClick={() => onNavigate('landing')} />
         <div>
+          <a className="ghost-link" href="/updates" onClick={(event) => handlePageLinkClick(event, 'updates')}>Updates</a>
           <a
             className="ghost-link"
             href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'auth', universeId: null })}

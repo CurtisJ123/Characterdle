@@ -9,6 +9,8 @@ export type Page =
   | 'history'
   | 'leaderboard'
   | 'premium'
+  | 'updates'
+  | 'admin'
   | 'profile'
   | 'support'
   | 'about'
@@ -25,6 +27,7 @@ export type AuthMode = PrimaryAuthMode | 'forgotPassword' | 'resetPassword';
 export type RouteGameMode = GameMode;
 
 export interface AppRoute {
+  postSlug?: string;
   authMode: AuthMode;
   gameId: number | null;
   gameMode: GameMode;

@@ -63,6 +63,12 @@
   line-height: 1.35;
 }
 
+.streak-dropdown-progress-copy {
+  font-family: var(--body-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
 .streak-dropdown-progress-bar {
   position: relative;
   width: 100%;
@@ -226,10 +232,18 @@
   filter:
     saturate(0.92)
     brightness(0.96)
-    drop-shadow(0 6px 12px color-mix(in srgb, var(--black) 22%, transparent));
+    drop-shadow(0 2px 3px color-mix(in srgb, var(--black) 16%, transparent));
 }
 
 @media (max-width: 760px) {
+  .header-actions {
+    position: relative;
+  }
+
+  .header-actions .streak-menu-wrap {
+    position: static;
+  }
+
   .streak-dropdown {
     width: min(360px, calc(100vw - 24px));
     grid-template-columns: 1fr;
