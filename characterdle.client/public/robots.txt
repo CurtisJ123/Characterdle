@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://characterdle.com/sitemap.xml
+Sitemap: https://characterdle-api-vtnh.onrender.com/api/updates/sitemap.xml

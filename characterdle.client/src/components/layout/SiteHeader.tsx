@@ -10,6 +10,8 @@ import { BrandButton } from './BrandButton';
 import { PremiumCrownIcon } from '../ui/PremiumCrownIcon';
 
 interface SiteHeaderProps {
+  hasUnreadUpdates?: boolean;
+  isAdmin?: boolean;
   autoUseStreakSavers: boolean;
   availableStreakSavers: number;
   currentStreak: number;
@@ -33,6 +35,8 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({
+  hasUnreadUpdates = false,
+  isAdmin = false,
   autoUseStreakSavers,
   availableStreakSavers,
   currentStreak,
@@ -145,6 +149,11 @@ export function SiteHeader({
           </nav>
 
           <div className="header-actions" aria-label="Account actions">
+            <button className="updates-header-button" type="button" onClick={() => onNavigate('updates')}
+              aria-label={hasUnreadUpdates ? 'Updates, new announcement' : 'Updates'} aria-haspopup="dialog">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M4 5h16v15H4zM7 9h10M7 13h10M7 17h6M8 2v3M16 2v3" /></svg>
+              <span>Updates</span>{hasUnreadUpdates && <i aria-hidden="true" />}
+            </button>
             {canShowPremiumCta && (
               <button
                 className={`premium-cta-button${currentPage === 'premium' ? ' is-active' : ''}`}
@@ -200,6 +209,7 @@ export function SiteHeader({
               </button>
               {isAuthenticated && isProfileMenuOpen && (
                 <div className="profile-menu" role="menu" aria-label="Profile menu">
+                  {isAdmin && <button type="button" role="menuitem" onClick={() => { setIsProfileMenuOpen(false); onNavigate('admin'); }}>Admin</button>}
                   <button type="button" role="menuitem" onClick={handleProfileNavigation}>
                     Profile
                   </button>

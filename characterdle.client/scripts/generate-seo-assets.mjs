@@ -16,6 +16,7 @@ const sitemapEntries = [
   { path: '/got/archive/quote', changefreq: 'weekly', priority: '0.8' },
   { path: '/got/leaderboard', changefreq: 'daily', priority: '0.8' },
   { path: '/premium', changefreq: 'weekly', priority: '0.7' },
+  { path: '/updates', changefreq: 'weekly', priority: '0.7' },
   { path: '/about', changefreq: 'monthly', priority: '0.7' },
   { path: '/how-to-play', changefreq: 'monthly', priority: '0.7' },
   { path: '/support', changefreq: 'monthly', priority: '0.6' },
@@ -34,6 +35,7 @@ const robotsLines = isStagingBuild
       'Allow: /',
       '',
       `Sitemap: ${siteOrigin}/sitemap.xml`,
+      'Sitemap: https://characterdle-api-vtnh.onrender.com/api/updates/sitemap.xml',
       '',
     ];
 

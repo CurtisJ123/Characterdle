@@ -7,6 +7,21 @@ const socialImagePath = '/brand/characterdle-logo.png';
 
 const routePages = [
   {
+    description: 'The latest Characterdle features, improvements, and announcements.',
+    outputPath: 'updates.html',
+    path: '/updates',
+    socialImageVersion: 'updates-v1',
+    title: 'News & Updates | Characterdle',
+  },
+  {
+    description: 'Characterdle administration.',
+    outputPath: 'admin.html',
+    path: '/admin',
+    socialImageVersion: 'updates-v1',
+    title: 'Administration | Characterdle',
+    robots: 'noindex,nofollow',
+  },
+  {
     description: 'Play today\'s Game of Thrones character guessing game in Characterdle and deduce the hidden answer through attributes, seasons, and status clues.',
     outputPath: 'got.html',
     path: '/got',
@@ -77,6 +92,7 @@ function renderRouteHtml(indexHtml, routePage) {
   const canonicalUrl = `${siteOrigin}${routePage.path}`;
   const socialImageUrl = `${siteOrigin}${socialImagePath}?v=${routePage.socialImageVersion}`;
   let html = setTitle(indexHtml, routePage.title);
+  if (routePage.robots) html = setMeta(html, 'name', 'robots', routePage.robots);
 
   html = setCanonicalUrl(html, canonicalUrl);
   html = setMeta(html, 'name', 'description', routePage.description);

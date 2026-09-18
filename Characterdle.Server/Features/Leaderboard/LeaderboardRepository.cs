@@ -385,6 +385,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
+              and results.mode in ('character', 'quote')
               and results.status in ('won', 'lost')
               and results.hint_count = 0;
             """;
@@ -451,6 +452,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               left join public."UserPremiumStatus" as premium_status
                 on premium_status.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
                 and results.hint_count = 0
               group by
@@ -575,6 +577,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               left join public."UserPremiumStatus" as premium_status
                 on premium_status.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
                 and results.hint_count = 0
               group by

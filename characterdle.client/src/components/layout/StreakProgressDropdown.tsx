@@ -19,7 +19,6 @@ export function StreakProgressDropdown({
   const {
     currentTier,
     currentTierUnlocked,
-    daysRemainingToNext,
     nextTier,
     progressCurrentValue,
     progressMaxValue,
@@ -28,16 +27,17 @@ export function StreakProgressDropdown({
 
   const currentTierCopy = currentTierUnlocked
     ? `Unlocked at ${formatStreakDayLabel(currentTier.threshold)}`
-    : `Starts at ${formatStreakDayLabel(currentTier.threshold)}`;
+    : 'No active streak';
   const nextTierCopy = nextTier
     ? `Unlocks at ${formatStreakDayLabel(nextTier.threshold)}`
-    : `Top flame unlocked`;
+    : 'Final milestone reached';
   const progressHeading = nextTier
-    ? `${formatStreakDayLabel(daysRemainingToNext)} to next flame`
-    : 'Top streak flame unlocked';
-  const progressCaption = nextTier
-    ? `${progressCurrentValue} / ${progressMaxValue} days`
-    : `${formatStreakDayLabel(normalizedStreak)} streak`;
+    ? 'Next Milestone'
+    : 'All Milestones Reached';
+  const progressCaption = `${progressCurrentValue}/${progressMaxValue} days`;
+  const progressValueText = nextTier
+    ? `${progressCurrentValue} of ${progressMaxValue} days toward the next milestone`
+    : 'All streak milestones reached';
   const streakSaverCount = hasStreakProtection
     ? availableStreakSavers
     : 0;
@@ -47,7 +47,6 @@ export function StreakProgressDropdown({
       <div className="streak-dropdown-tier">
         <p className="streak-dropdown-label">Current</p>
         <StreakEmblem
-          className={!currentTierUnlocked ? 'is-preview' : undefined}
           showCount={false}
           size="regular"
           streak={currentTier.threshold}
@@ -59,10 +58,11 @@ export function StreakProgressDropdown({
         <p className="streak-dropdown-heading">{progressHeading}</p>
         <div
           className="streak-dropdown-progress-bar"
-          aria-label={progressCaption}
+          aria-label="Streak milestone progress"
           aria-valuemax={progressMaxValue}
           aria-valuemin={0}
-          aria-valuenow={nextTier ? progressCurrentValue : progressMaxValue}
+          aria-valuenow={progressCurrentValue}
+          aria-valuetext={progressValueText}
           role="progressbar"
         >
           <span className="streak-dropdown-progress-fill" style={{ width: `${progressRatio * 100}%` }} />
