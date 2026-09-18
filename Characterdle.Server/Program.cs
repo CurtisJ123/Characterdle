@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using Characterdle.Server.Features.Admin;
+using Characterdle.Server.Features.Announcements;
 using Characterdle.Server.Configuration;
 using Characterdle.Server.Features.Billing;
 using Characterdle.Server.Features.GameComments;
@@ -89,6 +91,23 @@ builder.Services.AddScoped<IEpisodeLadderRepository, EpisodeLadderRepository>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RandomLadderSession>();
+builder.Services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
+builder.Services.AddSingleton<AnnouncementCommentLimiter>();
+builder.Services.AddSingleton<AnnouncementImageLimiter>();
+builder.Services.AddHttpClient<IAnnouncementImageStorage, SupabaseAnnouncementImageStorage>(client =>
+{
+    client.BaseAddress = new Uri(supabaseOptions.Url);
+    client.Timeout = TimeSpan.FromSeconds(45);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+builder.Services.AddScoped<IAdminCommentsRepository, AdminCommentsRepository>();
+builder.Services.AddScoped<IAdminCatalogRepository, AdminCatalogRepository>();
+builder.Services.AddScoped<IAdminCatalogCreator, AdminCatalogCreator>();
+builder.Services.AddHttpClient<IAdminPortraitStorage, SupabaseAdminPortraitStorage>(client =>
+{
+    client.BaseAddress = new Uri(supabaseOptions.Url);
+    client.Timeout = TimeSpan.FromSeconds(45);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddScoped<IBillingRepository, BillingRepository>();
 builder.Services.AddScoped<IPremiumRepository, PremiumRepository>();
 builder.Services.AddScoped<IPremiumStreakSaverService, PremiumStreakSaverService>();
@@ -161,6 +180,7 @@ app.MapUniverseGameEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapGameCommentEndpoints();
 app.MapEpisodeLadderEndpoints();
+app.MapAnnouncementEndpoints();
 app.MapBillingEndpoints();
 app.MapPremiumEndpoints();
 app.MapProfileEndpoints();

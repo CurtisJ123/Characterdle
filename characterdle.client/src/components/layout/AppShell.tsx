@@ -3,6 +3,10 @@ import { AdSenseBootstrap } from './AdSenseBootstrap';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { useAuth } from '../../hooks/useAuth';
+import type { useAnnouncements } from '../../hooks/useAnnouncements';
+import { AnnouncementPopup } from '../updates/AnnouncementPopup';
+import { UpdatesPage } from '../../pages/UpdatesPage';
+import { AdminPage } from '../../pages/AdminPage';
 import { usePremium } from '../../hooks/usePremium';
 import { useProfile } from '../../hooks/useProfile';
 import { useUniverse } from '../../hooks/useUniverse';
@@ -45,6 +49,8 @@ interface LiveStreakState {
 type BillingRedirectStatus = 'success' | 'cancelled' | null;
 
 interface AppShellProps {
+  announcements: ReturnType<typeof useAnnouncements>;
+  currentPostSlug?: string;
   authMode: AuthMode;
   currentPage: Exclude<Page, 'landing'>;
   currentGameId: number | null;
@@ -57,6 +63,8 @@ interface AppShellProps {
 }
 
 export function AppShell({
+  announcements,
+  currentPostSlug,
   authMode,
   currentGameId,
   currentGameMode,
@@ -294,6 +302,8 @@ export function AppShell({
         isPremiumLoading={isPremiumLoading}
       />
       <SiteHeader
+        hasUnreadUpdates={announcements.unread}
+        isAdmin={announcements.isAdmin}
         isPremiumActive={isPremiumActive}
         isPremiumUser={showSupporterBadge}
         isPremiumLoading={isPremiumLoading}
@@ -413,11 +423,18 @@ export function AppShell({
         />
       )}
       {currentPage === 'support' && <SupportPage onNavigate={onNavigate} />}
+      {currentPage === 'updates' && <UpdatesPage key={currentPostSlug ?? 'list'} slug={currentPostSlug}
+        token={session?.access_token ?? null} userId={user?.id} onLogin={() => onAuthNavigate('login')} />}
+      {currentPage === 'admin' && <AdminPage key={user?.id ?? 'guest'} token={session?.access_token ?? null} onLogin={() => onAuthNavigate('login')} />}
       {currentPage === 'about' && <AboutPage onNavigate={onNavigate} />}
       {currentPage === 'howToPlay' && <HowToPlayPage onNavigate={onNavigate} />}
       {currentPage === 'privacyPolicy' && <LegalDocumentPage onNavigate={onNavigate} page="privacyPolicy" />}
       {currentPage === 'termsOfService' && <LegalDocumentPage onNavigate={onNavigate} page="termsOfService" />}
       <SiteFooter onNavigate={onNavigate} />
+      {announcements.post && !billingRedirectStatus && !['game', 'random', 'auth', 'admin', 'updates', 'premium'].includes(currentPage) && (
+        <AnnouncementPopup key={`${user?.id ?? 'guest'}:${announcements.post.id}`} post={announcements.post}
+          unread={announcements.unread} token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen} onLogin={() => onAuthNavigate('login')} />
+      )}
     </div>
   );
 }

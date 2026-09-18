@@ -20,6 +20,7 @@ export function SiteFooter({ onNavigate }: SiteFooterProps) {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="site-footer-links">
+          <a className="site-footer-link" href="/updates" onClick={event => handleInternalNavigation(event, 'updates')}>Updates</a>
           <a
             className="site-footer-link"
             href="https://github.com/CurtisJ123/Characterdle"

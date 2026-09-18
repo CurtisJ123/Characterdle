@@ -53,6 +53,10 @@ export function buildRoutePath(route: AppRoute): string {
       return `${universePrefix}/leaderboard`;
     case 'premium':
       return '/premium';
+    case 'updates':
+      return route.postSlug ? `/updates/${encodeURIComponent(route.postSlug)}` : '/updates';
+    case 'admin':
+      return '/admin';
     case 'profile':
       return `${universePrefix}/profile`;
     case 'support':

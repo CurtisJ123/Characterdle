@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AppShell } from './components/layout/AppShell';
 import { SeoManager } from './components/seo/SeoManager';
 import { defaultUniverseId } from './data/universeCatalog';
 import { useUniverse } from './hooks/useUniverse';
+import { useAuth } from './hooks/useAuth';
+import { useAnnouncements } from './hooks/useAnnouncements';
+import { AnnouncementPopup } from './components/updates/AnnouncementPopup';
+import { LatestUpdatePopup } from './components/updates/LatestUpdatePopup';
 import { buildRoutePath, isUniverseScopedPage } from './lib/routePaths';
 import { getUniverseIdFromPathname, getUniverseSubdomainUniverseId } from './lib/siteRouting';
 import { LandingPage } from './pages/LandingPage';
@@ -107,6 +111,11 @@ function readRouteFromSegments(segments: string[]): AppRoute | null {
   }
 
   switch (pageSegment) {
+    case 'updates':
+      return { authMode: 'login', gameId: null, gameMode: 'character', page: 'updates', universeId: null,
+        postSlug: modeSegment };
+    case 'admin':
+      return { authMode: 'login', gameId: null, gameMode: 'character', page: 'admin', universeId: null };
     case 'landing':
       return applyUniverseScope({
         authMode: 'login',
@@ -265,7 +274,11 @@ function readRouteFromLocation(): AppRoute {
 }
 
 function App() {
+  const [isLatestUpdateOpen, setLatestUpdateOpen] = useState(false);
   const [route, setRoute] = useState<AppRoute>(() => readRouteFromLocation());
+  const acceptedLocation = useRef(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+  const { session, user, isLoading } = useAuth();
+  const announcements = useAnnouncements(session?.access_token ?? null, user?.id, isLoading);
   const { selectedUniverseId, setSelectedUniverseId } = useUniverse();
 
   useEffect(() => {
@@ -277,7 +290,11 @@ function App() {
   }, [route.universeId, selectedUniverseId, setSelectedUniverseId]);
 
   useEffect(() => {
-    function syncRouteFromLocation() {
+    function syncRouteFromLocation(event?: PopStateEvent) {
+      if (event && !window.dispatchEvent(new Event('characterdle:before-navigate', { cancelable: true }))) {
+        window.history.pushState(null, '', acceptedLocation.current);
+        return;
+      }
       const nextRoute = readRouteFromLocation();
       setRoute(nextRoute);
 
@@ -287,6 +304,7 @@ function App() {
       if (readLegacyHashRoute(window.location.hash) || currentPathAndSearch !== canonicalPathAndSearch) {
         window.history.replaceState(null, '', canonicalPathAndSearch);
       }
+      acceptedLocation.current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     }
 
     syncRouteFromLocation();
@@ -299,6 +317,7 @@ function App() {
   }, []);
 
   function navigateToRoute(nextRoute: AppRoute) {
+    if (!window.dispatchEvent(new Event('characterdle:before-navigate', { cancelable: true }))) return;
     setRoute(nextRoute);
 
     const nextUrl = buildRoutePath(nextRoute);
@@ -309,6 +328,7 @@ function App() {
     }
 
     window.history.pushState(null, '', nextUrl);
+    acceptedLocation.current = nextUrl;
   }
 
   function getScopedUniverseId(nextPage: Page): string | null {
@@ -322,6 +342,7 @@ function App() {
   }
 
   function handleNavigate(page: Page) {
+    if (page === 'updates') { setLatestUpdateOpen(true); return; }
     navigateToRoute({
       authMode: route.authMode,
       gameId: null,
@@ -373,11 +394,19 @@ function App() {
     });
   }
 
+  const latestUpdatePopup = isLatestUpdateOpen && <LatestUpdatePopup key={user?.id ?? 'guest'}
+    token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen}
+    onClose={() => setLatestUpdateOpen(false)} onLogin={() => { setLatestUpdateOpen(false); openAuth('login'); }} />;
+
   if (route.page === 'landing') {
     return (
       <>
         <SeoManager route={route} />
         <LandingPage onNavigate={handleNavigate} onAuthNavigate={openAuth} />
+        {latestUpdatePopup}
+        {announcements.post && !window.location.hash && !window.location.search && <AnnouncementPopup
+          key={`${user?.id ?? 'guest'}:${announcements.post.id}`} post={announcements.post} unread={announcements.unread}
+          token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen} onLogin={() => openAuth('login')} />}
       </>
     );
   }
@@ -385,7 +414,10 @@ function App() {
   return (
     <>
       <SeoManager route={route} />
+      {latestUpdatePopup}
       <AppShell
+        announcements={announcements}
+        currentPostSlug={route.postSlug}
         authMode={route.authMode}
         currentGameId={route.gameId}
         currentGameMode={route.gameMode}
