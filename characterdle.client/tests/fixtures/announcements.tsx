@@ -28,7 +28,7 @@ const gameComments: AdminComment[] = ['character', 'quote'].map((mode, index) =>
 }));
 const claimed = new Set<string>();
 let dashboardRequests = 0;
-const activity = { uploads: 0, saves: 0, lastSavedBody: '' };
+const activity = { uploads: 0, saves: 0, claims: 0, lastSavedBody: '' };
 function recordActivity() { window.dispatchEvent(new Event('fixture-activity')); }
 window.fetch = async (input, options) => {
   const url = new URL(String(input), window.location.origin), path = url.pathname, method = options?.method ?? 'GET';
@@ -55,7 +55,12 @@ window.fetch = async (input, options) => {
       premium: { users: value(9), trialUsers: value(6), activeSubscriptions: value(2), pastDueSubscriptions: value(1) },
       players: { uniquePlayers: value(12345), activePlayers: value(189), startedGames: value(34567), completedGames: value(23456) } });
   }
-  if (path.endsWith('/claim')) { const id = path.split('/')[3], first = !claimed.has(id); claimed.add(id); return json({ claimed: first }); }
+  if (path.endsWith('/claim')) {
+    activity.claims++; recordActivity();
+    if (new Headers(options?.headers).get('Authorization') !== 'Bearer fixture') return json({}, 401);
+    const id = path.split('/')[3], first = !claimed.has(id); claimed.add(id);
+    return json({ claimed: first });
+  }
   if (path.endsWith('/seen')) return json({ claimed: true });
   if (path === '/api/updates/current') {
     const scenario = new URLSearchParams(location.search).get('latest');
@@ -94,6 +99,9 @@ window.fetch = async (input, options) => {
 export function Fixture() {
   const query = new URLSearchParams(location.search), mode = query.get('mode') ?? 'post';
   const [unread, setUnread] = useState(true);
+  const [signedIn, setSignedIn] = useState(query.get('auth') === 'member');
+  const popupUserId = signedIn ? 'fixture-popup-user' : undefined;
+  const popupId = query.get('popupId') ?? '00000000-0000-0000-0000-000000000002';
   const [latestOpen, setLatestOpen] = useState(false);
   const [requests, setRequests] = useState({ ...activity });
   useEffect(() => {
@@ -102,6 +110,13 @@ export function Fixture() {
     return () => window.removeEventListener('fixture-activity', update);
   }, []);
   return <div className="app-shell" style={{ padding: '20px', minHeight: '100vh' }}>
+    {mode === 'popup' && <aside>
+      <output aria-label="Popup fixture status">{signedIn ? 'Signed in' : 'Guest'}. Popup claim requests: {requests.claims}.</output>
+      <button className="secondary-button" onClick={() => { setSignedIn(value => !value); setUnread(true); }}>
+        {signedIn ? 'Simulate sign out' : 'Simulate sign in'}
+      </button>
+      <button className="secondary-button" onClick={() => setLatestOpen(true)}>Updates</button>
+    </aside>}
     {mode === 'admin' && <aside style={{ padding: '12px', color: '#f4ebd0', fontSize: '14px' }}>
       <output aria-label="Fixture request counts">Image upload requests: {requests.uploads}. Post save requests: {requests.saves}.</output>
       {requests.lastSavedBody && <details><summary>Fixture saved Markdown</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{requests.lastSavedBody}</pre></details>}
@@ -109,7 +124,9 @@ export function Fixture() {
     {mode === 'latest' ? <button className="secondary-button" onClick={() => setLatestOpen(true)}>Updates</button>
       : mode === 'admin' ? <AdminPage token="fixture" onLogin={() => {}} />
       : <UpdatesPage slug={mode === 'post' ? 'new-mode' : undefined} token="fixture" userId="fixture-user" onLogin={() => {}} />}
-    {mode === 'popup' && <AnnouncementPopup post={{ ...posts[0], id: '00000000-0000-0000-0000-000000000002' }} unread={unread} token={null} onLogin={() => {}} onSeen={id => { rememberAnnouncement(id); setUnread(false); }} />}
+    {mode === 'popup' && <AnnouncementPopup key={`${popupUserId ?? 'guest'}:${popupId}`}
+      post={{ ...posts[0], id: popupId }} unread={unread} token={signedIn ? 'fixture' : null}
+      userId={popupUserId} onLogin={() => {}} onSeen={id => { rememberAnnouncement(id, popupUserId); setUnread(false); }} />}
     {latestOpen && <LatestUpdatePopup token={null} onSeen={() => {}} onClose={() => setLatestOpen(false)} onLogin={() => setLatestOpen(false)} />}
   </div>;
 }

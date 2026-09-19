@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { UpdateDialog } from './UpdateDialog';
 import type { Announcement } from '../../types/announcements';
 import { updateMutation } from '../../services/announcementsApi';
-import { seenAnnouncements, rememberAnnouncement } from '../../lib/announcementState';
+import { seenAnnouncements } from '../../lib/announcementState';
 import '../../pages/UpdatesPage.css';
 
 export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin }: {
@@ -13,7 +13,8 @@ export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin
   const onSeenRef = useRef(onSeen);
   useEffect(() => { onSeenRef.current = onSeen; }, [onSeen]);
   useEffect(() => {
-    if (!unread) return;
+    if (!token || !userId || !unread) return;
+    const accessToken = token;
     let disposed = false;
     let claiming = false;
     let done = false;
@@ -28,16 +29,10 @@ export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin
       try {
         const claim = async () => {
           if (seenAnnouncements(userId).includes(post.id)) return false;
-          if (token) {
-            const result = await updateMutation<{ claimed: boolean }>(`/api/updates/${post.id}/claim`, token, 'POST');
-            return result.claimed;
-          }
-          // Notify only after opening; otherwise the unread-state update can cancel this claim.
-          rememberAnnouncement(post.id, undefined, false);
-          return true;
+          const result = await updateMutation<{ claimed: boolean }>(`/api/updates/${post.id}/claim`, accessToken, 'POST');
+          return result.claimed;
         };
-        const claimed = !token && navigator.locks
-          ? await navigator.locks.request(`announcement:${post.id}`, claim) : await claim();
+        const claimed = await claim();
         if (disposed) return;
         done = true;
         if (claimed && safeMoment()) setOpen(true);
@@ -54,7 +49,7 @@ export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'aria-modal'] });
     return () => { disposed = true; clearTimeout(timer); observer.disconnect(); window.removeEventListener('focus', retry); document.removeEventListener('focusout', retry); };
   }, [post.id, token, userId, unread]);
-  if (!open || dismissed) return null;
+  if (!token || !userId || !open || dismissed) return null;
   return <UpdateDialog post={post} token={token} onClose={() => setDismissed(true)}
     onLogin={() => { setDismissed(true); onLogin(); }} />;
 }
