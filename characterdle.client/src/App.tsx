@@ -6,7 +6,6 @@ import { defaultUniverseId } from './data/universeCatalog';
 import { useUniverse } from './hooks/useUniverse';
 import { useAuth } from './hooks/useAuth';
 import { useAnnouncements } from './hooks/useAnnouncements';
-import { AnnouncementPopup } from './components/updates/AnnouncementPopup';
 import { LatestUpdatePopup } from './components/updates/LatestUpdatePopup';
 import { buildRoutePath, isUniverseScopedPage } from './lib/routePaths';
 import { getUniverseIdFromPathname, getUniverseSubdomainUniverseId } from './lib/siteRouting';
@@ -277,7 +276,7 @@ function App() {
   const [isLatestUpdateOpen, setLatestUpdateOpen] = useState(false);
   const [route, setRoute] = useState<AppRoute>(() => readRouteFromLocation());
   const acceptedLocation = useRef(`${window.location.pathname}${window.location.search}${window.location.hash}`);
-  const { session, user, isLoading } = useAuth();
+  const { session, user, isLoading, isAuthenticated } = useAuth();
   const announcements = useAnnouncements(session?.access_token ?? null, user?.id, isLoading);
   const { selectedUniverseId, setSelectedUniverseId } = useUniverse();
 
@@ -398,15 +397,12 @@ function App() {
     token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen}
     onClose={() => setLatestUpdateOpen(false)} onLogin={() => { setLatestUpdateOpen(false); openAuth('login'); }} />;
 
-  if (route.page === 'landing') {
+  if (route.page === 'landing' && (isLoading || !isAuthenticated)) {
     return (
       <>
         <SeoManager route={route} />
-        <LandingPage onNavigate={handleNavigate} onAuthNavigate={openAuth} />
+        <LandingPage isAuthLoading={isLoading} onNavigate={handleNavigate} onAuthNavigate={openAuth} />
         {latestUpdatePopup}
-        {announcements.post && !window.location.hash && !window.location.search && <AnnouncementPopup
-          key={`${user?.id ?? 'guest'}:${announcements.post.id}`} post={announcements.post} unread={announcements.unread}
-          token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen} onLogin={() => openAuth('login')} />}
       </>
     );
   }

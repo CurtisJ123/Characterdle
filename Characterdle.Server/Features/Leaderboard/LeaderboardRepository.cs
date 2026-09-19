@@ -156,26 +156,12 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         command.Parameters.AddWithValue("revealedHintKeys", revealedHintKeys.ToArray());
         await command.ExecuteNonQueryAsync(cancellationToken);
 
-        if (mode == "character" && status is "won" or "lost")
+        if (status is "won" or "lost")
         {
-            var creditDate = await TryInsertDailyStreakCreditAsync(
-                connection,
-                transaction,
-                userId,
-                universe,
-                gameId,
-                cancellationToken);
-
-            if (creditDate.HasValue)
-            {
-                await UpdateStreakSummaryAsync(
-                    connection,
-                    transaction,
-                    userId,
-                    universe.Id,
-                    creditDate.Value,
-                    cancellationToken);
-            }
+            await using var streakCommand = DailyStreakCreditCommand.Create(universe, userId, gameId, mode);
+            streakCommand.Connection = connection;
+            streakCommand.Transaction = transaction;
+            await streakCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
         var streak = await LoadStreakAsync(
@@ -186,113 +172,6 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return streak;
-    }
-
-    private static async Task<DateOnly?> TryInsertDailyStreakCreditAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        Guid userId,
-        UniverseDefinition universe,
-        long gameId,
-        CancellationToken cancellationToken)
-    {
-        var sql =
-            $"""
-            insert into public."UniverseStreakCredits" (
-              user_id,
-              universe_id,
-              game_id,
-              result_id,
-              credit_date,
-              credit_type
-            )
-            select
-              results.user_id,
-              results.universe_id,
-              results.game_id,
-              results.id,
-              (games.datetime at time zone @scheduleTimeZoneId)::date,
-              'daily_completion'
-            from public."UniverseGameResults" as results
-            join {universe.GameTableName} as games
-              on games.id = results.game_id
-            where results.user_id = @userId
-              and results.universe_id = @universeId
-              and results.game_id = @gameId
-              and results.mode = 'character'
-              and results.status in ('won', 'lost')
-              and (games.datetime at time zone @scheduleTimeZoneId)::date
-                = (now() at time zone @scheduleTimeZoneId)::date
-            on conflict do nothing
-            returning credit_date;
-            """;
-
-        await using var command = new NpgsqlCommand(sql, connection, transaction);
-        command.Parameters.AddWithValue("userId", userId);
-        command.Parameters.AddWithValue("universeId", universe.Id);
-        command.Parameters.AddWithValue("gameId", gameId);
-        command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
-        var value = await command.ExecuteScalarAsync(cancellationToken);
-        return value is DateOnly creditDate ? creditDate : null;
-    }
-
-    private static async Task UpdateStreakSummaryAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        Guid userId,
-        string universeId,
-        DateOnly creditDate,
-        CancellationToken cancellationToken)
-    {
-        const string sql =
-            """
-            insert into public."UniverseStreaks" (
-              user_id,
-              universe_id,
-              current_streak,
-              longest_streak,
-              last_credit_date,
-              updated_at
-            )
-            values (
-              @userId,
-              @universeId,
-              1,
-              1,
-              @creditDate,
-              timezone('utc', now())
-            )
-            on conflict (user_id, universe_id) do update
-            set
-              current_streak = case
-                when public."UniverseStreaks".last_credit_date = excluded.last_credit_date
-                  then public."UniverseStreaks".current_streak
-                when public."UniverseStreaks".last_credit_date = excluded.last_credit_date - 1
-                  then public."UniverseStreaks".current_streak + 1
-                else 1
-              end,
-              longest_streak = greatest(
-                public."UniverseStreaks".longest_streak,
-                case
-                  when public."UniverseStreaks".last_credit_date = excluded.last_credit_date
-                    then public."UniverseStreaks".current_streak
-                  when public."UniverseStreaks".last_credit_date = excluded.last_credit_date - 1
-                    then public."UniverseStreaks".current_streak + 1
-                  else 1
-                end
-              ),
-              last_credit_date = greatest(
-                public."UniverseStreaks".last_credit_date,
-                excluded.last_credit_date
-              ),
-              updated_at = excluded.updated_at;
-            """;
-
-        await using var command = new NpgsqlCommand(sql, connection, transaction);
-        command.Parameters.AddWithValue("userId", userId);
-        command.Parameters.AddWithValue("universeId", universeId);
-        command.Parameters.AddWithValue("creditDate", creditDate);
-        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static async Task<UniverseStreakResponse> LoadStreakAsync(

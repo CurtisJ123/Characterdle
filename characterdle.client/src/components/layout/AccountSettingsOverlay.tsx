@@ -460,7 +460,7 @@ export function AccountSettingsOverlay({
                   <div className="account-settings-toggle-copy">
                     <p className="card-kicker">Streak protection</p>
                     <h3>Auto-use streak savers</h3>
-                    <p className="muted-copy">Spend one automatically if you miss a daily character game.</p>
+                    <p className="muted-copy">Spend one automatically if you miss a day without completing any daily game.</p>
                   </div>
 
                   <label className="account-settings-toggle-control">

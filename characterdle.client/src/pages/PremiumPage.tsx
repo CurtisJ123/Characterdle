@@ -34,7 +34,7 @@ const livePremiumFeatures: PremiumFeature[] = [
   },
   {
     title: 'Streak protection',
-    detail: 'Receive one streak saver each billing cycle and choose whether it should be used automatically to preserve your daily character streak.',
+    detail: 'Receive one streak saver each billing cycle and choose whether it should be used automatically to preserve your daily streak.',
   },
   {
     title: 'Supporter styling',
