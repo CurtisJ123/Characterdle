@@ -5,11 +5,18 @@ import { buildRoutePath } from '../lib/routePaths';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 
 interface LandingPageProps {
+  isAuthenticated?: boolean;
+  isAuthLoading?: boolean;
   onAuthNavigate: (mode: AuthMode) => void;
   onNavigate: NavigateToPage;
 }
 
-export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
+export function LandingPage({
+  isAuthenticated = false,
+  isAuthLoading = false,
+  onAuthNavigate,
+  onNavigate,
+}: LandingPageProps) {
   function handleAuthLinkClick(event: MouseEvent<HTMLAnchorElement>, mode: AuthMode) {
     event.preventDefault();
     onAuthNavigate(mode);
@@ -21,27 +28,33 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
   }
 
   return (
-    <main className="landing-shell">
-      <nav className="landing-nav" aria-label="Landing navigation">
-        <BrandButton onClick={() => onNavigate('landing')} />
-        <div>
-          <a className="ghost-link" href="/updates" onClick={(event) => handlePageLinkClick(event, 'updates')}>Updates</a>
-          <a
-            className="ghost-link"
-            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'auth', universeId: null })}
-            onClick={(event) => handleAuthLinkClick(event, 'login')}
-          >
-            Sign in
-          </a>
-          <a
-            className="primary-button"
-            href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
-            onClick={(event) => handlePageLinkClick(event, 'launcher')}
-          >
-            Try without signing up
-          </a>
-        </div>
-      </nav>
+    <main className={`landing-shell${isAuthenticated ? ' landing-shell--signed-in' : ''}`} aria-busy={isAuthLoading}>
+      {!isAuthenticated && (
+        <nav className="landing-nav" aria-label="Landing navigation">
+          <BrandButton onClick={() => onNavigate('landing')} />
+          <div>
+            <a className="ghost-link" href="/updates" onClick={(event) => handlePageLinkClick(event, 'updates')}>Updates</a>
+            {!isAuthLoading && (
+              <>
+                <a
+                  className="ghost-link"
+                  href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'auth', universeId: null })}
+                  onClick={(event) => handleAuthLinkClick(event, 'login')}
+                >
+                  Sign in
+                </a>
+                <a
+                  className="primary-button"
+                  href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
+                  onClick={(event) => handlePageLinkClick(event, 'launcher')}
+                >
+                  Try without signing up
+                </a>
+              </>
+            )}
+          </div>
+        </nav>
+      )}
 
       <section className="landing-hero">
         <div className="landing-copy">
@@ -49,20 +62,34 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
           <h1>Guess the character.</h1>
           <p>Play today&apos;s board.</p>
           <div className="landing-actions">
-            <a
-              className="primary-button large-button"
-              href={buildRoutePath({ authMode: 'signup', gameId: null, gameMode: 'character', page: 'auth', universeId: null })}
-              onClick={(event) => handleAuthLinkClick(event, 'signup')}
-            >
-              Create free account
-            </a>
-            <a
-              className="secondary-button large-button"
-              href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
-              onClick={(event) => handlePageLinkClick(event, 'launcher')}
-            >
-              Try without signing up
-            </a>
+            {isAuthLoading ? (
+              <span className="landing-session-status" role="status">Loading your account...</span>
+            ) : isAuthenticated ? (
+              <a
+                className="primary-button large-button"
+                href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
+                onClick={(event) => handlePageLinkClick(event, 'launcher')}
+              >
+                Continue
+              </a>
+            ) : (
+              <>
+                <a
+                  className="primary-button large-button"
+                  href={buildRoutePath({ authMode: 'signup', gameId: null, gameMode: 'character', page: 'auth', universeId: null })}
+                  onClick={(event) => handleAuthLinkClick(event, 'signup')}
+                >
+                  Create free account
+                </a>
+                <a
+                  className="secondary-button large-button"
+                  href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
+                  onClick={(event) => handlePageLinkClick(event, 'launcher')}
+                >
+                  Try without signing up
+                </a>
+              </>
+            )}
           </div>
         </div>
 
@@ -93,7 +120,7 @@ export function LandingPage({ onAuthNavigate, onNavigate }: LandingPageProps) {
         </aside>
       </section>
 
-      <SiteFooter onNavigate={onNavigate} />
+      {!isAuthenticated && <SiteFooter onNavigate={onNavigate} />}
     </main>
   );
 }

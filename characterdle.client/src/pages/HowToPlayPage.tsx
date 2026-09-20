@@ -19,6 +19,10 @@ const faqItems = [
     answer: 'The daily character and quote boards roll over once per day. Archive boards stay available so older rounds can still be replayed later.',
   },
   {
+    question: 'Which games count toward my streak?',
+    answer: 'Complete today\'s Character or Quote game while signed in to keep your streak. Hints and giving up still count as completion. Completing both counts as one day, not two. Random rounds and past archive games do not count.',
+  },
+  {
     question: 'What is the difference between daily and random games?',
     answer: 'Daily games affect archives, stats, and streaks. Random premium practice games are pulled from the database for extra play and do not change daily progress.',
   },

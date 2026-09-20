@@ -11,6 +11,16 @@
   );
 }
 
+.landing-shell--signed-in {
+  flex: 1;
+  min-height: 0;
+}
+
+.landing-session-status {
+  color: var(--on-surface-variant);
+  padding-block: 20px;
+}
+
 .landing-nav,
 .landing-hero {
   width: min(1200px, calc(100% - 32px));

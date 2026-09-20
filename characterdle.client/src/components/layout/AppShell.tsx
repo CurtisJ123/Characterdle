@@ -22,6 +22,7 @@ import { AboutPage } from '../../pages/AboutPage';
 import { CharacterGamePage } from '../../pages/CharacterGamePage';
 import { HowToPlayPage } from '../../pages/HowToPlayPage';
 import { LauncherPage } from '../../pages/LauncherPage';
+import { LandingPage } from '../../pages/LandingPage';
 import { LeaderboardPage } from '../../pages/LeaderboardPage';
 import { LegalDocumentPage } from '../../pages/LegalDocumentPage';
 import { PreviousGamesPage } from '../../pages/PreviousGamesPage';
@@ -49,7 +50,7 @@ interface AppShellProps {
   announcements: ReturnType<typeof useAnnouncements>;
   currentPostSlug?: string;
   authMode: AuthMode;
-  currentPage: Exclude<Page, 'landing'>;
+  currentPage: Page;
   currentGameId: number | null;
   currentGameMode: GameMode;
   onAuthNavigate: (mode: AuthMode) => void;
@@ -291,12 +292,12 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <AdSenseBootstrap
+      {currentPage !== 'landing' && <AdSenseBootstrap
         isAdFreePremium={premiumAccess?.adFree === true}
         isAuthenticated={isAuthenticated}
         isAuthLoading={isLoading}
         isPremiumLoading={isPremiumLoading}
-      />
+      />}
       <SiteHeader
         hasUnreadUpdates={announcements.unread}
         isAdmin={announcements.isAdmin}
@@ -321,6 +322,9 @@ export function AppShell({
         userAvatarUrl={user?.avatarUrl}
         userDisplayName={user?.displayName}
       />
+      {currentPage === 'landing' && (
+        <LandingPage isAuthenticated={isAuthenticated} onAuthNavigate={onAuthNavigate} onNavigate={onNavigate} />
+      )}
       {currentPage === 'auth' && (
         <AuthPage
           initialMode={authMode}
@@ -410,7 +414,7 @@ export function AppShell({
       {currentPage === 'privacyPolicy' && <LegalDocumentPage onNavigate={onNavigate} page="privacyPolicy" />}
       {currentPage === 'termsOfService' && <LegalDocumentPage onNavigate={onNavigate} page="termsOfService" />}
       <SiteFooter onNavigate={onNavigate} />
-      {announcements.post && !billingRedirectStatus && !['game', 'random', 'auth', 'admin', 'updates', 'premium'].includes(currentPage) && (
+      {announcements.post && !billingRedirectStatus && (currentPage !== 'landing' || (!window.location.hash && !window.location.search)) && !['game', 'random', 'auth', 'admin', 'updates', 'premium'].includes(currentPage) && (
         <AnnouncementPopup key={`${user?.id ?? 'guest'}:${announcements.post.id}`} post={announcements.post}
           unread={announcements.unread} token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen} onLogin={() => onAuthNavigate('login')} />
       )}
