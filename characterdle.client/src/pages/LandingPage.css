@@ -68,10 +68,11 @@
   margin: 0;
   color: var(--on-surface);
   font-family: var(--heading-font);
-  font-size: clamp(3.5rem, 8vw, 7.8rem);
+  font-size: clamp(2.8rem, 5.8vw, 5.5rem);
   font-weight: 900;
-  line-height: 0.88;
-  letter-spacing: -0.075em;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
 }
 
 .landing-copy > p:not(.eyebrow) {
@@ -171,6 +172,11 @@
 }
 
 @media (max-width: 520px) {
+  html:has(.landing-shell),
+  body:has(.landing-shell) {
+    min-width: 0;
+  }
+
   .landing-nav,
   .landing-hero {
     width: min(100% - 24px, 1200px);

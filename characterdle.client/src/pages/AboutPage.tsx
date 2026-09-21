@@ -1,4 +1,5 @@
 import './InformationalPage.css';
+import { RouteLink } from '../components/ui/RouteLink';
 import type { NavigateToPage } from '../types/routes';
 
 interface AboutPageProps {
@@ -20,12 +21,12 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
 
         <div className="informational-hero-actions">
-          <button className="primary-button informational-action-button" type="button" onClick={() => onNavigate('launcher')}>
+          <RouteLink className="primary-button informational-action-button" href="/home" onNavigate={() => onNavigate('launcher')}>
             Play today&apos;s game
-          </button>
-          <button className="secondary-button informational-action-button" type="button" onClick={() => onNavigate('howToPlay')}>
+          </RouteLink>
+          <RouteLink className="secondary-button informational-action-button" href="/how-to-play" onNavigate={() => onNavigate('howToPlay')}>
             Read how to play
-          </button>
+          </RouteLink>
         </div>
       </section>
 

@@ -1,10 +1,13 @@
+import { RouteLink } from '../ui/RouteLink';
+
 interface BrandButtonProps {
+  href: string;
   onClick: () => void;
 }
 
-export function BrandButton({ onClick }: BrandButtonProps) {
+export function BrandButton({ href, onClick }: BrandButtonProps) {
   return (
-    <button className="brand-button" type="button" onClick={onClick}>
+    <RouteLink className="brand-button" href={href} onNavigate={onClick}>
       <img
         className="brand-mark"
         src="/brand/characterdle-logo.png"
@@ -12,6 +15,6 @@ export function BrandButton({ onClick }: BrandButtonProps) {
         aria-hidden="true"
       />
       Characterdle
-    </button>
+    </RouteLink>
   );
 }

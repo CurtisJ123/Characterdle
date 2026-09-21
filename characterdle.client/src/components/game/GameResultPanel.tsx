@@ -1,4 +1,5 @@
 import { CharacterPortrait } from './CharacterPortrait';
+import { GameAction } from './GameAction';
 import { GameShareButton } from '../ui/GameShareButton';
 import type { GameSharePayload } from '../../lib/gameShare';
 import type { CharacterGameStatus } from '../../types/universeGame';
@@ -15,10 +16,12 @@ interface GameResultPanelProps {
   showShareButton?: boolean;
   highlightPrimaryAction?: boolean;
   primaryActionLabel?: string;
+  primaryActionHref?: string;
   primaryTitle?: string;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
   secondaryActionLabel?: string;
+  secondaryActionHref?: string;
   status: Extract<CharacterGameStatus, 'won' | 'lost'>;
 }
 
@@ -44,10 +47,12 @@ export function GameResultPanel({
   showShareButton = true,
   highlightPrimaryAction = false,
   primaryActionLabel,
+  primaryActionHref,
   primaryTitle = 'Correct',
   onPrimaryAction,
   onSecondaryAction,
   secondaryActionLabel,
+  secondaryActionHref,
   status,
 }: GameResultPanelProps) {
   const showPrimaryAction = !!primaryActionLabel && !!onPrimaryAction;
@@ -81,18 +86,18 @@ export function GameResultPanel({
 
         <div className="button-stack">
           {showPrimaryAction && (
-            <button
+            <GameAction
               className={highlightPrimaryAction ? 'primary-button is-random-ready' : 'primary-button'}
-              type="button"
+              href={primaryActionHref}
               onClick={onPrimaryAction}
             >
               {primaryActionLabel}
-            </button>
+            </GameAction>
           )}
           {showSecondaryAction && (
-            <button className="secondary-button" type="button" onClick={onSecondaryAction}>
+            <GameAction className="secondary-button" href={secondaryActionHref} onClick={onSecondaryAction}>
               {secondaryActionLabel}
-            </button>
+            </GameAction>
           )}
           {canShare && <GameShareButton payload={sharePayload} />}
         </div>
@@ -139,18 +144,18 @@ export function GameResultPanel({
 
       <div className="button-stack">
         {showPrimaryAction && (
-          <button
+          <GameAction
             className={highlightPrimaryAction ? 'primary-button is-random-ready' : 'primary-button'}
-            type="button"
+            href={primaryActionHref}
             onClick={onPrimaryAction}
           >
             {primaryActionLabel}
-          </button>
+          </GameAction>
         )}
         {showSecondaryAction && (
-          <button className="secondary-button" type="button" onClick={onSecondaryAction}>
+          <GameAction className="secondary-button" href={secondaryActionHref} onClick={onSecondaryAction}>
             {secondaryActionLabel}
-          </button>
+          </GameAction>
         )}
         {canShare && <GameShareButton payload={sharePayload} />}
       </div>

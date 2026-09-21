@@ -31,7 +31,7 @@ export function LandingPage({
     <main className={`landing-shell${isAuthenticated ? ' landing-shell--signed-in' : ''}`} aria-busy={isAuthLoading}>
       {!isAuthenticated && (
         <nav className="landing-nav" aria-label="Landing navigation">
-          <BrandButton onClick={() => onNavigate('landing')} />
+          <BrandButton href="/" onClick={() => onNavigate('landing')} />
           <div>
             <a className="ghost-link" href="/updates" onClick={(event) => handlePageLinkClick(event, 'updates')}>Updates</a>
             {!isAuthLoading && (
@@ -45,8 +45,7 @@ export function LandingPage({
                 </a>
                 <a
                   className="primary-button"
-                  href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
-                  onClick={(event) => handlePageLinkClick(event, 'launcher')}
+                  href="/got"
                 >
                   Try without signing up
                 </a>
@@ -58,9 +57,12 @@ export function LandingPage({
 
       <section className="landing-hero">
         <div className="landing-copy">
-          <p className="eyebrow">Daily character game</p>
-          <h1>Guess the character.</h1>
-          <p>Play today&apos;s board.</p>
+          <p className="eyebrow">Daily character and quote games</p>
+          <h1>Guess the Game of Thrones character.</h1>
+          <p>
+            Play Characterdle, a free daily guessing game inspired by Wordle. Use the clues to find the hidden character,
+            or guess who said the quote. No account required.
+          </p>
           <div className="landing-actions">
             {isAuthLoading ? (
               <span className="landing-session-status" role="status">Loading your account...</span>
@@ -83,8 +85,7 @@ export function LandingPage({
                 </a>
                 <a
                   className="secondary-button large-button"
-                  href={buildRoutePath({ authMode: 'login', gameId: null, gameMode: 'character', page: 'launcher', universeId: null })}
-                  onClick={(event) => handlePageLinkClick(event, 'launcher')}
+                  href="/got"
                 >
                   Try without signing up
                 </a>

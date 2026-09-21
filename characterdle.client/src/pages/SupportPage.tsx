@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react';
+import { RouteLink } from '../components/ui/RouteLink';
 import { buildRoutePath } from '../lib/routePaths';
 import type { NavigateToPage } from '../types/routes';
 
@@ -33,13 +34,13 @@ export function SupportPage({ onNavigate }: SupportPageProps) {
           >
             Email support
           </a>
-          <button
+          <RouteLink
             className="secondary-button support-action-button"
-            type="button"
-            onClick={() => onNavigate('launcher')}
+            href="/home"
+            onNavigate={() => onNavigate('launcher')}
           >
             Back home
-          </button>
+          </RouteLink>
         </div>
       </section>
 

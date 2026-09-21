@@ -29,6 +29,8 @@
 }
 
 .nav-button {
+  display: inline-block;
+  text-align: center;
   position: relative;
   padding: 9px 4px;
   border: 0;

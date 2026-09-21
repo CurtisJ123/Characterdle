@@ -1,4 +1,5 @@
 import { getLegalDocument } from '../data/legalDocuments';
+import { RouteLink } from '../components/ui/RouteLink';
 import type { NavigateToPage, Page } from '../types/routes';
 
 interface LegalDocumentPageProps {
@@ -30,20 +31,20 @@ export function LegalDocumentPage({ onNavigate, page }: LegalDocumentPageProps) 
           </div>
 
           <div className="legal-hero-actions">
-            <button
+            <RouteLink
               className="secondary-button legal-action-button"
-              type="button"
-              onClick={() => onNavigate('support')}
+              href="/support"
+              onNavigate={() => onNavigate('support')}
             >
               Contact support
-            </button>
-            <button
+            </RouteLink>
+            <RouteLink
               className="secondary-button legal-action-button"
-              type="button"
-              onClick={() => onNavigate('launcher')}
+              href="/home"
+              onNavigate={() => onNavigate('launcher')}
             >
               Back home
-            </button>
+            </RouteLink>
           </div>
         </div>
       </section>

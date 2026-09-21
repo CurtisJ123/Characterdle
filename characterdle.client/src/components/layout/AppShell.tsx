@@ -307,6 +307,8 @@ export function AppShell({
         autoUseStreakSavers={premiumAccess?.autoUseStreakSavers ?? true}
         availableStreakSavers={premiumAccess?.availableStreakSavers ?? 0}
         currentPage={currentPage}
+        currentGameMode={currentGameMode}
+        universeId={selectedUniverse.id}
         currentStreakSaverSettingEnabled={premiumAccess?.streakProtection === true}
         isAuthenticated={isAuthenticated}
         isUserLoading={isLoading}

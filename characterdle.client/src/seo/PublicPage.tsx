@@ -45,6 +45,19 @@ export function PublicPage({ route, updates, error }: {
     </main>; break;
     default: {
       const seo = resolveSeo(route);
+      const isGotDailyCharacter = route.page === 'game' && route.universeId === 'got'
+        && route.gameMode === 'character' && route.gameId === null;
+      if (isGotDailyCharacter) {
+        content = <main className="page centered-page game-page">
+          <section className="game-hero">
+            <p className="eyebrow">Universe: Game of Thrones</p>
+            <h1>Daily Character Game</h1>
+          </section>
+          <p id="prerender-status" className="muted-copy" role="status">Loading interactive features...</p>
+          <noscript>Enable JavaScript to play. <a href="/how-to-play">Read the rules</a>.</noscript>
+        </main>;
+        break;
+      }
       content = <main className="page informational-page"><section className="glass-card informational-hero">
         <div className="informational-hero-copy"><h1>{seo.title.split(' | ')[0]}</h1><p className="muted-copy">{seo.description}</p>
           {route.page === 'game' && <p className="muted-copy">{route.gameMode === 'quote'

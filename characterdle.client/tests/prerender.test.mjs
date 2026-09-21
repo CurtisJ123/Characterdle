@@ -49,6 +49,49 @@ test('every public route can be rendered noindex for staging', () => {
   }
 });
 
+test('daily character metadata stays descriptive while the initial game header stays minimal', async () => {
+  const html = await readFile(new URL('got.html', dist), 'utf8');
+  const seo = resolveSeo(routeForPath('/got'));
+  assert.equal(seo.title, 'Game Of Thrones Characterdle');
+  assert.match(seo.description, /free daily Game of Thrones character guessing game/);
+  assert.equal(seo.canonicalUrl, 'https://characterdle.com/got');
+  assert.match(html, /<section class="game-hero"><p class="eyebrow">Universe: Game of Thrones<\/p><h1>Daily Character Game<\/h1><\/section>/);
+  assert.doesNotMatch(html, /game-introduction|inspired by Wordle/);
+  const body = html.slice(html.indexOf('<body'));
+  assert.ok(!body.includes(seo.description), 'The SEO description should not appear as visible game-page copy.');
+  assert.equal((html.match(/<h1[ >]/g) ?? []).length, 1);
+  for (const pathname of publicPaths) {
+    const pageHtml = await readFile(new URL(file(pathname), dist), 'utf8');
+    assert.doesNotMatch(resolveSeo(routeForPath(pathname)).title, /\bWordle\b/i);
+    assert.doesNotMatch(pageHtml, /(?:property="og:title"|name="twitter:title") content="[^"]*Wordle/i);
+  }
+});
+
+test('landing copy explains the game without a redundant play text link', async () => {
+  const html = await readFile(new URL('index.html', dist), 'utf8');
+  assert.match(html, /<h1>Guess the Game of Thrones character\.<\/h1>/);
+  assert.doesNotMatch(html, /landing-game-link|Play today&#x27;s Game of Thrones character game/);
+  assert.match(html, /inspired by Wordle/);
+  assert.match(html, /rel="canonical" href="https:\/\/characterdle\.com\/"/);
+});
+
+test('quote, archive and random routes retain their mode-specific titles and copy', () => {
+  for (const [pathname, title] of [
+    ['/got/game/quote', 'Daily Game of Thrones Quote Game | Characterdle'],
+    ['/got/game/character/50', 'Game of Thrones Character Game #50 | Characterdle'],
+    ['/got/game/quote/50', 'Game of Thrones Quote Game #50 | Characterdle'],
+  ]) {
+    const route = routeForPath(pathname);
+    assert.equal(resolveSeo(route).title, title);
+    assert.doesNotMatch(renderDocument(pageTemplate, route), /game-introduction|inspired by Wordle/);
+  }
+  for (const pathname of ['/got/random', '/got/random/quote']) {
+    const route = routeForPath(pathname);
+    assert.match(resolveSeo(route).robots, /^noindex/);
+    assert.doesNotMatch(renderDocument(pageTemplate, route), /game-introduction|inspired by Wordle/);
+  }
+});
+
 test('private and practice routes return noindex without user data', async () => {
   const handler = renderRequest(() => { throw new Error('No API calls allowed.'); });
   for (const pathname of ['/login', '/signup', '/reset-password', '/got/profile', '/admin', '/got/random', '/got/random/quote']) {

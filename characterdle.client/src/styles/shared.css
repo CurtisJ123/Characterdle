@@ -176,3 +176,7 @@
     padding: 18px;
   }
 }
+
+.route-link {
+  text-decoration: none;
+}

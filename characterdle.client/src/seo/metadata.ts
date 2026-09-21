@@ -147,14 +147,19 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'game': {
+      const isGotDailyCharacter = route.universeId === 'got' && route.gameMode === 'character' && route.gameId === null;
       const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
       const archivePrefix = route.gameId ? 'Archive ' : 'Daily ';
-      const title = route.gameId
-        ? `${universeTitle} ${modeLabel} Game #${route.gameId} | Characterdle`
-        : `${archivePrefix}${universeTitle} ${modeLabel} Game | Characterdle`;
-      const description = route.gameMode === 'quote'
-        ? `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} quote guessing game in Characterdle and identify who said the line before using all your hints.`
-        : `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} character guessing game in Characterdle and deduce the hidden answer through attributes, seasons, and status clues.`;
+      const title = isGotDailyCharacter
+        ? 'Game Of Thrones Characterdle'
+        : route.gameId
+          ? `${universeTitle} ${modeLabel} Game #${route.gameId} | Characterdle`
+          : `${archivePrefix}${universeTitle} ${modeLabel} Game | Characterdle`;
+      const description = isGotDailyCharacter
+        ? 'Play Characterdle, a free daily Game of Thrones character guessing game. Use house, role, season, and status clues. No account required.'
+        : route.gameMode === 'quote'
+          ? `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} quote guessing game in Characterdle and identify who said the line before using all your hints.`
+          : `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} character guessing game in Characterdle and deduce the hidden answer through attributes, seasons, and status clues.`;
       return {
         canonicalUrl,
         description,
