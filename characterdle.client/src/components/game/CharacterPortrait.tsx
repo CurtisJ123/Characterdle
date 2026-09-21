@@ -30,6 +30,8 @@ export function CharacterPortrait({ character, variant }: CharacterPortraitProps
       <img
         className={className}
         src={portraitUrl}
+        loading={variant === 'history' ? 'lazy' : undefined}
+        decoding="async"
         alt=""
         aria-hidden="true"
         onError={() => setCandidateIndex((currentIndex) => currentIndex + 1)}

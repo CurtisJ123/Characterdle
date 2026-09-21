@@ -7,6 +7,8 @@ import {
   type CharacterdlePublicConfig,
 } from './lib/runtimeConfig';
 import { getUniverseHostRedirectUrl } from './lib/siteRouting';
+import { readRouteFromSegments } from './lib/routeParser';
+import { routeForPath } from './seo/publicRoutes';
 
 const RECOVERY_POLL_INTERVAL_MS = 3000;
 const RECOVERY_MAX_ATTEMPTS = 20;
@@ -133,7 +135,9 @@ function renderStartupScreen(
       <main className="startup-screen">
         <section className="startup-screen__card">
           <img
-            src="/brand/characterdle-logo.png"
+            src="/brand/characterdle-logo-small.webp"
+            width={64}
+            height={64}
             alt=""
             aria-hidden="true"
             className="startup-screen__logo"
@@ -160,10 +164,14 @@ async function bootstrap(root: Root) {
   window.__CHARACTERDLE_PUBLIC_CONFIG__ = await resolveRuntimeConfig();
   startBackendWarmup(window.__CHARACTERDLE_PUBLIC_CONFIG__);
 
+  const legacyPath = window.location.hash.replace(/^#\/?/, '').trim();
+  const initialRoute = (legacyPath ? readRouteFromSegments(legacyPath.split('/')) : null)
+    ?? routeForPath(window.location.pathname);
   const [{ default: App }, { AuthProvider }, { UniverseProvider }] = await Promise.all([
     import('./App.tsx'),
     import('./contexts/AuthContext'),
     import('./contexts/UniverseContext'),
+    import('./lib/pageModules').then(({ preloadInitialPage }) => preloadInitialPage(initialRoute?.page ?? 'notFound')),
   ]);
 
   document.getElementById('root')?.removeAttribute('data-prerendered');

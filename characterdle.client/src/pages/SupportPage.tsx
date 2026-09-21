@@ -114,3 +114,4 @@ export function SupportPage({ onNavigate }: SupportPageProps) {
     </main>
   );
 }
+import './SupportPage.css';

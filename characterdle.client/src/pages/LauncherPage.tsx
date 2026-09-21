@@ -82,3 +82,4 @@ export function LauncherPage({
     </main>
   );
 }
+import '../styles/launcher.css';

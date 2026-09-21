@@ -298,3 +298,4 @@ export function PremiumPage({
     </main>
   );
 }
+import './PremiumPage.css';

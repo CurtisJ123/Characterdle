@@ -252,3 +252,4 @@ export function ProfilePage({
     </main>
   );
 }
+import './ProfilePage.css';

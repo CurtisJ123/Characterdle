@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AppShell } from './components/layout/AppShell';
 import { ArchiveRouteGuard } from './components/layout/ArchiveRouteGuard';
@@ -6,7 +6,7 @@ import { SeoManager } from './components/seo/SeoManager';
 import { useUniverse } from './hooks/useUniverse';
 import { useAuth } from './hooks/useAuth';
 import { useAnnouncements } from './hooks/useAnnouncements';
-import { LatestUpdatePopup } from './components/updates/LatestUpdatePopup';
+import { DeferredContent } from './components/ui/DeferredContent';
 import { buildRoutePath, isUniverseScopedPage } from './lib/routePaths';
 import { getDefaultRoute, readRouteFromSegments } from './lib/routeParser';
 import { LandingPage } from './pages/LandingPage';
@@ -15,6 +15,7 @@ import { routeForPath } from './seo/publicRoutes';
 import type { GameMode } from './types/game';
 import type { AppRoute, AuthMode, Page } from './types/routes';
 
+const LatestUpdatePopup = lazy(() => import('./components/updates/LatestUpdatePopup').then(module => ({ default: module.LatestUpdatePopup })));
 
 function readLegacyHashRoute(hash: string): AppRoute | null {
   const normalizedHash = hash.replace(/^#\/?/, '').trim();
@@ -168,9 +169,9 @@ function App() {
     });
   }
 
-  const latestUpdatePopup = isLatestUpdateOpen && <LatestUpdatePopup key={user?.id ?? 'guest'}
+  const latestUpdatePopup = isLatestUpdateOpen && <DeferredContent><LatestUpdatePopup key={user?.id ?? 'guest'}
     token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen}
-    onClose={() => setLatestUpdateOpen(false)} onLogin={() => { setLatestUpdateOpen(false); openAuth('login'); }} />;
+    onClose={() => setLatestUpdateOpen(false)} onLogin={() => { setLatestUpdateOpen(false); openAuth('login'); }} /></DeferredContent>;
 
   if (route.page === 'notFound') return <><SeoManager route={route} /><RouteErrorPage /></>;
 

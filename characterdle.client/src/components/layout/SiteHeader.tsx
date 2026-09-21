@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, useEffect, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
 import { buildRoutePath } from '../../lib/routePaths';
 import type { GameMode } from '../../types/game';
@@ -7,10 +7,12 @@ import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 import { StreakProgressDropdown } from './StreakProgressDropdown';
 import { StreakEmblem } from '../ui/StreakEmblem';
 import { UserAvatar } from '../ui/UserAvatar';
-import { AccountSettingsOverlay } from './AccountSettingsOverlay';
+import { DeferredContent } from '../ui/DeferredContent';
 import { BrandButton } from './BrandButton';
 import { PremiumCrownIcon } from '../ui/PremiumCrownIcon';
 import { RouteLink } from '../ui/RouteLink';
+
+const AccountSettingsOverlay = lazy(() => import('./AccountSettingsOverlay').then(module => ({ default: module.AccountSettingsOverlay })));
 
 interface SiteHeaderProps {
   hasUnreadUpdates?: boolean;
@@ -243,6 +245,7 @@ export function SiteHeader({
         </div>
       </header>
       {isSettingsOpen && (
+        <DeferredContent>
         <AccountSettingsOverlay
           currentAutoUseStreakSavers={autoUseStreakSavers}
           currentAvatarUrl={userAvatarUrl ?? null}
@@ -257,6 +260,7 @@ export function SiteHeader({
           onOpenBillingPortal={onOpenBillingPortal}
           onSaveSettings={onSaveSettings}
         />
+        </DeferredContent>
       )}
     </>
   );

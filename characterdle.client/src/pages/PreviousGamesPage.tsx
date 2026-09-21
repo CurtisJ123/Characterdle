@@ -137,3 +137,4 @@ export function PreviousGamesPage({
     </main>
   );
 }
+import '../styles/history.css';

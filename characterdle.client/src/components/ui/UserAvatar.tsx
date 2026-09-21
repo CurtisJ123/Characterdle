@@ -42,7 +42,7 @@ export function UserAvatar({
     return (
       <span className={classes} aria-hidden="true">
         <span className="user-avatar__inner">
-          <img src={avatarUrl} alt="" loading="lazy" />
+          <img src={avatarUrl} alt="" loading={size === 'header' ? undefined : 'lazy'} decoding="async" />
         </span>
       </span>
     );

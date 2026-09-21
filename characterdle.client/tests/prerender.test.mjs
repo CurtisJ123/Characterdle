@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile, access } from 'node:fs/promises';
 import { createPageHandler, pageTemplate, publicPaths, renderDocument, resolveSeo, routeForPath } from '../dist-ssr/renderer.js';
+import { collectStyles, pageEntries } from '../scripts/route-styles.mjs';
 
 const dist = new URL('../dist/', import.meta.url);
 const escape = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -18,6 +19,74 @@ const assets = { ASSETS: { async fetch(request) {
 } } };
 const request = (pathname, init) => new Request(`https://characterdle.com${pathname}`, init);
 const renderRequest = (fetchPublic, staging = false) => createPageHandler(pageTemplate, 'https://api.example.test', staging, fetchPublic);
+
+test('stylesheet collection follows static dependencies without loading secondary pages', () => {
+  const manifest = {
+    shell: { imports: ['shared'], css: ['shell.css'], dynamicImports: ['admin'] },
+    shared: { imports: ['shell'], css: ['shared.css'] },
+    admin: { css: ['admin.css'] },
+  };
+  assert.deepEqual(collectStyles(manifest, ['shell']), ['shared.css', 'shell.css']);
+  assert.throws(() => collectStyles(manifest, ['missing']), /Missing build manifest entry/);
+});
+
+test('initial client dependency graph excludes lazy pages and Markdown rendering', async () => {
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  const initial = new Set();
+  function visit(key) {
+    if (initial.has(key)) return;
+    initial.add(key);
+    for (const dependency of manifest[key].imports ?? []) visit(dependency);
+  }
+  visit('index.html');
+  visit('src/App.tsx');
+  for (const entry of Object.values(pageEntries)) assert.ok(!initial.has(entry), `${entry} must stay deferred`);
+  for (const key of initial) {
+    const code = await readFile(new URL(manifest[key].file, dist), 'utf8');
+    assert.ok(!code.includes('remarkGfm'), 'Markdown must not be required to play a game');
+  }
+});
+
+test('prerendered routes include required page styles but exclude unrelated private styles', async () => {
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  const privateStyles = Object.values(manifest).filter(entry => /^(AdminPage|AuthPage|AccountSettingsOverlay|ProfilePage)$/.test(entry.name))
+    .flatMap(entry => entry.css ?? []);
+  const baseStyles = collectStyles(manifest, ['index.html', 'src/App.tsx']);
+  for (const pathname of publicPaths) {
+    const route = routeForPath(pathname);
+    const html = await readFile(new URL(file(pathname), dist), 'utf8');
+    const needed = [...baseStyles, ...(pageEntries[route.page] ? collectStyles(manifest, [pageEntries[route.page]]) : [])];
+    for (const style of needed) assert.ok(html.includes(`href="/${style}"`), `${pathname} needs ${style}`);
+    for (const style of privateStyles) assert.ok(!html.includes(`href="/${style}"`), `${pathname} must not load ${style}`);
+  }
+  const dynamicUpdate = renderDocument(pageTemplate, routeForPath('/updates/new-icons'), { updates: { path: '/updates/new-icons', post } });
+  for (const style of collectStyles(manifest, [pageEntries.updates])) assert.ok(dynamicUpdate.includes(`href="/${style}"`));
+});
+
+test('initial public HTML uses the small logo while preserving the social image', async () => {
+  for (const pathname of publicPaths) {
+    const html = await readFile(new URL(file(pathname), dist), 'utf8');
+    assert.match(html, /<img[^>]+src="\/brand\/characterdle-logo-small\.webp"[^>]+width="42"[^>]+height="42"/);
+    assert.match(html, /property="og:image" content="https:\/\/characterdle\.com\/android-chrome-512x512\.png"/);
+  }
+  await access(new URL('brand/characterdle-logo-small.webp', dist));
+});
+
+test('shared header, feedback, and guest signup styling does not depend on visiting another page', async () => {
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  const css = async entries => (await Promise.all(collectStyles(manifest, entries)
+    .map(file => readFile(new URL(file, dist), 'utf8')))).join('\n');
+  const shared = await css(['index.html', 'src/App.tsx']);
+  assert.match(shared, /\.updates-header-button\s*\{/);
+  assert.match(shared, /\.updates-header-button svg\s*\{/);
+  assert.match(shared, /\.updates-header-button>span\s*\{/);
+  assert.match(shared, /\.auth-feedback\.is-error\s*\{/);
+  assert.match(shared, /\.auth-feedback\.is-success\s*\{/);
+  const game = await css([pageEntries.game]);
+  assert.match(game, /\.auth-form input\s*\{/);
+  assert.match(game, /\.password-visibility-button\s*\{/);
+  assert.match(game, /\.google-auth-button\s*\{/);
+});
 
 test('all sitemap routes have distinct initial metadata, visible content, and built styles', async () => {
   const sitemap = await readFile(new URL('sitemap.xml', dist), 'utf8');

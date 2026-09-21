@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { collectStyles, pageEntries } from './route-styles.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -12,7 +13,9 @@ const apiOrigin = environment.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') ?? '
 if (apiOrigin && !/^https?:\/\//.test(apiOrigin)) throw new Error('VITE_API_BASE_URL must be an absolute HTTP(S) URL.');
 let template = await readFile(path.join(dist, 'index.html'), 'utf8');
 const manifest = JSON.parse(await readFile(path.join(dist, '.vite/manifest.json'), 'utf8'));
-const styles = [...new Set(Object.values(manifest).flatMap(entry => entry.css ?? []))];
+const styles = collectStyles(manifest, ['index.html', 'src/App.tsx']);
+const pageStyles = Object.fromEntries(Object.entries(pageEntries)
+  .map(([page, entry]) => [page, collectStyles(manifest, [entry])]));
 template = template.replace('</head>', () => styles.filter(file => !template.includes(`/${file}`))
   .map(file => `<link rel="stylesheet" href="/${file}" />`).join('\n') + '</head>');
 
@@ -24,6 +27,7 @@ await build({
     __HTML_TEMPLATE__: JSON.stringify(template),
     __PUBLIC_API_ORIGIN__: JSON.stringify(apiOrigin),
     __STAGING_BUILD__: JSON.stringify(staging),
+    __PAGE_STYLES__: JSON.stringify(pageStyles),
   },
   build: { ssr: 'src/seo/worker.ts', outDir: 'dist-ssr', emptyOutDir: true,
     rolldownOptions: { output: { entryFileNames: 'renderer.js' } } },

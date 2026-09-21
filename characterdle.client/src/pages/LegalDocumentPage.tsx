@@ -71,3 +71,4 @@ export function LegalDocumentPage({ onNavigate, page }: LegalDocumentPageProps) 
     </main>
   );
 }
+import './LegalDocumentPage.css';

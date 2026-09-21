@@ -78,7 +78,7 @@ export function PublicPage({ route, updates, error }: {
   }
   return <div className="app-shell">
     <header className="site-header"><nav className="header-inner prerender-nav" aria-label="Main navigation">
-      <a className="brand-button" href="/"><img className="brand-mark" src="/brand/characterdle-logo.png" alt="" />Characterdle</a>
+      <a className="brand-button" href="/"><img className="brand-mark" src="/brand/characterdle-logo-small.webp" width={42} height={42} alt="" />Characterdle</a>
       <div className="main-nav"><a className="nav-button" href="/home">Home</a>
         <a className="nav-button" href="/got/archive/character">Archive</a>
         <a className="nav-button" href="/got/leaderboard">Leaderboard</a><a className="nav-button" href="/updates">Updates</a></div>

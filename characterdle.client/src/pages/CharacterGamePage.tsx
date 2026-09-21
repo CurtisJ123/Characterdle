@@ -1128,3 +1128,4 @@ function buildSolvedQuoteRow(game: NonNullable<ReturnType<typeof buildQuoteGameD
     portraitUrl: game.answerCharacter.portraitUrl ?? null,
   };
 }
+import '../styles/game.css';

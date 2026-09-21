@@ -5,6 +5,8 @@ import type { PublicUpdates } from './publicUpdates';
 import type { AppRoute } from '../types/routes';
 import { RouteErrorPage } from '../pages/RouteErrorPage';
 
+declare const __PAGE_STYLES__: Partial<Record<AppRoute['page'], string[]>>;
+
 export function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
@@ -18,6 +20,9 @@ export function renderDocument(template: string, route: AppRoute, options: {
 } = {}): string {
   const seo = options.seo ?? (options.updates?.post ? resolveAnnouncementSeo(options.updates.post) : resolveSeo(route));
   const robots = options.noindex ? 'noindex,nofollow' : seo.robots;
+  const styles = (__PAGE_STYLES__[route.page] ?? []).filter(file => !template.includes(`/${file}`));
+  template = template.replace('</head>', () => styles
+    .map(file => `<link rel="stylesheet" href="/${escapeHtml(file)}" />`).join('\n') + '</head>');
   let html = template.replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(seo.title)}</title>`)
     .replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/, () => `<link rel="canonical" href="${escapeHtml(seo.canonicalUrl)}" />`);
   for (const [name, content] of Object.entries({

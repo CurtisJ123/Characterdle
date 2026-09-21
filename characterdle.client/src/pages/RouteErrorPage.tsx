@@ -12,3 +12,4 @@ export function RouteErrorPage({ status = 404 }: { status?: 404 | 503 }) {
     </section>
   </main>;
 }
+import './InformationalPage.css';

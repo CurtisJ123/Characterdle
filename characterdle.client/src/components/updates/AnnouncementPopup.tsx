@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { UpdateDialog } from './UpdateDialog';
+import { lazy, useEffect, useRef, useState } from 'react';
+import { DeferredContent } from '../ui/DeferredContent';
 import type { Announcement } from '../../types/announcements';
 import { updateMutation } from '../../services/announcementsApi';
 import { seenAnnouncements } from '../../lib/announcementState';
-import '../../pages/UpdatesPage.css';
+
+const loadUpdateDialog = () => import('./UpdateDialog').then(module => ({ default: module.UpdateDialog }));
+const UpdateDialog = lazy(loadUpdateDialog);
 
 export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin }: {
   post: Announcement; unread: boolean; token: string | null; userId?: string; onSeen: (id: string) => void; onLogin: () => void;
@@ -27,6 +29,9 @@ export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin
       if (disposed || claiming || done || !safeMoment()) return;
       claiming = true;
       try {
+        // A failed/slow chunk must not consume the one-time announcement claim.
+        await loadUpdateDialog();
+        if (disposed || !safeMoment()) return;
         const claim = async () => {
           if (seenAnnouncements(userId).includes(post.id)) return false;
           const result = await updateMutation<{ claimed: boolean }>(`/api/updates/${post.id}/claim`, accessToken, 'POST');
@@ -50,6 +55,6 @@ export function AnnouncementPopup({ post, unread, token, userId, onSeen, onLogin
     return () => { disposed = true; clearTimeout(timer); observer.disconnect(); window.removeEventListener('focus', retry); document.removeEventListener('focusout', retry); };
   }, [post.id, token, userId, unread]);
   if (!token || !userId || !open || dismissed) return null;
-  return <UpdateDialog post={post} token={token} onClose={() => setDismissed(true)}
-    onLogin={() => { setDismissed(true); onLogin(); }} />;
+  return <DeferredContent><UpdateDialog post={post} token={token} onClose={() => setDismissed(true)}
+    onLogin={() => { setDismissed(true); onLogin(); }} /></DeferredContent>;
 }
