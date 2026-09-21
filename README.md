@@ -85,11 +85,17 @@ The landing page warms the API and prefetches the current Game of Thrones board 
 
 Run `npm ci` and `npm run build` in `characterdle.client`. The build produces `dist/` (static assets and public HTML) and `dist-ssr/worker.js` (the Worker entry configured in `wrangler.jsonc`). Deploy with that configuration, not an assets-only upload. `npm run test:seo` checks the generated pages and Worker behavior after a build; `npx wrangler deploy --dry-run` validates packaging without deploying.
 
-The Worker uses the existing build-time `VITE_API_BASE_URL` to read only the public announcements API. It does not forward visitor cookies or authorization, render private data, or query game answers. Published posts use the same safe Markdown components as the browser. Missing posts return 404; an unavailable announcements API returns a retryable 503 without taking other public pages down.
+The Worker uses the existing build-time `VITE_API_BASE_URL` to read public announcements and answer-free game-availability metadata. It does not forward visitor cookies or authorization, render private data, or query game answers. Published posts use the same safe Markdown components as the browser. Missing pages, posts, and unreleased/nonexistent numbered games return 404; an unavailable API returns a retryable 503 rather than a false 404.
+
+Recognized aliases such as `/launcher`, `/history/quote`, and `/got/game/character` return same-host 301 redirects to canonical paths, preserving query strings. Known public `.html` filenames and trailing slashes are normalized too. Unknown modes, invalid IDs, and extra path segments are rejected. [Selective Worker-first routing](https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first) handles these redirects before static HTML is served; images and compiled assets remain asset-first. The separate `www`-to-bare-domain redirect is not enabled by this change because existing browser-local sessions and guest progress need a planned transition.
 
 Set `VITE_DEPLOYMENT_ENVIRONMENT=staging` for staging builds. This writes noindex metadata into the generated HTML; private account, admin, and random-practice routes also return noindex. Gameplay, authentication, billing, and live leaderboard data still load through the existing React app and API. Public page content stays visible while the app starts.
 
 Before promoting this change, verify the staging Worker serves page-specific HTML with JavaScript disabled, test a newly published update without rebuilding, and smoke-test sign-in, game navigation, and the existing billing-return flow. No database migration is required for rendering.
+
+For the URL-validation release, deploy the Render API first and verify `GET /api/universes/got/games/{existingGameId}/availability/character` returns `{"available":true}`. Then deploy the frontend Worker through the existing GitHub integration. An older backend without this endpoint makes numbered archive pages temporarily unavailable; daily pages remain independent. No SQL or new environment variables are required.
+
+On staging, check the document response in browser DevTools: `/launcher?check=1` should return 301 to `/home?check=1`; `/about/extra` and `/got/game/character/not-a-number` should return 404; a nonexistent numeric archive ID should also return 404. Existing Character and Quote archive games must still open with their existing access restrictions. Confirm sign-in, password-reset, and billing return parameters survive navigation. Local Vite validates the React error screens but does not serve the production Worker HTTP statuses; use staging for final redirect/status checks.
 
 ## Release Workflow
 

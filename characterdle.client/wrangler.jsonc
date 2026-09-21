@@ -6,7 +6,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "none",
-    "run_worker_first": ["/updates", "/updates/*"],
+    "run_worker_first": ["/*", "!/assets/*", "!/brand/*", "!/images/*"],
     "html_handling": "drop-trailing-slash"
   },
   "workers_dev": true

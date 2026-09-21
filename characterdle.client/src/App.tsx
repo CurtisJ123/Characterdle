@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AppShell } from './components/layout/AppShell';
+import { ArchiveRouteGuard } from './components/layout/ArchiveRouteGuard';
 import { SeoManager } from './components/seo/SeoManager';
 import { useUniverse } from './hooks/useUniverse';
 import { useAuth } from './hooks/useAuth';
@@ -9,6 +10,8 @@ import { LatestUpdatePopup } from './components/updates/LatestUpdatePopup';
 import { buildRoutePath, isUniverseScopedPage } from './lib/routePaths';
 import { getDefaultRoute, readRouteFromSegments } from './lib/routeParser';
 import { LandingPage } from './pages/LandingPage';
+import { RouteErrorPage } from './pages/RouteErrorPage';
+import { routeForPath } from './seo/publicRoutes';
 import type { GameMode } from './types/game';
 import type { AppRoute, AuthMode, Page } from './types/routes';
 
@@ -20,7 +23,7 @@ function readLegacyHashRoute(hash: string): AppRoute | null {
     return null;
   }
 
-  return readRouteFromSegments(normalizedHash.split('/').filter(Boolean));
+  return readRouteFromSegments(normalizedHash.split('/'));
 }
 
 function readRouteFromLocation(): AppRoute {
@@ -34,13 +37,13 @@ function readRouteFromLocation(): AppRoute {
     return legacyHashRoute;
   }
 
-  const normalizedPathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
-
-  if (!normalizedPathname) {
+  if (window.location.pathname === '/') {
     return getDefaultRoute();
   }
 
-  return readRouteFromSegments(normalizedPathname.split('/')) ?? getDefaultRoute();
+  return routeForPath(window.location.pathname) ?? {
+    ...getDefaultRoute(), page: 'notFound', requestedPath: window.location.pathname, universeId: null,
+  };
 }
 
 function App() {
@@ -72,7 +75,8 @@ function App() {
       const canonicalPathAndSearch = `${buildRoutePath(nextRoute)}${window.location.search}`;
 
       if (readLegacyHashRoute(window.location.hash) || currentPathAndSearch !== canonicalPathAndSearch) {
-        window.history.replaceState(null, '', canonicalPathAndSearch);
+        const hash = readLegacyHashRoute(window.location.hash) ? '' : window.location.hash;
+        window.history.replaceState(null, '', `${canonicalPathAndSearch}${hash}`);
       }
       acceptedLocation.current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     }
@@ -168,6 +172,8 @@ function App() {
     token={session?.access_token ?? null} userId={user?.id} onSeen={announcements.markSeen}
     onClose={() => setLatestUpdateOpen(false)} onLogin={() => { setLatestUpdateOpen(false); openAuth('login'); }} />;
 
+  if (route.page === 'notFound') return <><SeoManager route={route} /><RouteErrorPage /></>;
+
   if (route.page === 'landing' && (isLoading || !isAuthenticated)) {
     return (
       <>
@@ -178,7 +184,7 @@ function App() {
     );
   }
 
-  return (
+  const content = (
     <>
       <SeoManager route={route} />
       {latestUpdatePopup}
@@ -197,6 +203,9 @@ function App() {
       />
     </>
   );
+  return route.page === 'game' && route.gameId !== null
+    ? <ArchiveRouteGuard key={buildRoutePath(route)} route={route}>{content}</ArchiveRouteGuard>
+    : content;
 }
 
 export default App;

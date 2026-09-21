@@ -105,13 +105,126 @@ test('private and practice routes return noindex without user data', async () =>
   }
 });
 
-test('existing archive and alias routes use the same parser and canonical as the client', async () => {
-  const handler = renderRequest(() => { throw new Error('No API calls allowed.'); });
-  for (const pathname of ['/got/game/character/50', '/got/game/quote/50', '/got/history/quote', '/auth/signup', '/refund-policy']) {
+test('existing archive routes use the same parser and canonical as the client', async () => {
+  const handler = renderRequest(async () => Response.json({ available: true }));
+  for (const pathname of ['/got/game/character/50', '/got/game/quote/50']) {
     const response = await handler(request(pathname), assets);
     assert.equal(response.status, 200);
     assert.ok((await response.text()).includes(`href="${resolveSeo(routeForPath(pathname)).canonicalUrl}"`));
   }
+});
+
+test('established aliases redirect permanently in one hop, retaining queries and host', async () => {
+  const handler = renderRequest(() => { throw new Error('Aliases must not fetch data.'); });
+  const aliases = [
+    ['/launcher', '/home'], ['/landing', '/'], ['/game', '/got'], ['/game/50', '/got/game/character/50'],
+    ['/got/game/character', '/got'], ['/got/history/quote', '/got/archive/quote'],
+    ['/history/quote', '/got/archive/quote'], ['/archive', '/got/archive/character'],
+    ['/auth/signup', '/signup'], ['/got/auth/reset-password', '/got/reset-password'],
+    ['/refund-policy', '/terms'], ['/subscription-cancellation', '/terms'],
+    ['/got/game/quote/0050', '/got/game/quote/50'], ['/random/character', '/got/random'],
+    ['/got/', '/got'], ['/about/', '/about'], ['/about.html', '/about'],
+    ['/got/index.html', '/got'], ['/index.html', '/'], ['/updates.html', '/updates'],
+  ];
+  for (const host of ['characterdle.com', 'www.characterdle.com', 'staging.characterdle.com']) {
+    for (const [source, target] of aliases) {
+      const query = '?code=callback-code&checkout=success&session_id=example&next=%2Fgot';
+      const response = await handler(new Request(`https://${host}${source}${query}`), assets);
+      assert.equal(response.status, 301, source);
+      assert.equal(response.headers.get('Location'), `https://${host}${target}${query}`, source);
+      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+      assert.equal(resolveSeo(routeForPath(target)).canonicalUrl, `https://characterdle.com${target}`);
+    }
+  }
+});
+
+test('invalid modes, IDs, slugs and extra segments are not routes or redirects', async () => {
+  const handler = renderRequest(() => { throw new Error('Invalid routes must not fetch data.'); });
+  for (const pathname of [
+    '/made-up-url', '/about/extra', '/home/extra', '/admin/extra', '/login/extra',
+    '/got/leaderboard/extra', '/got/game/character/not-a-number', '/got/game/quote/0',
+    '/got/game/quote/-1', '/got/game/quote/1e3', '/got/game/quote/1.0',
+    '/got/game/character/9007199254740992', '/got/game/character/50/extra',
+    '/got/game/no-such-mode', '/got/game/50/extra', '/got/random/bad', '/got/archive/bad',
+    '/updates/new-icons/extra', '/updates/Not_A_Slug', '/auth/bad', '/got//game/quote',
+  ]) {
+    assert.equal(routeForPath(pathname), null, pathname);
+    const response = await handler(request(pathname), assets);
+    assert.equal(response.status, 404, pathname);
+    assert.equal(response.headers.get('Location'), null);
+    assert.equal(response.headers.get('X-Robots-Tag'), 'noindex, nofollow', pathname);
+    const html = await response.text();
+    assert.doesNotMatch(html, /<script[^>]*type="module"/);
+    if (!/\.[a-z0-9]+$/i.test(pathname)) assert.match(html, /<h1>Page not found<\/h1>/);
+  }
+});
+
+test('game existence checks are anonymous, mode-specific, and contain no game data', async () => {
+  for (const mode of ['character', 'quote']) {
+    const handler = renderRequest(async (url, init) => {
+      assert.equal(url, `https://api.example.test/api/universes/got/games/50/availability/${mode}`);
+      assert.deepEqual(init.headers, { Accept: 'application/json' });
+      assert.equal(init.credentials, 'omit');
+      assert.equal(init.redirect, 'manual');
+      return Response.json({ available: true, answer: 'DO_NOT_RENDER' });
+    });
+    const response = await handler(request(`/got/game/${mode}/50?token=secret`, {
+      headers: { Cookie: 'session=secret', Authorization: 'Bearer secret' },
+    }), assets);
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(await response.text(), /DO_NOT_RENDER|Bearer secret|session=secret/);
+  }
+});
+
+test('a confirmed missing or unreleased game returns a real non-booting 404', async () => {
+  const handler = renderRequest(async () => Response.json({ available: false }));
+  for (const method of ['GET', 'HEAD']) {
+    const response = await handler(request('/got/game/quote/999999999', { method }), assets);
+    assert.equal(response.status, 404);
+    assert.equal(response.headers.get('X-Robots-Tag'), 'noindex, nofollow');
+    const html = await response.text();
+    if (method === 'HEAD') assert.equal(html, '');
+    else {
+      assert.match(html, /<h1>Page not found<\/h1>/);
+      assert.doesNotMatch(html, /<script[^>]*type="module"/);
+    }
+  }
+});
+
+test('unavailable, old, redirected or malformed availability APIs produce retryable 503, not 404', async () => {
+  for (const result of [
+    () => { throw new Error('offline'); },
+    () => new Response(null, { status: 404 }),
+    () => new Response(null, { status: 503 }),
+    () => new Response(null, { status: 302, headers: { Location: 'https://elsewhere.example' } }),
+    () => Response.json({}), () => Response.json({ available: 'false' }),
+  ]) {
+    const handler = renderRequest(async () => result());
+    const response = await handler(request('/got/game/character/50'), assets);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('Retry-After'), '60');
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.match(await response.text(), /Game temporarily unavailable/);
+    assert.equal((await handler(request('/got'), assets)).status, 200);
+    assert.equal((await handler(request('/premium'), assets)).status, 200);
+  }
+});
+
+test('canonical static pages, assets and callback URLs are not redirected', async () => {
+  const handler = renderRequest(() => { throw new Error('No API calls expected.'); });
+  for (const pathname of ['/got', '/premium?checkout=success&session_id=example', '/?code=example', '/reset-password?code=example']) {
+    const response = await handler(request(pathname), assets);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Location'), null);
+  }
+  assert.equal((await handler(request('/got', { method: 'HEAD' }), assets)).body, null);
+  assert.equal((await handler(request('/assets/missing.js'), assets)).status, 404);
+});
+
+test('Cloudflare sends HTML routes to the Worker while keeping heavy assets asset-first', async () => {
+  const config = JSON.parse(await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8'));
+  assert.equal(config.assets.not_found_handling, 'none');
+  assert.deepEqual(config.assets.run_worker_first, ['/*', '!/assets/*', '!/brand/*', '!/images/*']);
 });
 
 test('published updates render full safe Markdown and preserve initial data for the browser', async () => {

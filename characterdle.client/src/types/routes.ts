@@ -1,6 +1,7 @@
 import type { GameMode } from './game';
 
 export type Page =
+  | 'notFound'
   | 'landing'
   | 'auth'
   | 'launcher'
@@ -27,6 +28,7 @@ export type AuthMode = PrimaryAuthMode | 'forgotPassword' | 'resetPassword';
 export type RouteGameMode = GameMode;
 
 export interface AppRoute {
+  requestedPath?: string;
   postSlug?: string;
   authMode: AuthMode;
   gameId: number | null;

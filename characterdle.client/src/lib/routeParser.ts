@@ -57,7 +57,7 @@ function parseGameId(value: string | undefined): number | null {
 
   const parsedGameId = Number(value);
 
-  return Number.isInteger(parsedGameId) && parsedGameId > 0
+  return /^\d+$/.test(value) && Number.isSafeInteger(parsedGameId) && parsedGameId > 0
     ? parsedGameId
     : null;
 }
@@ -93,6 +93,15 @@ export function readRouteFromSegments(segments: string[]): AppRoute | null {
     ? segments.slice(1)
     : segments;
   const [pageSegment, modeSegment, gameIdSegment] = routeSegments;
+
+  // Never discard an unknown tail, mode, or invalid ID and turn it into a real page.
+  const maxSegments = pageSegment === 'game' ? 3
+    : ['updates', 'auth', 'random', 'archive', 'history'].includes(pageSegment) ? 2 : 1;
+  if (routeSegments.length > maxSegments || routeSegments.some(segment => !segment)) return null;
+  if (pageSegment === 'updates' && modeSegment && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(modeSegment)) return null;
+  if (pageSegment === 'auth' && modeSegment
+    && !['login', 'signup', 'forgot-password', 'reset-password'].includes(modeSegment)) return null;
+  if (['random', 'archive', 'history'].includes(pageSegment) && modeSegment && !parseGameMode(modeSegment)) return null;
 
   if (!pageSegment) {
     return explicitUniverseId
@@ -133,6 +142,8 @@ export function readRouteFromSegments(segments: string[]): AppRoute | null {
       return buildAuthRoute(parseAuthMode(modeSegment), explicitUniverseId);
     case 'game': {
       const parsedMode = parseGameMode(modeSegment);
+      const idSegment = parsedMode ? gameIdSegment : modeSegment;
+      if ((!parsedMode && gameIdSegment) || (idSegment !== undefined && parseGameId(idSegment) === null)) return null;
 
       return applyUniverseScope({
         authMode: 'login',

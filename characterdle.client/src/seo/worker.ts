@@ -1,6 +1,8 @@
 import { renderDocument } from './render';
 import { publicPaths, routeForPath } from './publicRoutes';
-import { resolveSeo } from './metadata';
+import { resolveErrorSeo, resolveSeo } from './metadata';
+import { buildRoutePath } from '../lib/routePaths';
+import { fetchGameAvailability, gameAvailabilityPath } from '../lib/gameAvailability';
 import type { Announcement, AnnouncementPage } from '../types/announcements';
 import type { PublicUpdates } from './publicUpdates';
 
@@ -32,21 +34,43 @@ function publishedPost(value: unknown): Announcement | null {
 export function createPageHandler(template: string, apiOrigin: string, staging: boolean, fetchPublic = fetch) {
   return async (request: Request, env: { ASSETS: Assets }): Promise<Response> => {
     const url = new URL(request.url);
-    const pathname = url.pathname.replace(/\/+$/, '') || '/';
+    const pathname = url.pathname;
     const route = routeForPath(pathname);
     if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
     const noindex = staging || !['characterdle.com', 'www.characterdle.com'].includes(url.hostname);
+    if (route && buildRoutePath(route) !== pathname) {
+      // Same-origin redirects retain checkout/OAuth query parameters. Fragments
+      // are not sent to the server; browsers inherit them from the original URL.
+      const location = new URL(url);
+      location.pathname = buildRoutePath(route);
+      const headers = new Headers({ Location: location.href, 'Cache-Control': 'no-store' });
+      if (noindex) headers.set('X-Robots-Tag', 'noindex, nofollow');
+      return new Response(null, { status: 301, headers });
+    }
     // Static assets and prerendered public pages retain Cloudflare's asset caching.
     if (route?.page !== 'updates' && (publicPaths.includes(pathname) || /\.[a-z0-9]+$/i.test(pathname))) {
       const response = await env.ASSETS.fetch(request);
-      if (!noindex) return response;
       const headers = new Headers(response.headers);
-      headers.set('X-Robots-Tag', 'noindex, nofollow');
-      return new Response(response.body, { status: response.status, headers });
+      if (noindex || response.status >= 400) headers.set('X-Robots-Tag', 'noindex, nofollow');
+      return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, headers });
     }
     let status = route ? 200 : 404;
     let updates: PublicUpdates | undefined;
     let error: string | undefined;
+    let notFound = !route;
+    let gameUnavailable = false;
+    if (route?.page === 'game' && route.gameId !== null) {
+      try {
+        if (!apiOrigin) throw new Error('Public API origin is not configured.');
+        const available = await fetchGameAvailability(
+          `${apiOrigin}${gameAvailabilityPath(route.universeId!, route.gameId, route.gameMode)}`,
+          AbortSignal.timeout(5000), fetchPublic,
+        );
+        if (!available) { status = 404; notFound = true; }
+      } catch {
+        status = 503; gameUnavailable = true;
+      }
+    }
     if (route?.page === 'updates') {
       try {
         if (!apiOrigin) throw new Error('Public API origin is not configured.');
@@ -74,10 +98,9 @@ export function createPageHandler(template: string, apiOrigin: string, staging: 
       }
     }
     const fallback = routeForPath('/')!;
-    const seo = !route ? { ...resolveSeo(fallback), title: 'Page not found | Characterdle',
-      description: 'This page could not be found.', canonicalUrl: `https://characterdle.com${pathname}`, robots: 'noindex,nofollow', structuredData: null }
-      : error ? { ...resolveSeo(route), title: 'Update unavailable | Characterdle', description: error, robots: 'noindex,nofollow', structuredData: null } : undefined;
-    const html = renderDocument(template, route ?? fallback, { updates, error, seo, notFound: !route, noindex: noindex || status !== 200 });
+    const seo = notFound || gameUnavailable ? resolveErrorSeo(pathname, gameUnavailable ? 503 : 404)
+      : error && route ? { ...resolveSeo(route), title: 'Update unavailable | Characterdle', description: error, robots: 'noindex,nofollow', structuredData: null } : undefined;
+    const html = renderDocument(template, route ?? fallback, { updates, error, seo, notFound, gameUnavailable, noindex: noindex || status !== 200 });
     const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
     if (noindex || status !== 200 || (route && resolveSeo(route).robots.startsWith('noindex'))) headers.set('X-Robots-Tag', 'noindex, nofollow');
     if (status === 503) headers.set('Retry-After', '60');

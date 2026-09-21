@@ -119,6 +119,8 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
   const canonicalUrl = buildCanonicalUrl(route);
 
   switch (route.page) {
+    case 'notFound':
+      return resolveErrorSeo(buildRoutePath(route), 404);
     case 'admin':
       return { canonicalUrl, title: 'Administration | Characterdle', description: 'Characterdle administration.', robots: NOINDEX_ROBOTS, structuredData: null };
     case 'updates':
@@ -309,6 +311,16 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
   }
+}
+
+export function resolveErrorSeo(pathname: string, status: 404 | 503): SeoDefinition {
+  return {
+    canonicalUrl: `${SITE_ORIGIN}${pathname}`,
+    title: status === 404 ? 'Page not found | Characterdle' : 'Game temporarily unavailable | Characterdle',
+    description: status === 404 ? 'This page could not be found.' : 'Please try again shortly.',
+    robots: NOINDEX_ROBOTS,
+    structuredData: null,
+  };
 }
 
 export function resolveAnnouncementSeo(post: Announcement): SeoDefinition {
