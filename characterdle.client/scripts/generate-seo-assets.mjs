@@ -1,28 +1,14 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
+import publicPaths from '../src/seo/publicPaths.json' with { type: 'json' };
 
 const siteOrigin = 'https://characterdle.com';
 const publisherId = 'pub-2618219034381751';
-const currentDate = new Date().toISOString().slice(0, 10);
-const isStagingBuild = process.env.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
+const environment = { ...loadEnv('production', process.cwd(), 'VITE_'), ...process.env };
+const isStagingBuild = environment.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
 
-const sitemapEntries = [
-  { path: '/', changefreq: 'daily', priority: '1.0' },
-  { path: '/home', changefreq: 'daily', priority: '0.9' },
-  { path: '/got', changefreq: 'daily', priority: '1.0' },
-  { path: '/got/game/quote', changefreq: 'daily', priority: '0.9' },
-  { path: '/got/archive/character', changefreq: 'weekly', priority: '0.8' },
-  { path: '/got/archive/quote', changefreq: 'weekly', priority: '0.8' },
-  { path: '/got/leaderboard', changefreq: 'daily', priority: '0.8' },
-  { path: '/premium', changefreq: 'weekly', priority: '0.7' },
-  { path: '/updates', changefreq: 'weekly', priority: '0.7' },
-  { path: '/about', changefreq: 'monthly', priority: '0.7' },
-  { path: '/how-to-play', changefreq: 'monthly', priority: '0.7' },
-  { path: '/support', changefreq: 'monthly', priority: '0.6' },
-  { path: '/privacy-policy', changefreq: 'monthly', priority: '0.5' },
-  { path: '/terms', changefreq: 'monthly', priority: '0.5' },
-];
 
 const robotsLines = isStagingBuild
   ? [
@@ -40,11 +26,8 @@ const robotsLines = isStagingBuild
     ];
 
 function buildSitemapXml() {
-  const urls = sitemapEntries.map((entry) => `  <url>
-    <loc>${siteOrigin}${entry.path}</loc>
-    <lastmod>${currentDate}</lastmod>
-    <changefreq>${entry.changefreq}</changefreq>
-    <priority>${entry.priority}</priority>
+  const urls = publicPaths.map((pathname) => `  <url>
+    <loc>${siteOrigin}${pathname}</loc>
   </url>`).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>

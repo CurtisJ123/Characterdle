@@ -106,6 +106,28 @@ function renderStartupScreen(
   message: string,
   retryAction?: () => void,
 ) {
+  // Keep the public HTML readable until React commits the interactive app.
+  const prerendered = document.querySelector<HTMLElement>('#root[data-prerendered]');
+  if (prerendered) {
+    let status = prerendered.querySelector<HTMLElement>('#prerender-status');
+    if (!status && !retryAction) return;
+    if (!status) {
+      status = document.createElement('p');
+      status.id = 'prerender-status';
+      status.className = 'page muted-copy';
+      status.setAttribute('role', 'status');
+      prerendered.appendChild(status);
+    }
+    status.textContent = message;
+    if (retryAction) {
+      const retry = document.createElement('button');
+      retry.className = 'secondary-button';
+      retry.textContent = 'Retry';
+      retry.onclick = retryAction;
+      status.append(' ', retry);
+    }
+    return;
+  }
   root.render(
     <StrictMode>
       <main className="startup-screen">
@@ -144,6 +166,7 @@ async function bootstrap(root: Root) {
     import('./contexts/UniverseContext'),
   ]);
 
+  document.getElementById('root')?.removeAttribute('data-prerendered');
   root.render(
     <StrictMode>
       <AuthProvider>

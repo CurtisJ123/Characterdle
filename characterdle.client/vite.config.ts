@@ -13,6 +13,7 @@ const STAGING_NOINDEX_ROBOTS = 'noindex,nofollow,max-image-preview:large,max-sni
 export default defineConfig(({ command }) => {
     const isStagingBuild = env.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
     const configuration = {
+        build: { manifest: true },
         plugins: [
             plugin(),
             {

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { updatesRequest } from '../services/announcementsApi';
 
-export function useUpdatesResource<T>(path: string | null, token: string | null = null) {
+export function useUpdatesResource<T>(path: string | null, token: string | null = null, initialData?: T) {
   const [version, setVersion] = useState(0);
-  const [result, setResult] = useState<{ key: string; data?: T; error?: string }>({ key: '' });
+  const [result, setResult] = useState<{ key: string; data?: T; error?: string }>(
+    () => initialData ? { key: `${path}:${token}:0`, data: initialData } : { key: '' },
+  );
   const key = `${path}:${token}:${version}`;
   useEffect(() => {
     if (!path) return;

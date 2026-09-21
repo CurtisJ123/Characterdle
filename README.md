@@ -43,7 +43,8 @@ The repository is a portfolio-focused view of the product and the engineering be
 - Supabase browser authentication with email/password and Google OAuth
 - Local board recovery plus a durable result outbox that retries authenticated submissions after network interruptions
 - Guest victory migration when a player creates an account after completing a board
-- Route-aware titles, descriptions, canonical URLs, Open Graph metadata, JSON-LD, sitemap generation, and public informational pages
+- Build-time HTML for all public sitemap pages, with titles, descriptions, canonicals, Open Graph metadata, and JSON-LD shared with the React client
+- Request-time rendering of published updates through a Cloudflare Worker, so publishing or editing an announcement does not require a deployment
 
 ### Backend
 
@@ -73,12 +74,22 @@ The repository is a portfolio-focused view of the product and the engineering be
 
 ## Deployment
 
-- **Frontend:** Cloudflare Workers Static Assets
+- **Frontend:** Cloudflare Workers Static Assets plus a public-page Worker
 - **Backend:** Dockerized ASP.NET Core service on Render
 - **Database and authentication:** Supabase
 - **Billing:** Stripe
 
 The landing page warms the API and prefetches the current Game of Thrones board without blocking navigation, reducing the impact of a sleeping backend instance.
+
+### Public HTML and SEO
+
+Run `npm ci` and `npm run build` in `characterdle.client`. The build produces `dist/` (static assets and public HTML) and `dist-ssr/worker.js` (the Worker entry configured in `wrangler.jsonc`). Deploy with that configuration, not an assets-only upload. `npm run test:seo` checks the generated pages and Worker behavior after a build; `npx wrangler deploy --dry-run` validates packaging without deploying.
+
+The Worker uses the existing build-time `VITE_API_BASE_URL` to read only the public announcements API. It does not forward visitor cookies or authorization, render private data, or query game answers. Published posts use the same safe Markdown components as the browser. Missing posts return 404; an unavailable announcements API returns a retryable 503 without taking other public pages down.
+
+Set `VITE_DEPLOYMENT_ENVIRONMENT=staging` for staging builds. This writes noindex metadata into the generated HTML; private account, admin, and random-practice routes also return noindex. Gameplay, authentication, billing, and live leaderboard data still load through the existing React app and API. Public page content stays visible while the app starts.
+
+Before promoting this change, verify the staging Worker serves page-specific HTML with JavaScript disabled, test a newly published update without rebuilding, and smoke-test sign-in, game navigation, and the existing billing-return flow. No database migration is required for rendering.
 
 ## Release Workflow
 

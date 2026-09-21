@@ -49,3 +49,8 @@
 @import './components/ui/SupporterBadge.css';
 @import './components/ui/UserAvatar.css';
 @import './components/ui/LoadingOverlay.css';
+
+/* Only used while the interactive app is loading, including without JavaScript. */
+.prerender-nav { flex-wrap: wrap; gap: 12px; padding-block: 12px; }
+.prerender-nav a { text-decoration: none; }
+.prerender-nav .main-nav { flex-wrap: wrap; margin-left: 0; }

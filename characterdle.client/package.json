@@ -10,6 +10,7 @@
     "postbuild": "node ./scripts/generate-route-html.mjs",
     "lint": "eslint .",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:seo": "node --test --test-isolation=none tests/prerender.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
