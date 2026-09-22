@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { CharacterGuessRow } from './CharacterGuessRow';
 import { GameResultPanel } from './GameResultPanel';
 import { GuestVictorySignupOverlay } from './GuestVictorySignupOverlay';
+import { HistoryEduIcon } from '../ui/HistoryEduIcon';
 import { getCharacterBoardAttributeGroups } from '../../lib/characterBoardLayout';
 import type {
   CharacterGameRow,
@@ -115,9 +116,7 @@ export function CharacterGameBoard({
           ))
         ) : (
           <div className="empty-guess-state">
-            <span className="material-symbols-outlined empty-guess-state-mark" aria-hidden="true">
-              history_edu
-            </span>
+            <HistoryEduIcon className="empty-guess-state-mark" />
             <span className="empty-guess-state-title">No guesses yet.</span>
             <span className="empty-guess-state-copy">
               Search for a character above, then make your first guess.

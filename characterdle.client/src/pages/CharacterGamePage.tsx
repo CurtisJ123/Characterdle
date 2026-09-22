@@ -191,10 +191,10 @@ export function CharacterGamePage({
     } as CSSProperties;
   }, [attributeCount]);
   const remoteCharacterOutcome = characterResult
-    ? getRemoteGameOutcome(characterResult.status, characterResult.completedAt)
+    ? getRemoteGameOutcome(characterResult.status, characterResult.completedAt, characterResult.hintCount)
     : 'pending';
   const remoteQuoteOutcome = quoteResult
-    ? getRemoteGameOutcome(quoteResult.status, quoteResult.completedAt)
+    ? getRemoteGameOutcome(quoteResult.status, quoteResult.completedAt, quoteResult.hintCount)
     : 'pending';
   const usesRemoteCharacterResult = !isTemporaryGame && !isQuoteMode && !!data && characterGame.status === 'playing' && remoteCharacterOutcome !== 'pending';
   const usesRemoteQuoteResult = !isTemporaryGame && isQuoteMode && !!quoteGameData && quoteGame.status === 'playing' && remoteQuoteOutcome !== 'pending';
@@ -343,7 +343,7 @@ export function CharacterGamePage({
   }, [error, isComplete, isGameLoading, isTemporaryGame, isUnavailable, isQuoteMode, data?.id]);
 
   useEffect(() => {
-    if (isTemporaryGame || !data) {
+    if (isTemporaryGame || !data || !characterGame.isReady) {
       return;
     }
 
@@ -403,6 +403,7 @@ export function CharacterGamePage({
     characterGame.status,
     data,
     isTemporaryGame,
+    characterGame.isReady,
   ]);
 
   useEffect(() => {
@@ -410,6 +411,7 @@ export function CharacterGamePage({
       isTemporaryGame
       || !data
       || !session?.access_token
+      || !characterGame.isReady
       || !user
       || (
         characterGame.guessCount === 0
@@ -430,6 +432,7 @@ export function CharacterGamePage({
       currentGame.id,
       'character',
       finalizedStatus,
+      characterGame.attemptNumber,
       characterGame.guessCount,
       characterGame.hintCount,
     ].join(':');
@@ -446,6 +449,7 @@ export function CharacterGamePage({
       gameId: currentGame.id,
       guessCount: characterGame.guessCount,
       guessedCharacterIds: characterGame.guessedCharacterIds,
+      attemptNumber: characterGame.attemptNumber,
       hintCount: characterGame.hintCount,
       mode: 'character' as const,
       revealedHintKeys: characterGame.revealedHints.map((hint) => hint.id),
@@ -481,6 +485,8 @@ export function CharacterGamePage({
   }, [
     characterGame.guessCount,
     characterGame.guessedCharacterIds,
+    characterGame.attemptNumber,
+    characterGame.isReady,
     characterGame.hintCount,
     characterGame.revealedHints,
     characterGame.status,
@@ -492,7 +498,7 @@ export function CharacterGamePage({
   ]);
 
   useEffect(() => {
-    if (!quoteGameData || isTemporaryGame) {
+    if (!quoteGameData || isTemporaryGame || !quoteGame.isReady) {
       return;
     }
 
@@ -552,6 +558,7 @@ export function CharacterGamePage({
     quoteGame.hintCount,
     quoteGame.status,
     quoteGameData,
+    quoteGame.isReady,
   ]);
 
   useEffect(() => {
@@ -559,6 +566,7 @@ export function CharacterGamePage({
       isTemporaryGame
       || !quoteGameData
       || !session?.access_token
+      || !quoteGame.isReady
       || !user
       || (
         quoteGame.guessCount === 0
@@ -579,6 +587,7 @@ export function CharacterGamePage({
       currentQuoteGame.gameId,
       'quote',
       finalizedStatus,
+      quoteGame.attemptNumber,
       quoteGame.guessCount,
       quoteGame.hintCount,
     ].join(':');
@@ -595,6 +604,7 @@ export function CharacterGamePage({
       gameId: currentQuoteGame.gameId,
       guessCount: quoteGame.guessCount,
       guessedCharacterIds: quoteGame.guessedCharacterIds,
+      attemptNumber: quoteGame.attemptNumber,
       hintCount: quoteGame.hintCount,
       mode: 'quote' as const,
       revealedHintKeys: quoteGame.revealedHints.map((hint) => hint.id),
@@ -631,6 +641,8 @@ export function CharacterGamePage({
     isTemporaryGame,
     quoteGame.guessCount,
     quoteGame.guessedCharacterIds,
+    quoteGame.attemptNumber,
+    quoteGame.isReady,
     quoteGame.hintCount,
     quoteGame.revealedHints,
     quoteGame.status,

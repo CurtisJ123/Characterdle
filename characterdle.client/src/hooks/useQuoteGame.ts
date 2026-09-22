@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   getQuoteGameStorageKey,
-  hasExpiredGiveUp,
 } from '../lib/characterGameProgress';
+import { getAttemptNumber, mergeReplayProgress, prepareReplayProgress } from '../lib/gameReplay';
 import { resolveCharacterSearch } from '../lib/characterSearch';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
 import { compareAttributeValue, formatAttributeValue } from '../lib/universeAttributes';
@@ -20,6 +20,7 @@ import type {
 } from '../types/universeGame';
 
 interface StoredQuoteGameState {
+  attemptNumber?: number;
   completionRecorded: boolean;
   firstLetterRevealed: boolean;
   gaveUp: boolean;
@@ -166,18 +167,8 @@ function readStoredState(game: QuoteGameData, ownerKey: string): StoredQuoteGame
       ? parsedValue.resolvedAt
       : null;
 
-    if (parsedValue.gaveUp === true && hasExpiredGiveUp(resolvedAt)) {
-      return {
-        completionRecorded: false,
-        firstLetterRevealed: false,
-        gaveUp: false,
-        guessCount: 0,
-        guessedCharacterIds: [],
-        revealedHintKeys: [],
-      };
-    }
-
-    return {
+    return prepareReplayProgress({
+      attemptNumber: getAttemptNumber(parsedValue.attemptNumber),
       completionRecorded: parsedValue.completionRecorded === true,
       firstLetterRevealed: parsedValue.firstLetterRevealed === true,
       gaveUp: parsedValue.gaveUp === true,
@@ -196,7 +187,7 @@ function readStoredState(game: QuoteGameData, ownerKey: string): StoredQuoteGame
       updatedAt: typeof parsedValue.updatedAt === 'string' && !Number.isNaN(Date.parse(parsedValue.updatedAt))
         ? parsedValue.updatedAt
         : null,
-    };
+    });
   } catch {
     return {
       completionRecorded: false,
@@ -220,10 +211,6 @@ function resolveStoredState(
     return localState;
   }
 
-  if (persistedResult.status === 'lost' && hasExpiredGiveUp(persistedResult.completedAt)) {
-    return localState;
-  }
-
   const allowedCharacterIds = new Set(game.characters.map((character) => character.id));
   const allowedHintKeys = new Set<string>([
     QUOTE_SOURCE_HINT_ID,
@@ -233,6 +220,7 @@ function resolveStoredState(
     (characterId) => allowedCharacterIds.has(characterId),
   );
   const remoteState: StoredQuoteGameState = {
+    attemptNumber: getAttemptNumber(persistedResult.attemptNumber),
     completionRecorded: persistedResult.status === 'won',
     firstLetterRevealed: persistedResult.revealedHintKeys.includes('first-letter'),
     gaveUp: persistedResult.status === 'lost',
@@ -242,29 +230,7 @@ function resolveStoredState(
     resolvedAt: persistedResult.completedAt,
     updatedAt: persistedResult.updatedAt,
   };
-  const localIsComplete = localState.completionRecorded || localState.gaveUp;
-  const remoteIsComplete = remoteState.completionRecorded || remoteState.gaveUp;
-
-  if (localIsComplete !== remoteIsComplete) {
-    return remoteIsComplete ? remoteState : localState;
-  }
-
-  const localProgress = localState.guessCount
-    + localState.revealedHintKeys.length
-    + (localState.firstLetterRevealed ? 1 : 0);
-  const remoteProgress = remoteState.guessCount
-    + remoteState.revealedHintKeys.length
-    + (remoteState.firstLetterRevealed ? 1 : 0);
-
-  if (remoteProgress !== localProgress) {
-    return remoteProgress > localProgress ? remoteState : localState;
-  }
-
-  if (localState.updatedAt && Date.parse(remoteState.updatedAt ?? '') > Date.parse(localState.updatedAt)) {
-    return remoteState;
-  }
-
-  return localState;
+  return mergeReplayProgress(localState, prepareReplayProgress({ ...remoteState, hintCount: persistedResult.hintCount }));
 }
 
 export function useQuoteGame(
@@ -273,6 +239,15 @@ export function useQuoteGame(
   ownerKey = 'guest',
   persistProgress = true,
 ): GameRoundState<QuoteGameRow> {
+  const [attemptNumber, setAttemptNumber] = useState(0);
+  const [loadedInputs, setLoadedInputs] = useState<{
+    game: QuoteGameData | null;
+    ownerKey: string;
+    persistedResult: PersistedGameResult | null;
+    persistProgress: boolean;
+  } | null>(null);
+  const isReady = loadedInputs?.game === game && loadedInputs.ownerKey === ownerKey
+    && loadedInputs.persistedResult === persistedResult && loadedInputs.persistProgress === persistProgress;
   const [totalGuessCount, setTotalGuessCount] = useState(0);
   const [guessedCharacterIds, setGuessedCharacterIds] = useState<number[]>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -285,7 +260,9 @@ export function useQuoteGame(
   const [completedGameStats, setCompletedGameStats] = useState<CompletedGameStats>(createEmptyCompletedGameStats());
 
   useEffect(() => {
+    setLoadedInputs({ game, ownerKey, persistedResult, persistProgress });
     if (!game) {
+      setAttemptNumber(0);
       setGuessedCharacterIds([]);
       setMessage(null);
       setCompletionRecorded(false);
@@ -299,7 +276,7 @@ export function useQuoteGame(
       return;
     }
 
-    const storedState = persistProgress
+    const storedState: StoredQuoteGameState = persistProgress
       ? resolveStoredState(game, persistedResult, ownerKey)
       : {
         completionRecorded: false,
@@ -310,6 +287,7 @@ export function useQuoteGame(
         revealedHintKeys: [],
       };
     const storedActivity = hasStoredActivity(storedState);
+    setAttemptNumber(getAttemptNumber(storedState.attemptNumber));
     setTotalGuessCount(storedState.guessCount);
     setGuessedCharacterIds(storedState.guessedCharacterIds);
     setCompletionRecorded(storedState.completionRecorded);
@@ -323,11 +301,12 @@ export function useQuoteGame(
   }, [game, ownerKey, persistProgress, persistedResult]);
 
   useEffect(() => {
-    if (!persistProgress || !game || typeof window === 'undefined') {
+    if (!isReady || !persistProgress || !game || typeof window === 'undefined') {
       return;
     }
 
     const storedState: StoredQuoteGameState = {
+      attemptNumber,
       completionRecorded,
       firstLetterRevealed,
       gaveUp,
@@ -344,7 +323,8 @@ export function useQuoteGame(
             try {
               const existingState = JSON.parse(existingRawValue) as Partial<StoredQuoteGameState>;
 
-              if (typeof existingState.resolvedAt === 'string' && !Number.isNaN(Date.parse(existingState.resolvedAt))) {
+              if (getAttemptNumber(existingState.attemptNumber) === attemptNumber
+                && typeof existingState.resolvedAt === 'string' && !Number.isNaN(Date.parse(existingState.resolvedAt))) {
                 return existingState.resolvedAt;
               }
             } catch {
@@ -363,6 +343,8 @@ export function useQuoteGame(
       JSON.stringify(storedState),
     );
   }, [
+    attemptNumber,
+    isReady,
     completionRecorded,
     firstLetterRevealed,
     game,
@@ -419,16 +401,16 @@ export function useQuoteGame(
   const hasMeaningfulActivity = totalGuessCount > 0 || hintCount > 0 || status !== 'playing';
 
   useEffect(() => {
-    if (!game || hasRecordedPlay || !hasMeaningfulActivity) {
+    if (!isReady || !game || hasRecordedPlay || !hasMeaningfulActivity) {
       return;
     }
 
     setCompletedGameStats((currentStats) => incrementPlayCount(currentStats));
     setHasRecordedPlay(true);
-  }, [game, hasMeaningfulActivity, hasRecordedPlay]);
+  }, [game, hasMeaningfulActivity, hasRecordedPlay, isReady]);
 
   useEffect(() => {
-    if (!game || !isSolved || completionRecorded || typeof window === 'undefined') {
+    if (!isReady || !game || !isSolved || completionRecorded || typeof window === 'undefined') {
       return;
     }
 
@@ -438,10 +420,10 @@ export function useQuoteGame(
 
     setIsAggregateUpdateEligible(false);
     setCompletionRecorded(true);
-  }, [completionRecorded, game, isAggregateUpdateEligible, isSolved, isStatsEligible, totalGuessCount]);
+  }, [completionRecorded, game, isAggregateUpdateEligible, isSolved, isStatsEligible, totalGuessCount, isReady]);
 
   function submitGuess(query: string): SubmitGuessResult {
-    if (!game) {
+    if (!isReady || !game) {
       return {
         accepted: false,
         wasCorrect: false,
@@ -499,7 +481,7 @@ export function useQuoteGame(
   }
 
   function handleHintAction() {
-    if (!game || status !== 'playing') {
+    if (!isReady || !game || status !== 'playing') {
       return;
     }
 
@@ -549,6 +531,8 @@ export function useQuoteGame(
   }
 
   return {
+    attemptNumber,
+    isReady,
     completedGameStats,
     guessCount: totalGuessCount,
     guessedCharacterIds,

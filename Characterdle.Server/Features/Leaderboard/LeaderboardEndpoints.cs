@@ -19,6 +19,7 @@ public static class LeaderboardEndpoints
             .WithName("SubmitUniverseLeaderboardResult")
             .Produces<UniverseStreakResponse>()
             .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
@@ -115,9 +116,14 @@ public static class LeaderboardEndpoints
                 request.Status.Trim().ToLowerInvariant(),
                 request.GuessedCharacterIds,
                 request.RevealedHintKeys,
+                request.AttemptNumber,
                 cancellationToken);
 
             return Results.Ok(streak);
+        }
+        catch (GameReplayNotAvailableException exception)
+        {
+            return Results.Problem(title: exception.Message, statusCode: StatusCodes.Status409Conflict);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -138,6 +144,11 @@ public static class LeaderboardEndpoints
     private static Dictionary<string, string[]> Validate(SubmitUniverseGameResultRequest request)
     {
         var errors = new Dictionary<string, string[]>();
+
+        if (request.AttemptNumber < 0)
+        {
+            errors["attemptNumber"] = ["Attempt number cannot be negative."];
+        }
 
         if (request.GameId <= 0)
         {

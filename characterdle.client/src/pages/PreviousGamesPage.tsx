@@ -10,8 +10,8 @@ import {
   getCharacterGameOutcome,
   getGameProgressOwnerKey,
   getQuoteGameOutcome,
-  getRemoteGameOutcome,
 } from '../lib/characterGameProgress';
+import { getArchiveGameOutcome } from '../lib/gameReplay';
 import type { GameMode } from '../types/game';
 import type { PremiumAccess } from '../types/premium';
 import type { NavigateToPage } from '../types/routes';
@@ -69,7 +69,7 @@ export function PreviousGamesPage({
         : getCharacterGameOutcome(progressOwnerKey, selectedUniverse.id, game.id);
       const remoteResult = gameResults.find((result) => result.mode === selectedGameMode && result.gameId === game.id);
       const remoteOutcome = remoteResult
-        ? getRemoteGameOutcome(remoteResult.status, remoteResult.completedAt)
+        ? getArchiveGameOutcome(remoteResult.status, remoteResult.hintCount, remoteResult.completedAt)
         : 'pending';
 
       return [game.id, remoteOutcome !== 'pending' ? remoteOutcome : localOutcome];

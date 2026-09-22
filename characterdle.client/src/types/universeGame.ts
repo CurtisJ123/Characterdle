@@ -113,6 +113,8 @@ export interface CompletedGameStats {
 }
 
 export interface GameRoundState<RowType> {
+  attemptNumber: number;
+  isReady: boolean;
   completedGameStats: CompletedGameStats;
   guessCount: number;
   guessedCharacterIds: number[];

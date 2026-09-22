@@ -61,7 +61,7 @@ The repository is a portfolio-focused view of the product and the engineering be
 - **Supabase Postgres:** characters, quotes, daily games, results, profiles, premium status, and streaks
 - **Supabase Auth:** sessions, Google OAuth, confirmation, and password recovery
 - **Stripe:** monthly and yearly subscriptions, billing portal, and webhook-driven entitlements
-- **Google AdSense:** advertising for eligible free sessions, suppressed for Premium members
+- **Google AdSense (paused):** no advertising scripts load in staging or production. Account verification metadata and `ads.txt` remain inert for future use; the previous loader can be recovered from Git history. Re-enabling ads requires an explicit code change and restoring the Premium exclusion checks.
 
 ## Notable Engineering Decisions
 

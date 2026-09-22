@@ -1,5 +1,4 @@
 import { lazy, useEffect, useState } from 'react';
-import { AdSenseBootstrap } from './AdSenseBootstrap';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { useAuth } from '../../hooks/useAuth';
@@ -309,12 +308,6 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      {currentPage !== 'landing' && <AdSenseBootstrap
-        isAdFreePremium={premiumAccess?.adFree === true}
-        isAuthenticated={isAuthenticated}
-        isAuthLoading={isLoading}
-        isPremiumLoading={isPremiumLoading}
-      />}
       <SiteHeader
         hasUnreadUpdates={announcements.unread}
         isAdmin={announcements.isAdmin}

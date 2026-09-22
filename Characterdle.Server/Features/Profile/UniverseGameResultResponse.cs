@@ -9,4 +9,5 @@ public sealed record UniverseGameResultResponse(
     IReadOnlyList<long> GuessedCharacterIds,
     IReadOnlyList<string> RevealedHintKeys,
     DateTimeOffset? CompletedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    int AttemptNumber);

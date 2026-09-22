@@ -7,4 +7,5 @@ public sealed record SubmitUniverseGameResultRequest(
     string Mode,
     string Status,
     IReadOnlyList<long> GuessedCharacterIds,
-    IReadOnlyList<string> RevealedHintKeys);
+    IReadOnlyList<string> RevealedHintKeys,
+    int AttemptNumber = 0);

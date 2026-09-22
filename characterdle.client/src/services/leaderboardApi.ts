@@ -58,6 +58,7 @@ export async function submitUniverseGameResult(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      attemptNumber: payload.attemptNumber ?? 0,
       gameId: payload.gameId,
       guessCount: payload.guessCount,
       guessedCharacterIds: retainGuessesForPersistence(payload.guessedCharacterIds),

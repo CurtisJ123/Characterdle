@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile, access } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { createPageHandler, pageTemplate, publicPaths, renderDocument, resolveSeo, routeForPath } from '../dist-ssr/renderer.js';
 import { collectStyles, pageEntries } from '../scripts/route-styles.mjs';
 
@@ -19,6 +20,68 @@ const assets = { ASSETS: { async fetch(request) {
 } } };
 const request = (pathname, init) => new Request(`https://characterdle.com${pathname}`, init);
 const renderRequest = (fetchPublic, staging = false) => createPageHandler(pageTemplate, 'https://api.example.test', staging, fetchPublic);
+
+test('public pages and client bundles do not include advertising loaders', async () => {
+  const advertisingLoader = /AdSenseBootstrap|adsbygoogle|googlesyndication\.com|doubleclick\.net|adtrafficquality\.google/i;
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  const scripts = new Set(Object.values(manifest).map(entry => entry.file).filter(file => file.endsWith('.js')));
+  for (const script of scripts) {
+    assert.doesNotMatch(await readFile(new URL(script, dist), 'utf8'), advertisingLoader, script);
+  }
+  for (const pathname of publicPaths) {
+    assert.doesNotMatch(await readFile(new URL(file(pathname), dist), 'utf8'), advertisingLoader, pathname);
+    for (const noindex of [false, true]) {
+      const html = renderDocument(pageTemplate, routeForPath(pathname), { noindex });
+      assert.doesNotMatch(html, advertisingLoader, `${pathname}, staging=${noindex}`);
+    }
+  }
+});
+
+test('public HTML and built styles use local fonts with only two matching preloads', async () => {
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  const styles = collectStyles(manifest, ['index.html', 'src/App.tsx']);
+  const css = (await Promise.all(styles.map(file => readFile(new URL(file, dist), 'utf8')))).join('\n');
+  assert.doesNotMatch(css, /fonts\.(googleapis|gstatic)\.com|@import\s/);
+  const faces = [...css.matchAll(/@font-face\s*\{([^}]+)\}/g)];
+  assert.equal(faces.length, 14);
+  for (const [, face] of faces) {
+    assert.match(face, /font-display:\s*swap/);
+    assert.match(face, /unicode-range:/);
+    assert.match(face, /font-style:\s*normal/);
+  }
+  for (const pathname of publicPaths) {
+    const html = await readFile(new URL(file(pathname), dist), 'utf8');
+    assert.doesNotMatch(html, /fonts\.(googleapis|gstatic)\.com|Material\+Symbols/);
+    const preloads = [...html.matchAll(/<link\b(?=[^>]*rel="preload")(?=[^>]*as="font")[^>]*>/g)];
+    assert.equal(preloads.length, 2, pathname);
+    for (const [link] of preloads) {
+      const href = /href="([^"]+)"/.exec(link)[1];
+      assert.match(href, /^\/assets\/(inter|cormorant-garamond)-latin-[^/]+\.woff2$/);
+      assert.match(link, /type="font\/woff2"/);
+      assert.match(link, /crossorigin/);
+      assert.ok(css.includes(href), 'CSS and preload must use the exact same fingerprinted URL');
+      const bytes = await readFile(new URL(href.slice(1), dist));
+      assert.equal(bytes.subarray(0, 4).toString(), 'wOF2');
+    }
+  }
+});
+
+test('vendored WOFF2 assets match their recorded sources and preserve existing weight limits', async () => {
+  const fonts = new URL('../src/assets/fonts/', import.meta.url);
+  const sources = JSON.parse(await readFile(new URL('sources.json', fonts), 'utf8'));
+  const weights = { Cinzel: '600 700', 'Cormorant Garamond': '500 700', Inter: '400 800' };
+  for (const font of sources.fonts) {
+    const bytes = await readFile(new URL(font.filename, fonts));
+    assert.equal(bytes.subarray(0, 4).toString(), 'wOF2');
+    assert.equal(bytes.length, font.bytes);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), font.sha256);
+    assert.equal(font.weights, weights[font.family]);
+  }
+  for (const family of ['cinzel', 'cormorant-garamond', 'inter']) {
+    assert.match(await readFile(new URL(`licenses/${family}-OFL.txt`, dist), 'utf8'), /SIL OPEN FONT LICENSE/);
+  }
+  assert.match(await readFile(new URL('licenses/material-symbols-Apache-2.0.txt', dist), 'utf8'), /Apache License/);
+});
 
 test('stylesheet collection follows static dependencies without loading secondary pages', () => {
   const manifest = {
