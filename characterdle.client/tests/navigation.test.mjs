@@ -11,6 +11,7 @@ let PreviousGamesGrid;
 let GameResultPanel;
 let QuoteGameBoard;
 let SiteHeader;
+let DeferredContent;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
@@ -29,8 +30,20 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, GameResultPanel, QuoteGameBoard, SiteHeader }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
+});
+
+test('deferred content adds no visible placeholder while a child is loading', () => {
+  const pending = new Promise(() => {});
+  const PendingContent = () => { throw pending; };
+  const html = render(DeferredContent, { children: createElement(PendingContent) });
+  assert.equal(html.replace(/<!--[\s\S]*?-->/g, ''), '');
+});
+
+test('deferred content renders loaded children normally', () => {
+  const html = render(DeferredContent, { children: createElement('div', { role: 'dialog' }, 'Settings') });
+  assert.match(html, /<div role="dialog">Settings<\/div>/);
 });
 
 test('route links expose href, label, and existing styling without JavaScript', () => {

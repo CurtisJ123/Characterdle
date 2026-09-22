@@ -20,7 +20,7 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
 
 export function DeferredContent({ children, resetKey }: { children: ReactNode; resetKey?: string }) {
   return <ChunkErrorBoundary key={resetKey}>
-    <Suspense fallback={<p className="page muted-copy" role="status">Loading...</p>}>
+    <Suspense fallback={null}>
       {children}
     </Suspense>
   </ChunkErrorBoundary>;

@@ -6,3 +6,4 @@ export { PreviousGamesGrid } from '../../src/components/history/PreviousGamesGri
 export { GameResultPanel } from '../../src/components/game/GameResultPanel';
 export { QuoteGameBoard } from '../../src/components/game/QuoteGameBoard';
 export { SiteHeader } from '../../src/components/layout/SiteHeader';
+export { DeferredContent } from '../../src/components/ui/DeferredContent';
