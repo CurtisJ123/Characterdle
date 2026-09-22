@@ -46,6 +46,16 @@
   background: linear-gradient(145deg, var(--status-danger-strong), var(--status-danger-deep));
 }
 
+.archive-tile.is-hinted-win {
+  border-color: color-mix(in srgb, var(--status-warning) 65%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--status-warning) 84%, var(--surface-container-lowest)),
+    color-mix(in srgb, var(--status-warning) 70%, var(--surface-container-lowest))
+  );
+  color: var(--surface-container-lowest);
+}
+
 .archive-tile:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--primary) 34%, transparent);
   filter: brightness(1.05);

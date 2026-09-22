@@ -28,7 +28,7 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
         <span>Player</span>
         <span>{winsLabel}</span>
         <span>Avg. Guesses</span>
-        <span>Plays</span>
+        <span>Attempts</span>
       </div>
       {rows.map((row) => (
         <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} key={row.userId}>

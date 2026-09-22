@@ -2,18 +2,16 @@ import type { PersistedGameResult } from '../types/profile';
 import type { GameMode } from '../types/game';
 import type { SubmitUniverseGameResultPayload } from '../types/leaderboard';
 import { enqueueUniverseGameResult } from './gameResultOutbox';
+import { getArchiveGameOutcome, getAttemptNumber, getProgressHintCount, isReplayAvailable, mergeReplayProgress,
+  type ArchiveGameOutcome, type ReplayProgress } from './gameReplay';
 
 interface StoredGameStats {
   guessCounts: number[];
 }
 
-interface StoredCompletionState {
-  completionRecorded?: boolean;
-  gaveUp?: boolean;
-  resolvedAt?: string | null;
-}
+type StoredCompletionState = ReplayProgress;
 
-export type StoredGameOutcome = 'pending' | 'won' | 'lost';
+export type StoredGameOutcome = ArchiveGameOutcome;
 
 const PLAY_STATS_STORAGE_KEY_PREFIX = 'character-game-stats';
 const GAME_STATE_STORAGE_KEY_PREFIX = 'character-game-state';
@@ -21,7 +19,6 @@ const LEGACY_SESSION_STORAGE_KEY_PREFIX = 'character-game';
 const QUOTE_PLAY_STATS_STORAGE_KEY_PREFIX = 'quote-game-stats';
 const QUOTE_GAME_STATE_STORAGE_KEY_PREFIX = 'quote-game-state';
 const UNIVERSE_GAME_RESULTS_CACHE_KEY_PREFIX = 'universe-game-results';
-const GIVE_UP_RESET_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface GuestVictoryState {
   completionRecorded?: boolean;
@@ -211,7 +208,8 @@ export function migrateGuestGameVictoriesToUser(userId: string): number {
           continue;
         }
 
-        window.localStorage.setItem(targetStorageKey, sourceValue);
+        // A guest's current victory is their first account-backed attempt.
+        window.localStorage.setItem(targetStorageKey, JSON.stringify({ ...candidate.state, attemptNumber: 0 }));
       }
 
       window.localStorage.removeItem(candidate.sourceStorageKey);
@@ -261,11 +259,8 @@ function readCompletionState(storageKey: string, fallbackStorageKey?: string): S
         ? parsedValue.resolvedAt
         : null;
 
-      if (parsedValue.gaveUp === true && hasExpiredGiveUp(resolvedAt)) {
-        return null;
-      }
-
       return {
+        ...parsedValue,
         completionRecorded: parsedValue.completionRecorded === true,
         gaveUp: parsedValue.gaveUp === true,
         resolvedAt,
@@ -287,29 +282,16 @@ export function readQuoteGameGuessCounts(universeId: string, gameId: number): nu
   return readGuessCounts(getQuoteGameStatsStorageKey(universeId, gameId));
 }
 
-export function hasExpiredGiveUp(resolvedAt: string | null | undefined): boolean {
-  if (!resolvedAt) {
-    return false;
-  }
-
-  const resolvedAtMs = Date.parse(resolvedAt);
-
-  if (Number.isNaN(resolvedAtMs)) {
-    return false;
-  }
-
-  return Date.now() - resolvedAtMs >= GIVE_UP_RESET_WINDOW_MS;
-}
-
 export function getRemoteGameOutcome(
   status: 'playing' | 'lost' | 'won',
   completedAt: string | null,
-): StoredGameOutcome {
+  hintCount = 0,
+): 'pending' | 'won' | 'lost' {
   if (status === 'playing') {
     return 'pending';
   }
 
-  return status === 'lost' && hasExpiredGiveUp(completedAt)
+  return isReplayAvailable(status, hintCount, completedAt)
     ? 'pending'
     : status;
 }
@@ -324,15 +306,10 @@ export function getCharacterGameOutcome(
     getLegacyCharacterGameSessionStorageKey(ownerKey, universeId, gameId),
   );
 
-  if (storedState?.completionRecorded === true) {
-    return 'won';
-  }
-
-  if (storedState?.gaveUp === true) {
-    return 'lost';
-  }
-
-  return 'pending';
+  return getArchiveGameOutcome(
+    storedState?.completionRecorded ? 'won' : storedState?.gaveUp ? 'lost' : 'playing',
+    getProgressHintCount(storedState ?? {}), storedState?.resolvedAt,
+  );
 }
 
 export function getQuoteGameOutcome(
@@ -342,15 +319,10 @@ export function getQuoteGameOutcome(
 ): StoredGameOutcome {
   const storedState = readCompletionState(getQuoteGameStorageKey(ownerKey, universeId, gameId));
 
-  if (storedState?.completionRecorded === true) {
-    return 'won';
-  }
-
-  if (storedState?.gaveUp === true) {
-    return 'lost';
-  }
-
-  return 'pending';
+  return getArchiveGameOutcome(
+    storedState?.completionRecorded ? 'won' : storedState?.gaveUp ? 'lost' : 'playing',
+    getProgressHintCount(storedState ?? {}), storedState?.resolvedAt,
+  );
 }
 
 function isPersistedGameStatus(value: unknown): value is PersistedGameResult['status'] {
@@ -401,6 +373,7 @@ function normalizePersistedGameResult(value: unknown): PersistedGameResult | nul
 
   return {
     completedAt,
+    attemptNumber: getAttemptNumber(candidate.attemptNumber),
     gameId: candidate.gameId,
     guessCount: typeof candidate.guessCount === 'number' && candidate.guessCount >= 0
       ? Math.max(candidate.guessCount, guessedCharacterIds.length)
@@ -479,6 +452,8 @@ export function syncPersistedGameResultsToLocalProgress(
       : getCharacterGameStorageKey(ownerKey, universeId, result.gameId);
 
     const nextState = {
+      attemptNumber: getAttemptNumber(result.attemptNumber),
+      hintCount: result.hintCount,
       completionRecorded: result.status === 'won',
       firstLetterRevealed: result.revealedHintKeys.includes('first-letter'),
       gaveUp: result.status === 'lost',
@@ -492,7 +467,12 @@ export function syncPersistedGameResultsToLocalProgress(
     };
 
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(nextState));
+      const existingValue = window.localStorage.getItem(storageKey);
+      let existing: ReplayProgress = {};
+      if (existingValue) {
+        try { existing = JSON.parse(existingValue) ?? {}; } catch { /* Replace malformed progress. */ }
+      }
+      window.localStorage.setItem(storageKey, JSON.stringify(mergeReplayProgress(existing, nextState)));
     } catch {
       // Ignore local storage failures so game state still loads from the API response.
     }

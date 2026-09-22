@@ -21,6 +21,7 @@ export interface ProfileRecentResult {
 }
 
 export interface PersistedGameResult {
+  attemptNumber?: number;
   gameId: number;
   mode: GameMode;
   status: 'playing' | 'won' | 'lost';

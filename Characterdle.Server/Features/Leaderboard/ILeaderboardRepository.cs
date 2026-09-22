@@ -29,5 +29,6 @@ public interface ILeaderboardRepository
         string status,
         IReadOnlyList<long> guessedCharacterIds,
         IReadOnlyList<string> revealedHintKeys,
+        int attemptNumber,
         CancellationToken cancellationToken);
 }

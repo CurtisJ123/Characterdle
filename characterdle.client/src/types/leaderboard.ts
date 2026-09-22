@@ -72,6 +72,7 @@ export interface UniverseLeaderboardState {
 }
 
 export interface SubmitUniverseGameResultPayload {
+  attemptNumber?: number;
   gameId: number;
   guessCount: number;
   guessedCharacterIds: number[];

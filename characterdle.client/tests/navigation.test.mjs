@@ -8,6 +8,7 @@ let renderToStaticMarkup;
 let RouteLink;
 let GameAction;
 let PreviousGamesGrid;
+let LeaderboardTable;
 let GameResultPanel;
 let QuoteGameBoard;
 let SiteHeader;
@@ -31,7 +32,7 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
 });
 
@@ -68,6 +69,30 @@ test('random regeneration actions remain buttons while page actions become links
 });
 
 for (const gameMode of ['character', 'quote']) {
+  test(`${gameMode} leaderboard labels plays as Attempts without changing the displayed count`, () => {
+    const html = render(LeaderboardTable, {
+      mode: gameMode,
+      rows: [{ userId: 'test-player', displayName: 'Test Player', avatarUrl: null,
+        rank: 1, wins: 3, averageGuesses: 2, plays: 7, isCurrentUser: false, showSupporterBadge: false }],
+    });
+    assert.match(html, /<span>Attempts<\/span>/);
+    assert.doesNotMatch(html, /<span>Plays<\/span>/);
+    assert.match(html, /<strong>7<\/strong>/);
+  });
+
+  test(`${gameMode} archive distinguishes hinted wins without changing tile destinations`, () => {
+    const html = render(PreviousGamesGrid, {
+      accessibleGameCount: 100, currentGameId: 50, gameMode,
+      games: [50, 49, 48, 47].map(id => ({ id, dateTime: '2026-09-20T00:00:00Z' })),
+      gameOutcomes: new Map([[50, 'won-with-hints'], [49, 'won'], [48, 'lost'], [47, 'pending']]),
+      onOpenGame: noop, universeTitle: 'Game of Thrones', universeId: 'got',
+    });
+    assert.match(html, /class="[^"]*is-hinted-win/);
+    assert.match(html, /Solved with hints\. Replay available 30 days after completion\./);
+    for (const state of ['is-completed', 'is-given-up', 'is-pending']) assert.ok(html.includes(state));
+    assert.equal((html.match(/<a /g) ?? []).length, 4);
+  });
+
   test(`${gameMode} archive exposes only playable tiles as links`, () => {
     const html = render(PreviousGamesGrid, {
       accessibleGameCount: 1, currentGameId: 50, gameMode,

@@ -1,4 +1,5 @@
 import { submitUniverseGameResult } from '../services/leaderboardApi';
+import { getAttemptNumber } from './gameReplay';
 import type { SubmitUniverseGameResultPayload, UniverseStreak } from '../types/leaderboard';
 
 const GAME_RESULT_OUTBOX_KEY_PREFIX = 'universe-game-result-outbox';
@@ -28,7 +29,7 @@ function getOutboxStorageKey(userId: string): string {
 }
 
 function getSubmissionKey(payload: SubmitUniverseGameResultPayload): string {
-  return `${payload.universeId}:${payload.gameId}:${payload.mode}`;
+  return `${payload.universeId}:${payload.gameId}:${payload.mode}:${getAttemptNumber(payload.attemptNumber)}`;
 }
 
 function createRevision(): string {
@@ -67,6 +68,7 @@ function normalizePayload(value: unknown): SubmitUniverseGameResultPayload | nul
     : [];
 
   return {
+    attemptNumber: getAttemptNumber(candidate.attemptNumber),
     gameId: candidate.gameId,
     guessCount: typeof candidate.guessCount === 'number' && candidate.guessCount >= 0
       ? Math.max(Math.floor(candidate.guessCount), guessedCharacterIds.length)

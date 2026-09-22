@@ -21,6 +21,22 @@ const assets = { ASSETS: { async fetch(request) {
 const request = (pathname, init) => new Request(`https://characterdle.com${pathname}`, init);
 const renderRequest = (fetchPublic, staging = false) => createPageHandler(pageTemplate, 'https://api.example.test', staging, fetchPublic);
 
+test('public pages and client bundles do not include advertising loaders', async () => {
+  const advertisingLoader = /AdSenseBootstrap|adsbygoogle|googlesyndication\.com|doubleclick\.net|adtrafficquality\.google/i;
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  const scripts = new Set(Object.values(manifest).map(entry => entry.file).filter(file => file.endsWith('.js')));
+  for (const script of scripts) {
+    assert.doesNotMatch(await readFile(new URL(script, dist), 'utf8'), advertisingLoader, script);
+  }
+  for (const pathname of publicPaths) {
+    assert.doesNotMatch(await readFile(new URL(file(pathname), dist), 'utf8'), advertisingLoader, pathname);
+    for (const noindex of [false, true]) {
+      const html = renderDocument(pageTemplate, routeForPath(pathname), { noindex });
+      assert.doesNotMatch(html, advertisingLoader, `${pathname}, staging=${noindex}`);
+    }
+  }
+});
+
 test('public HTML and built styles use local fonts with only two matching preloads', async () => {
   const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
   const styles = collectStyles(manifest, ['index.html', 'src/App.tsx']);

@@ -106,7 +106,8 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
               guessed_character_ids,
               revealed_hint_keys,
               completed_at,
-              updated_at
+              updated_at,
+              attempt_number
             from public."UniverseGameResults"
             where universe_id = @universeId
               and user_id = @userId
@@ -131,7 +132,8 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
                 reader.GetFieldValue<long[]>(5),
                 reader.GetFieldValue<string[]>(6),
                 reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
-                reader.GetFieldValue<DateTimeOffset>(8)));
+                reader.GetFieldValue<DateTimeOffset>(8),
+                reader.GetInt32(9)));
         }
 
         return results;

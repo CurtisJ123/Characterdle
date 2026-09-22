@@ -13,6 +13,7 @@ public sealed class LeaderboardQueryTests
     public void PlaysIncludeAllFinishedResultsRegardlessOfHints(string queryKind)
     {
         var sql = GetQuery(queryKind);
+        Assert.Contains("public.\"UniverseCompletedGameResults\" as results", sql);
         var scope = Regex.Match(
             sql,
             @"where results\.universe_id = @universeId(?<filters>.*?)(?:;|group by)",

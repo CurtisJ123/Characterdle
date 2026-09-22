@@ -48,7 +48,14 @@ export function PreviousGamesGrid({
           ? 'archive-tile is-completed'
           : outcome === 'lost'
             ? 'archive-tile is-given-up'
+            : outcome === 'won-with-hints'
+              ? 'archive-tile is-hinted-win'
             : 'archive-tile is-pending';
+        const outcomeLabel = outcome === 'won-with-hints'
+          ? 'Solved with hints. Replay available 30 days after completion.'
+          : outcome === 'lost'
+            ? 'Gave up. Replay available 30 days after completion.'
+            : outcome === 'won' ? 'Won without hints.' : 'Not completed.';
         const resolvedTileClassName = `${tileClassName}${isLocked ? ' is-locked' : ''}`;
         const accessibleGameDescription = isLocked
           ? `Premium required to play archived ${modeLabel} game ${game.id} from ${formatGameDate(game.dateTime)}`
@@ -59,7 +66,7 @@ export function PreviousGamesGrid({
         if (isLocked) {
           return (
             <button key={game.id} className={resolvedTileClassName} type="button"
-              aria-label={accessibleGameDescription} title="Premium required" disabled>
+              aria-label={`${accessibleGameDescription}. ${outcomeLabel}`} title={`Premium required. ${outcomeLabel}`} disabled>
               <span className="archive-tile-lock" aria-hidden="true">
                 <img src={lockClosedIcon} alt="" />
               </span>
@@ -74,8 +81,8 @@ export function PreviousGamesGrid({
             key={game.id}
             className={resolvedTileClassName}
             href={buildRoutePath({ page: 'game', universeId, gameMode, gameId, authMode: 'login' })}
-            aria-label={accessibleGameDescription}
-            title={isCurrentGame ? `Current Game - ${formatGameDate(game.dateTime)}` : formatGameDate(game.dateTime)}
+            aria-label={`${accessibleGameDescription}. ${outcomeLabel}`}
+            title={`${isCurrentGame ? 'Current Game - ' : ''}${formatGameDate(game.dateTime)}. ${outcomeLabel}`}
             onNavigate={() => onOpenGame(gameId)}
           >
             <span className="archive-tile-number">{game.id}</span>

@@ -64,9 +64,58 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         string status,
         IReadOnlyList<long> guessedCharacterIds,
         IReadOnlyList<string> revealedHintKeys,
+        int attemptNumber,
         CancellationToken cancellationToken)
     {
-        const string sql =
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var command = new NpgsqlCommand(BuildUpsertQuery(), connection, transaction);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("universeId", universe.Id);
+        command.Parameters.AddWithValue("gameId", gameId);
+        command.Parameters.AddWithValue("mode", mode);
+        command.Parameters.AddWithValue("status", status);
+        command.Parameters.AddWithValue("guessCount", guessCount);
+        command.Parameters.AddWithValue("hintCount", hintCount);
+        command.Parameters.AddWithValue("guessedCharacterIds", guessedCharacterIds.ToArray());
+        command.Parameters.AddWithValue("revealedHintKeys", revealedHintKeys.ToArray());
+        command.Parameters.AddWithValue("attemptNumber", attemptNumber);
+        var changedRows = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        if (changedRows == 0 && attemptNumber > 0)
+        {
+            await using var attemptCommand = new NpgsqlCommand(
+                """
+                select attempt_number from public."UniverseGameResults"
+                where user_id = @userId and universe_id = @universeId
+                  and game_id = @gameId and mode = @mode;
+                """, connection, transaction);
+            attemptCommand.Parameters.AddWithValue("userId", userId);
+            attemptCommand.Parameters.AddWithValue("universeId", universe.Id);
+            attemptCommand.Parameters.AddWithValue("gameId", gameId);
+            attemptCommand.Parameters.AddWithValue("mode", mode);
+            var savedAttempt = await attemptCommand.ExecuteScalarAsync(cancellationToken);
+            if (savedAttempt is not int currentAttempt || currentAttempt < attemptNumber)
+            {
+                // Do not acknowledge a premature replay; its durable outbox must keep it.
+                throw new GameReplayNotAvailableException();
+            }
+        }
+
+        if (status is "won" or "lost")
+        {
+            await using var streakCommand = DailyStreakCreditCommand.Create(universe, userId, gameId, mode);
+            streakCommand.Connection = connection;
+            streakCommand.Transaction = transaction;
+            await streakCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        var streak = await LoadStreakAsync(connection, transaction, userId, universe, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return streak;
+    }
+
+    internal static string BuildUpsertQuery() =>
             """
             insert into public."UniverseGameResults" (
               user_id,
@@ -78,10 +127,11 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               hint_count,
               guessed_character_ids,
               revealed_hint_keys,
+              attempt_number,
               completed_at,
               updated_at
             )
-            values (
+            select
               @userId,
               @universeId,
               @gameId,
@@ -91,11 +141,16 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               @hintCount,
               @guessedCharacterIds,
               @revealedHintKeys,
+              @attemptNumber,
               case
                 when @status in ('won', 'lost') then timezone('utc', now())
                 else null
               end,
               timezone('utc', now())
+            where @attemptNumber = 0 or exists (
+              select 1 from public."UniverseGameResults"
+              where user_id = @userId and universe_id = @universeId
+                and game_id = @gameId and mode = @mode
             )
             on conflict (user_id, universe_id, game_id, mode) do update
             set
@@ -104,15 +159,18 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               hint_count = excluded.hint_count,
               guessed_character_ids = excluded.guessed_character_ids,
               revealed_hint_keys = excluded.revealed_hint_keys,
+              attempt_number = excluded.attempt_number,
               completed_at = case
                 when public."UniverseGameResults".status = excluded.status
                   and public."UniverseGameResults".status in ('won', 'lost')
+                  and public."UniverseGameResults".attempt_number = excluded.attempt_number
                   then public."UniverseGameResults".completed_at
                 else excluded.completed_at
               end,
               updated_at = excluded.updated_at
             where (
               public."UniverseGameResults".status = 'playing'
+              and public."UniverseGameResults".attempt_number = excluded.attempt_number
               and (
                 excluded.guess_count + excluded.hint_count
                   > public."UniverseGameResults".guess_count + public."UniverseGameResults".hint_count
@@ -124,12 +182,14 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               )
             )
             or (
-              public."UniverseGameResults".status = 'lost'
+              (public."UniverseGameResults".status = 'lost'
+                or (public."UniverseGameResults".status = 'won' and public."UniverseGameResults".hint_count > 0))
               and public."UniverseGameResults".completed_at <= timezone('utc', now()) - interval '30 days'
-              and excluded.status = 'playing'
+              and excluded.attempt_number = public."UniverseGameResults".attempt_number + 1
             )
             or (
               public."UniverseGameResults".status = excluded.status
+              and public."UniverseGameResults".attempt_number = excluded.attempt_number
               and public."UniverseGameResults".status in ('won', 'lost')
               and public."UniverseGameResults".guess_count = excluded.guess_count
               and public."UniverseGameResults".hint_count = excluded.hint_count
@@ -141,38 +201,6 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               )
             );
             """;
-
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(sql, connection, transaction);
-        command.Parameters.AddWithValue("userId", userId);
-        command.Parameters.AddWithValue("universeId", universe.Id);
-        command.Parameters.AddWithValue("gameId", gameId);
-        command.Parameters.AddWithValue("mode", mode);
-        command.Parameters.AddWithValue("status", status);
-        command.Parameters.AddWithValue("guessCount", guessCount);
-        command.Parameters.AddWithValue("hintCount", hintCount);
-        command.Parameters.AddWithValue("guessedCharacterIds", guessedCharacterIds.ToArray());
-        command.Parameters.AddWithValue("revealedHintKeys", revealedHintKeys.ToArray());
-        await command.ExecuteNonQueryAsync(cancellationToken);
-
-        if (status is "won" or "lost")
-        {
-            await using var streakCommand = DailyStreakCreditCommand.Create(universe, userId, gameId, mode);
-            streakCommand.Connection = connection;
-            streakCommand.Transaction = transaction;
-            await streakCommand.ExecuteNonQueryAsync(cancellationToken);
-        }
-
-        var streak = await LoadStreakAsync(
-            connection,
-            transaction,
-            userId,
-            universe,
-            cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return streak;
-    }
 
     private static async Task<UniverseStreakResponse> LoadStreakAsync(
         NpgsqlConnection connection,
@@ -260,7 +288,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               count(distinct results.user_id) filter (where results.mode = 'quote')::int as quote_player_count,
               count(*) filter (where results.mode = 'quote')::int as quote_total_plays,
               round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses
-            from public."UniverseGameResults" as results
+            from public."UniverseCompletedGameResults" as results
             where results.universe_id = @universeId
               and results.mode in ('character', 'quote')
               and results.status in ('won', 'lost');
@@ -326,7 +354,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
                 max(results.completed_at) as last_completed_at
               from public."PlayerProfiles" as profiles
-              join public."UniverseGameResults" as results
+              join public."UniverseCompletedGameResults" as results
                 on results.user_id = profiles.user_id
               left join public."UserPremiumStatus" as premium_status
                 on premium_status.user_id = profiles.user_id
@@ -456,7 +484,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
                 max(results.completed_at) as last_completed_at
               from public."PlayerProfiles" as profiles
-              join public."UniverseGameResults" as results
+              join public."UniverseCompletedGameResults" as results
                 on results.user_id = profiles.user_id
               left join public."UserPremiumStatus" as premium_status
                 on premium_status.user_id = profiles.user_id
