@@ -12,6 +12,7 @@ let GameResultPanel;
 let QuoteGameBoard;
 let SiteHeader;
 let DeferredContent;
+let HistoryEduIcon;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
@@ -30,8 +31,18 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
+});
+
+test('the empty-game icon is decorative inline SVG without an icon font dependency', () => {
+  const html = render(HistoryEduIcon, { className: 'empty-guess-state-mark' });
+  assert.match(html, /<svg class="empty-guess-state-mark"/);
+  assert.match(html, /viewBox="0 -960 960 960"/);
+  assert.match(html, /fill="currentColor"/);
+  assert.match(html, /aria-hidden="true" focusable="false"/);
+  assert.match(html, /<path d="M320-160/);
+  assert.doesNotMatch(html, /<text|<use|href=|material-symbols|history_edu/);
 });
 
 test('deferred content adds no visible placeholder while a child is loading', () => {

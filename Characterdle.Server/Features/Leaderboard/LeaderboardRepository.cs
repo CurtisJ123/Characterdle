@@ -243,33 +243,37 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             streakRows);
     }
 
-    private async Task<(LeaderboardOverviewResponse Overall, LeaderboardModeOverviewResponse Character, LeaderboardModeOverviewResponse Quote)> LoadOverviewAsync(
-        string universeId,
-        CancellationToken cancellationToken)
+    internal static string BuildOverviewQuery()
     {
         const string sql =
             """
             select
               count(distinct results.user_id)::int as player_count,
               count(*)::int as total_plays,
-              count(*) filter (where results.status = 'won')::int as total_wins,
-              count(*) filter (where results.status = 'won' and results.mode = 'character')::int as total_character_wins,
-              count(*) filter (where results.status = 'won' and results.mode = 'quote')::int as total_quote_wins,
-              round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
+              count(*) filter (where results.status = 'won' and results.hint_count = 0)::int as total_wins,
+              count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::int as total_character_wins,
+              count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::int as total_quote_wins,
+              round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0)::numeric, 2) as average_guesses,
               count(distinct results.user_id) filter (where results.mode = 'character')::int as character_player_count,
               count(*) filter (where results.mode = 'character')::int as character_total_plays,
-              round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'character')::numeric, 2) as character_average_guesses,
+              round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::numeric, 2) as character_average_guesses,
               count(distinct results.user_id) filter (where results.mode = 'quote')::int as quote_player_count,
               count(*) filter (where results.mode = 'quote')::int as quote_total_plays,
-              round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses
+              round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses
             from public."UniverseGameResults" as results
             where results.universe_id = @universeId
               and results.mode in ('character', 'quote')
-              and results.status in ('won', 'lost')
-              and results.hint_count = 0;
+              and results.status in ('won', 'lost');
             """;
 
-        await using var command = dataSource.CreateCommand(sql);
+        return sql;
+    }
+
+    private async Task<(LeaderboardOverviewResponse Overall, LeaderboardModeOverviewResponse Character, LeaderboardModeOverviewResponse Quote)> LoadOverviewAsync(
+        string universeId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = dataSource.CreateCommand(BuildOverviewQuery());
         command.Parameters.AddWithValue("universeId", universeId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -301,11 +305,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         return (overall, character, quote);
     }
 
-    private async Task<IReadOnlyList<LeaderboardEntryResponse>> LoadRowsAsync(
-        UniverseDefinition universe,
-        Guid? currentUserId,
-        int limit,
-        CancellationToken cancellationToken)
+    internal static string BuildRowsQuery()
     {
         const string sql =
             """
@@ -315,15 +315,15 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 profiles.display_name,
                 profiles.avatar_url,
                 coalesce(premium_status.is_premium, false) as show_supporter_badge,
-                count(*) filter (where results.status = 'won')::int as total_wins,
-                count(*) filter (where results.status = 'won' and results.mode = 'character')::int as character_wins,
-                count(*) filter (where results.status = 'won' and results.mode = 'quote')::int as quote_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0)::int as total_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::int as character_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::int as quote_wins,
                 count(*)::int as total_plays,
                 count(*) filter (where results.mode = 'character')::int as character_plays,
                 count(*) filter (where results.mode = 'quote')::int as quote_plays,
-                round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
-                round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'character')::numeric, 2) as character_average_guesses,
-                round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0)::numeric, 2) as average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::numeric, 2) as character_average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
                 max(results.completed_at) as last_completed_at
               from public."PlayerProfiles" as profiles
               join public."UniverseGameResults" as results
@@ -333,7 +333,6 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               where results.universe_id = @universeId
                 and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
-                and results.hint_count = 0
               group by
                 profiles.user_id,
                 profiles.display_name,
@@ -411,7 +410,16 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             limit @limit;
             """;
 
-        await using var command = dataSource.CreateCommand(sql);
+        return sql;
+    }
+
+    private async Task<IReadOnlyList<LeaderboardEntryResponse>> LoadRowsAsync(
+        UniverseDefinition universe,
+        Guid? currentUserId,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        await using var command = dataSource.CreateCommand(BuildRowsQuery());
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("limit", limit);
@@ -427,10 +435,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         return rows;
     }
 
-    private async Task<LeaderboardEntryResponse?> LoadCurrentUserAsync(
-        UniverseDefinition universe,
-        Guid currentUserId,
-        CancellationToken cancellationToken)
+    internal static string BuildCurrentUserQuery()
     {
         const string sql =
             """
@@ -440,15 +445,15 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 profiles.display_name,
                 profiles.avatar_url,
                 coalesce(premium_status.is_premium, false) as show_supporter_badge,
-                count(*) filter (where results.status = 'won')::int as total_wins,
-                count(*) filter (where results.status = 'won' and results.mode = 'character')::int as character_wins,
-                count(*) filter (where results.status = 'won' and results.mode = 'quote')::int as quote_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0)::int as total_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::int as character_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::int as quote_wins,
                 count(*)::int as total_plays,
                 count(*) filter (where results.mode = 'character')::int as character_plays,
                 count(*) filter (where results.mode = 'quote')::int as quote_plays,
-                round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
-                round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'character')::numeric, 2) as character_average_guesses,
-                round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0)::numeric, 2) as average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::numeric, 2) as character_average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
                 max(results.completed_at) as last_completed_at
               from public."PlayerProfiles" as profiles
               join public."UniverseGameResults" as results
@@ -458,7 +463,6 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               where results.universe_id = @universeId
                 and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
-                and results.hint_count = 0
               group by
                 profiles.user_id,
                 profiles.display_name,
@@ -535,7 +539,15 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             where ranked.user_id = @currentUserId;
             """;
 
-        await using var command = dataSource.CreateCommand(sql);
+        return sql;
+    }
+
+    private async Task<LeaderboardEntryResponse?> LoadCurrentUserAsync(
+        UniverseDefinition universe,
+        Guid currentUserId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = dataSource.CreateCommand(BuildCurrentUserQuery());
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("currentUserId", currentUserId);
