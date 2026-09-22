@@ -27,6 +27,7 @@ function formatRank(value: number | null) {
 }
 
 function formatMode(mode: string) {
+  if (mode === 'episode_ladder') return 'Episode Ladder';
   return mode === 'quote' ? 'Quote' : 'Character';
 }
 

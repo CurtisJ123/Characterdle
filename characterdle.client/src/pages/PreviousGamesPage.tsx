@@ -12,6 +12,7 @@ import {
   getQuoteGameOutcome,
 } from '../lib/characterGameProgress';
 import { getArchiveGameOutcome } from '../lib/gameReplay';
+import { readLadderProgress } from '../lib/episodeLadderProgress';
 import type { GameMode } from '../types/game';
 import type { PremiumAccess } from '../types/premium';
 import type { NavigateToPage } from '../types/routes';
@@ -51,7 +52,7 @@ export function PreviousGamesPage({
     selectedUniverse.id,
     progressOwnerKey,
   );
-  const modeLabel = selectedGameMode === 'quote' ? 'Quote' : 'Character';
+  const modeLabel = selectedGameMode === 'episode_ladder' ? 'Episode Ladder' : selectedGameMode === 'quote' ? 'Quote' : 'Character';
   const hasFullArchiveAccess = premiumAccess?.fullArchiveAccess === true;
   const archiveLookbackDays = Math.max(premiumAccess?.archiveLookbackDays ?? 3, 0);
   const accessibleGameCount = hasFullArchiveAccess
@@ -64,12 +65,17 @@ export function PreviousGamesPage({
   const isArchiveLoading = isLoading || isCurrentGameLoading;
   const gameOutcomes = new Map(
     games.map((game) => {
-      const localOutcome = selectedGameMode === 'quote'
+      const ladderStatus = selectedGameMode === 'episode_ladder' ? readLadderProgress(progressOwnerKey, game.id)?.status : null;
+      const localOutcome = selectedGameMode === 'episode_ladder'
+        ? ladderStatus === 'won' || ladderStatus === 'lost' ? ladderStatus : 'pending'
+        : selectedGameMode === 'quote'
         ? getQuoteGameOutcome(progressOwnerKey, selectedUniverse.id, game.id)
         : getCharacterGameOutcome(progressOwnerKey, selectedUniverse.id, game.id);
       const remoteResult = gameResults.find((result) => result.mode === selectedGameMode && result.gameId === game.id);
       const remoteOutcome = remoteResult
-        ? getArchiveGameOutcome(remoteResult.status, remoteResult.hintCount, remoteResult.completedAt)
+        ? selectedGameMode === 'episode_ladder'
+          ? remoteResult.status === 'won' || remoteResult.status === 'lost' ? remoteResult.status : 'pending'
+          : getArchiveGameOutcome(remoteResult.status, remoteResult.hintCount, remoteResult.completedAt)
         : 'pending';
 
       return [game.id, remoteOutcome !== 'pending' ? remoteOutcome : localOutcome];
@@ -111,6 +117,14 @@ export function PreviousGamesPage({
               onNavigate={() => onOpenHistory('quote')}
             >
               Quote
+            </RouteLink>
+            <RouteLink
+              className={`archive-mode-link${selectedGameMode === 'episode_ladder' ? ' is-active' : ''}`}
+              href={buildRoutePath({ page: 'history', universeId: selectedUniverse.id, gameMode: 'episode_ladder', gameId: null, authMode: 'login' })}
+              aria-current={selectedGameMode === 'episode_ladder' ? 'page' : undefined}
+              onNavigate={() => onOpenHistory('episode_ladder')}
+            >
+              Episode Ladder
             </RouteLink>
           </div>
         </div>

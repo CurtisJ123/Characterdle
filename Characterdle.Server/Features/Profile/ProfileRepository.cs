@@ -481,7 +481,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             where universe_id = @universeId
               and user_id = @userId
               and status in ('won', 'lost')
-              and mode in ('character', 'quote')
+              and mode in ('character', 'quote', 'episode_ladder')
             order by completed_at desc
             """;
 

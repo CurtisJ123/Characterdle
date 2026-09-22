@@ -118,7 +118,8 @@ test('prerendered routes include required page styles but exclude unrelated priv
   for (const pathname of publicPaths) {
     const route = routeForPath(pathname);
     const html = await readFile(new URL(file(pathname), dist), 'utf8');
-    const needed = [...baseStyles, ...(pageEntries[route.page] ? collectStyles(manifest, [pageEntries[route.page]]) : [])];
+    const stylePage = route.gameMode === 'episode_ladder' && route.page === 'game' ? 'episodeLadder' : route.page;
+    const needed = [...baseStyles, ...(pageEntries[stylePage] ? collectStyles(manifest, [pageEntries[stylePage]]) : [])];
     for (const style of needed) assert.ok(html.includes(`href="/${style}"`), `${pathname} needs ${style}`);
     for (const style of privateStyles) assert.ok(!html.includes(`href="/${style}"`), `${pathname} must not load ${style}`);
   }
@@ -172,6 +173,32 @@ test('all sitemap routes have distinct initial metadata, visible content, and bu
   assert.equal(titles.size, publicPaths.length);
   assert.equal((sitemap.match(/<loc>/g) ?? []).length, publicPaths.length);
   assert.doesNotMatch(sitemap, /<lastmod>/); // Build dates are not content modification dates.
+});
+
+test('Episode Ladder uses mode-specific routes, metadata, CSS and archive availability checks', async () => {
+  for (const pathname of ['/got/game/episode_ladder', '/got/game/episode_ladder/50', '/got/archive/episode_ladder', '/got/random/episode_ladder']) {
+    const route = routeForPath(pathname);
+    assert.equal(route.gameMode, 'episode_ladder');
+    const seo = resolveSeo(route);
+    assert.match(seo.title, /Episode Ladder/);
+    assert.equal(seo.canonicalUrl, `https://characterdle.com${pathname}`);
+    assert.equal(seo.robots.startsWith('noindex'), route.page === 'random');
+  }
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  for (const [pathname, entry] of [['/got/game/episode_ladder', 'episodeLadder'], ['/got/random/episode_ladder', 'randomEpisodeLadder']]) {
+    const html = renderDocument(pageTemplate, routeForPath(pathname));
+    for (const style of collectStyles(manifest, [pageEntries[entry]])) assert.ok(html.includes(`href="/${style}"`));
+  }
+  for (const available of [true, false]) {
+    const handler = renderRequest(async url => {
+      assert.equal(url, 'https://api.example.test/api/universes/got/games/50/availability/episode_ladder');
+      return Response.json({ available });
+    });
+    assert.equal((await handler(request('/got/game/episode_ladder/50'), assets)).status, available ? 200 : 404);
+  }
+  for (const pathname of ['/got/game/episode_ladder/0', '/got/game/episode_ladder/50/extra', '/got/game/episodle', '/got/random/episode_ladder/50']) {
+    assert.equal(routeForPath(pathname), null, pathname);
+  }
 });
 
 test('every public route can be rendered noindex for staging', () => {

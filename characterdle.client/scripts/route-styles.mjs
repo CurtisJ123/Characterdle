@@ -3,6 +3,8 @@ export const pageEntries = {
   launcher: 'src/pages/LauncherPage.tsx',
   game: 'src/pages/CharacterGamePage.tsx',
   random: 'src/pages/RandomGamePage.tsx',
+  episodeLadder: 'src/pages/EpisodeLadderPage.tsx',
+  randomEpisodeLadder: 'src/pages/RandomEpisodeLadderPage.tsx',
   history: 'src/pages/PreviousGamesPage.tsx',
   leaderboard: 'src/pages/LeaderboardPage.tsx',
   premium: 'src/pages/PremiumPage.tsx',

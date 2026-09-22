@@ -29,6 +29,8 @@ import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 const DeferredAuthPage = lazy(pageModules.auth);
 const DeferredAboutPage = lazy(pageModules.about);
 const DeferredCharacterGamePage = lazy(pageModules.game);
+const DeferredEpisodeLadderPage = lazy(pageModules.episodeLadder);
+const DeferredRandomEpisodeLadderPage = lazy(pageModules.randomEpisodeLadder);
 const DeferredHowToPlayPage = lazy(pageModules.howToPlay);
 const DeferredLauncherPage = lazy(pageModules.launcher);
 const DeferredLeaderboardPage = lazy(pageModules.leaderboard);
@@ -78,6 +80,8 @@ export function AppShell({
   const AuthPage = initialPageComponents.auth ?? DeferredAuthPage;
   const AboutPage = initialPageComponents.about ?? DeferredAboutPage;
   const CharacterGamePage = initialPageComponents.game ?? DeferredCharacterGamePage;
+  const EpisodeLadderPage = initialPageComponents.episodeLadder ?? DeferredEpisodeLadderPage;
+  const RandomEpisodeLadderPage = initialPageComponents.randomEpisodeLadder ?? DeferredRandomEpisodeLadderPage;
   const HowToPlayPage = initialPageComponents.howToPlay ?? DeferredHowToPlayPage;
   const LauncherPage = initialPageComponents.launcher ?? DeferredLauncherPage;
   const LeaderboardPage = initialPageComponents.leaderboard ?? DeferredLeaderboardPage;
@@ -193,6 +197,9 @@ export function AppShell({
 
     async function flushPendingResults() {
       try {
+        void import('../../lib/episodeLadderProgress')
+          .then(({ migrateGuestLadderVictories }) => migrateGuestLadderVictories(userId, accessToken))
+          .catch(error => console.error('Episode Ladder results will be retried.', error));
         const outcomes = await flushUniverseGameResultOutbox(userId, accessToken);
 
         if (isDisposed) {
@@ -334,7 +341,7 @@ export function AppShell({
         userAvatarUrl={user?.avatarUrl}
         userDisplayName={user?.displayName}
       />
-      <DeferredContent resetKey={`${currentPage}:${currentPostSlug ?? ''}`}>
+      <DeferredContent resetKey={`${currentPage}:${currentGameMode}:${currentPostSlug ?? ''}`}>
       {currentPage === 'landing' && (
         <LandingPage isAuthenticated={isAuthenticated} onAuthNavigate={onAuthNavigate} onNavigate={onNavigate} />
       )}
@@ -356,7 +363,20 @@ export function AppShell({
           user={user}
         />
       )}
-      {currentPage === 'game' && (
+      {currentPage === 'game' && currentGameMode === 'episode_ladder' && (
+        <EpisodeLadderPage
+          key={`ladder:${user?.id ?? 'guest'}:${currentGameId ?? 'current'}`}
+          onStreakUpdated={handleStreakUpdated}
+          onOpenRandomGame={onOpenRandomGame}
+          premiumAccess={premiumAccess}
+          selectedGameId={currentGameId}
+          onNavigate={onNavigate}
+          onOpenGame={onOpenGame}
+          onOpenHistory={onOpenHistory}
+          onStartCheckout={handleStartCheckout}
+        />
+      )}
+      {currentPage === 'game' && currentGameMode !== 'episode_ladder' && (
         <CharacterGamePage
           key={user?.id ?? 'guest'}
           premiumAccess={premiumAccess}
@@ -370,7 +390,12 @@ export function AppShell({
           selectedGameMode={currentGameMode}
         />
       )}
-      {currentPage === 'random' && (
+      {currentPage === 'random' && currentGameMode === 'episode_ladder' && (
+        <RandomEpisodeLadderPage key={`random-ladder:${user?.id ?? 'guest'}`} onNavigate={onNavigate}
+          onOpenGame={onOpenGame} onOpenHistory={onOpenHistory} onOpenRandomGame={onOpenRandomGame}
+          onStartCheckout={handleStartCheckout} premiumAccess={premiumAccess} />
+      )}
+      {currentPage === 'random' && currentGameMode !== 'episode_ladder' && (
         <RandomGamePage
           accessToken={session?.access_token ?? null}
           currentStreak={currentStreak}

@@ -46,6 +46,8 @@ public sealed class GameAvailabilityTests : IAsyncLifetime
     [InlineData("quote", true)]
     [InlineData("character", false)]
     [InlineData("quote", false)]
+    [InlineData("episode_ladder", true)]
+    [InlineData("episode_ladder", false)]
     public async Task AnonymousReadReturnsOnlyAvailability(string mode, bool available)
     {
         _store.Available = available;
@@ -85,6 +87,7 @@ public sealed class GameAvailabilityTests : IAsyncLifetime
     [Theory]
     [InlineData("character")]
     [InlineData("quote")]
+    [InlineData("episode_ladder")]
     public void ExistenceQueryIsReadOnlyParameterizedAndExcludesFutureGames(string mode)
     {
         using var command = UniverseGameAvailabilityCommand.Create(UniverseCatalog.CreateDefault().Universes[0], 12345, mode);

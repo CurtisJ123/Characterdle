@@ -62,6 +62,7 @@
 
 .archive-mode-toggle {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 6px;
@@ -113,6 +114,6 @@
   }
 
   .archive-mode-link {
-    flex: 1 1 0;
+    flex: 1 1 130px;
   }
 }

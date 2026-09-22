@@ -1,4 +1,6 @@
 import type { CharacterAttribute } from '../types/game';
+import type { LadderAttempt } from '../types/episodeLadder';
+import { buildLadderShareText } from './episodeLadder';
 import { getShareUrlForCurrentLocation, getUniverseGamePath } from './siteRouting';
 import type {
   CharacterGameRow,
@@ -34,7 +36,14 @@ interface QuoteSharePayload extends BaseSharePayload {
   rows: QuoteGameRow[];
 }
 
-export type GameSharePayload = CharacterSharePayload | QuoteSharePayload;
+interface LadderSharePayload extends BaseSharePayload {
+  mode: 'episode_ladder';
+  rows: LadderAttempt[];
+  difficulty: number;
+  maxAttempts: number;
+}
+
+export type GameSharePayload = CharacterSharePayload | QuoteSharePayload | LadderSharePayload;
 
 interface BuildShareOptions {
   footerText: string;
@@ -100,6 +109,7 @@ function buildQuoteRows(rows: QuoteGameRow[], maxRows: number): string[] {
 }
 
 function buildRows(payload: GameSharePayload, maxRows: number): string[] {
+  if (payload.mode === 'episode_ladder') return [];
   return payload.mode === 'character'
     ? buildCharacterRows(payload.rows, maxRows)
     : buildQuoteRows(payload.rows, maxRows);
@@ -157,6 +167,9 @@ function buildShareText(
   payload: GameSharePayload,
   options: BuildShareOptions,
 ): string {
+  if (payload.mode === 'episode_ladder') {
+    return `${buildLadderShareText({ ...payload, attempts: payload.rows })}\n\n${options.footerText}`;
+  }
   const rows = buildRows(payload, options.maxRows);
   const sections = [
     `${getHeaderIcon(payload.mode)} ${getTitle(payload)}`,
@@ -248,6 +261,9 @@ export function buildNativeShareText(payload: GameSharePayload, shareUrl: string
 }
 
 export function buildXShareText(payload: GameSharePayload, _shareUrl: string): string {
+  if (payload.mode === 'episode_ladder') {
+    return `${buildLadderShareText({ ...payload, attempts: payload.rows })}\n\n${X_HASHTAGS}\n\n`;
+  }
   void _shareUrl;
   const maxTextLength = MAX_X_TEXT_LENGTH - 2;
 

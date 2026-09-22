@@ -68,6 +68,19 @@ test('random regeneration actions remain buttons while page actions become links
   assert.match(render(GameAction, { className: 'primary-button', children: 'Play Quote', href: '/got/game/quote/50', onClick: noop }), /<a[^>]+href="\/got\/game\/quote\/50"/);
 });
 
+test('Episode Ladder archive keeps its own links and does not promise Character/Quote replays', () => {
+  const html = render(PreviousGamesGrid, {
+    accessibleGameCount: 100, currentGameId: 50, gameMode: 'episode_ladder',
+    games: [50, 49].map(id => ({ id, dateTime: '2026-09-20T00:00:00Z' })),
+    gameOutcomes: new Map([[50, 'won'], [49, 'lost']]), onOpenGame: noop,
+    universeTitle: 'Game of Thrones', universeId: 'got',
+  });
+  assert.match(html, /href="\/got\/game\/episode_ladder"/);
+  assert.match(html, /href="\/got\/game\/episode_ladder\/49"/);
+  assert.match(html, /Finished without solving/);
+  assert.doesNotMatch(html, /30 days|Gave up|without hints/);
+});
+
 for (const gameMode of ['character', 'quote']) {
   test(`${gameMode} leaderboard labels plays as Attempts without changing the displayed count`, () => {
     const html = render(LeaderboardTable, {

@@ -171,7 +171,7 @@ async function bootstrap(root: Root) {
     import('./App.tsx'),
     import('./contexts/AuthContext'),
     import('./contexts/UniverseContext'),
-    import('./lib/pageModules').then(({ preloadInitialPage }) => preloadInitialPage(initialRoute?.page ?? 'notFound')),
+    import('./lib/pageModules').then(({ preloadInitialPage }) => preloadInitialPage(initialRoute?.page ?? 'notFound', initialRoute?.gameMode)),
   ]);
 
   document.getElementById('root')?.removeAttribute('data-prerendered');

@@ -150,7 +150,7 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
     }
     case 'game': {
       const isGotDailyCharacter = route.universeId === 'got' && route.gameMode === 'character' && route.gameId === null;
-      const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
+      const modeLabel = route.gameMode === 'episode_ladder' ? 'Episode Ladder' : route.gameMode === 'quote' ? 'Quote' : 'Character';
       const archivePrefix = route.gameId ? 'Archive ' : 'Daily ';
       const title = isGotDailyCharacter
         ? 'Game Of Thrones Characterdle'
@@ -159,6 +159,8 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
           : `${archivePrefix}${universeTitle} ${modeLabel} Game | Characterdle`;
       const description = isGotDailyCharacter
         ? 'Play Characterdle, a free daily Game of Thrones character guessing game. Use house, role, season, and status clues. No account required.'
+        : route.gameMode === 'episode_ladder'
+          ? `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} Episode Ladder. Arrange five events in episode order across five difficulties, with four attempts per difficulty.`
         : route.gameMode === 'quote'
           ? `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} quote guessing game in Characterdle and identify who said the line before using all your hints.`
           : `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} character guessing game in Characterdle and deduce the hidden answer through attributes, seasons, and status clues.`;
@@ -171,9 +173,9 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'history': {
-      const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
+      const modeLabel = route.gameMode === 'episode_ladder' ? 'Episode Ladder' : route.gameMode === 'quote' ? 'Quote' : 'Character';
       const title = `${universeTitle} ${modeLabel} Archive | Characterdle`;
-      const description = `Browse archived ${universeTitle.toLowerCase()} ${route.gameMode} boards in Characterdle and replay older daily rounds from the public archive.`;
+      const description = `Browse archived ${universeTitle.toLowerCase()} ${modeLabel.toLowerCase()} boards in Characterdle and replay older daily rounds from the public archive.`;
       return {
         canonicalUrl,
         description,
@@ -288,9 +290,9 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'random': {
-      const modeLabel = route.gameMode === 'quote' ? 'Quote' : 'Character';
+      const modeLabel = route.gameMode === 'episode_ladder' ? 'Episode Ladder' : route.gameMode === 'quote' ? 'Quote' : 'Character';
       const title = `${universeTitle} Random ${modeLabel} Practice | Characterdle`;
-      const description = `Play a random ${universeTitle} ${route.gameMode} practice round in Characterdle without affecting daily archives or leaderboard results.`;
+      const description = `Play a random ${universeTitle} ${modeLabel.toLowerCase()} practice round in Characterdle without affecting daily archives or leaderboard results.`;
       return {
         canonicalUrl,
         description,

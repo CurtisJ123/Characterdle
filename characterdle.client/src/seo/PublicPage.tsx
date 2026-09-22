@@ -60,7 +60,9 @@ export function PublicPage({ route, updates, error }: {
       }
       content = <main className="page informational-page"><section className="glass-card informational-hero">
         <div className="informational-hero-copy"><h1>{seo.title.split(' | ')[0]}</h1><p className="muted-copy">{seo.description}</p>
-          {route.page === 'game' && <p className="muted-copy">{route.gameMode === 'quote'
+          {route.page === 'game' && <p className="muted-copy">{route.gameMode === 'episode_ladder'
+            ? 'Order five events from earliest to latest. Correct positions lock in place, and each difficulty gives you four attempts.'
+            : route.gameMode === 'quote'
             ? 'Read the quote and guess the Game of Thrones character who said it. Hints can help you narrow down the speaker.'
             : 'Guess a Game of Thrones character. Compare identity, houses, roles, seasons, and status to narrow down the answer.'}</p>}
           <p id="prerender-status" className="muted-copy" role="status">Loading interactive features...</p>
@@ -70,8 +72,10 @@ export function PublicPage({ route, updates, error }: {
           <a className="secondary-button" href="/how-to-play">How to play</a>
           <a className="secondary-button" href="/got">Character game</a>
           <a className="secondary-button" href="/got/game/quote">Quote game</a>
+          <a className="secondary-button" href="/got/game/episode_ladder">Episode Ladder</a>
           <a className="secondary-button" href="/got/archive/character">Character archive</a>
           <a className="secondary-button" href="/got/archive/quote">Quote archive</a>
+          <a className="secondary-button" href="/got/archive/episode_ladder">Episode Ladder archive</a>
         </nav>
       </section></main>;
     }

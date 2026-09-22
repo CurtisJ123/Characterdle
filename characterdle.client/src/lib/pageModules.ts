@@ -1,4 +1,5 @@
 import type { Page } from '../types/routes';
+import type { GameMode } from '../types/game';
 
 // Shared by React.lazy and startup so a direct visit keeps its prerendered HTML
 // until the requested page's JavaScript and CSS are ready.
@@ -7,6 +8,8 @@ export const pageModules = {
   launcher: () => import('../pages/LauncherPage').then(module => ({ default: module.LauncherPage })),
   game: () => import('../pages/CharacterGamePage').then(module => ({ default: module.CharacterGamePage })),
   random: () => import('../pages/RandomGamePage').then(module => ({ default: module.RandomGamePage })),
+  episodeLadder: () => import('../pages/EpisodeLadderPage').then(module => ({ default: module.EpisodeLadderPage })),
+  randomEpisodeLadder: () => import('../pages/RandomEpisodeLadderPage').then(module => ({ default: module.RandomEpisodeLadderPage })),
   history: () => import('../pages/PreviousGamesPage').then(module => ({ default: module.PreviousGamesPage })),
   leaderboard: () => import('../pages/LeaderboardPage').then(module => ({ default: module.LeaderboardPage })),
   premium: () => import('../pages/PremiumPage').then(module => ({ default: module.PremiumPage })),
@@ -33,8 +36,10 @@ async function preparePage<K extends ModulePage>(page: K) {
 
 // Bootstrap-only: this selection stays fixed after React mounts. Using the
 // resolved component avoids a Suspense fallback even for a prewarmed import.
-export async function preloadInitialPage(page: Page) {
-  if (page in pageModules) {
+export async function preloadInitialPage(page: Page, gameMode: GameMode = 'character') {
+  if (gameMode === 'episode_ladder' && (page === 'game' || page === 'random')) {
+    await preparePage(page === 'game' ? 'episodeLadder' : 'randomEpisodeLadder');
+  } else if (page in pageModules) {
     await preparePage(page as ModulePage);
   }
 }
