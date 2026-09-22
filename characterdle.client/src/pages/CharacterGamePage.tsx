@@ -6,6 +6,7 @@ import { CharacterGameBoard } from '../components/game/CharacterGameBoard';
 import { CharacterHintPanel } from '../components/game/CharacterHintPanel';
 import { CharacterPortrait } from '../components/game/CharacterPortrait';
 import { GameComments } from '../components/game/GameComments';
+import { GameAction } from '../components/game/GameAction';
 import { QuoteGameBoard } from '../components/game/QuoteGameBoard';
 import { QuoteHintPills } from '../components/game/QuoteHintPills';
 import { QuotePromptCard } from '../components/game/QuotePromptCard';
@@ -13,6 +14,7 @@ import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGate
 import { SiteHelpOverlay } from '../components/layout/SiteHelpOverlay';
 import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { DiceIcon } from '../components/ui/DiceIcon';
+import { RouteLink } from '../components/ui/RouteLink';
 import { useAuth } from '../hooks/useAuth';
 import { useCharacterGame } from '../hooks/useCharacterGame';
 import { useQuoteGame } from '../hooks/useQuoteGame';
@@ -26,6 +28,7 @@ import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
 import { enqueueUniverseGameResult, flushUniverseGameResultOutbox } from '../lib/gameResultOutbox';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
+import { buildRoutePath } from '../lib/routePaths';
 import { compareAttributeValue } from '../lib/universeAttributes';
 import { createBillingCheckoutSession } from '../services/billingApi';
 import { trackUniverseGamePlay } from '../services/gamePlayTrackingApi';
@@ -728,6 +731,10 @@ export function CharacterGamePage({
   const searchPlaceholder = isQuoteMode
     ? 'Guess the speaker'
     : 'Type a name';
+  const gameRoute = { authMode: 'login' as const, gameId: selectedGameId, gameMode: selectedGameMode, universeId: selectedUniverse.id };
+  const characterHref = buildRoutePath({ ...gameRoute, page: 'game', gameMode: 'character' });
+  const quoteHref = buildRoutePath({ ...gameRoute, page: 'game', gameMode: 'quote' });
+  const leaderboardHref = buildRoutePath({ ...gameRoute, page: 'leaderboard', gameId: null });
   const characterPrimaryActionLabel = resolvedGameVariant === 'random'
     ? 'Another Random Game'
     : shouldOfferQuoteFollowUp ? 'Play Quote' : 'View Leaderboard';
@@ -888,15 +895,15 @@ export function CharacterGamePage({
       )}
 
       <div className="game-top-actions" aria-label="Game actions">
-        <button
+        <RouteLink
           className="game-action-button history-button"
-          type="button"
+          href={buildRoutePath({ ...gameRoute, page: 'history', gameId: null })}
           aria-label="View previous games"
           title="View previous games"
-          onClick={() => onOpenHistory(selectedGameMode)}
+          onNavigate={() => onOpenHistory(selectedGameMode)}
         >
           <img src={calendarDaysIcon} alt="" aria-hidden="true" />
-        </button>
+        </RouteLink>
         <button
           className="game-action-button help-button"
           type="button"
@@ -907,12 +914,12 @@ export function CharacterGamePage({
           <img src={questionMarkCircleIcon} alt="" aria-hidden="true" />
         </button>
         {isTemporaryGame ? (
-          <button
+          <RouteLink
             className="game-action-button current-game-button"
-            type="button"
+            href={buildRoutePath({ ...gameRoute, page: 'game', gameId: null })}
             aria-label={`Go back to current ${selectedGameMode} game`}
             title="Go back to current game"
-            onClick={() => onOpenGame(selectedGameMode, null, selectedUniverse.id)}
+            onNavigate={() => onOpenGame(selectedGameMode, null, selectedUniverse.id)}
           >
             <span className="current-game-icon-wrap" aria-hidden="true">
               <svg className="current-game-icon" viewBox="0 0 24 24" fill="none">
@@ -926,7 +933,7 @@ export function CharacterGamePage({
               </svg>
             </span>
             <span className="current-game-label">Current Game</span>
-          </button>
+          </RouteLink>
         ) : (
           <button
             className={`game-action-button random-game-button${isRandomGameLocked ? ' is-locked' : ''}`}
@@ -960,9 +967,9 @@ export function CharacterGamePage({
             )}
           </button>
         )}
-        <button
+        <GameAction
           className="game-action-button game-mode-switch-button"
-          type="button"
+          href={isTemporaryGame ? undefined : isQuoteMode ? characterHref : quoteHref}
           onClick={() => {
             if (isTemporaryGame) {
               onOpenRandomGame(isQuoteMode ? 'character' : 'quote');
@@ -973,7 +980,7 @@ export function CharacterGamePage({
           }}
         >
           {isQuoteMode ? 'Characterdle' : 'Quote'}
-        </button>
+        </GameAction>
         {user?.isAdmin && (
           <button className="game-action-button debug-reset-button" type="button" onClick={handleResetGame}>
             Debug Reset
@@ -1022,9 +1029,11 @@ export function CharacterGamePage({
               onSecondaryAction={quoteSecondaryAction}
               onViewLeaderboard={() => onNavigate('leaderboard')}
               primaryActionLabel={quotePrimaryActionLabel}
+              primaryActionHref={isTemporaryGame ? undefined : shouldOfferCharacterFollowUp ? characterHref : leaderboardHref}
               quoteText={quoteGameData.prompt.text}
               rows={displayedQuoteRows}
               secondaryActionLabel={quoteSecondaryActionLabel}
+              secondaryActionHref={isTemporaryGame ? undefined : leaderboardHref}
               showHintCount={isTemporaryGame || usesRemoteQuoteResult}
               showShareButton={!isTemporaryGame}
               highlightPrimaryAction={isRandomAdvanceReady}
@@ -1070,8 +1079,10 @@ export function CharacterGamePage({
               onSecondaryAction={characterSecondaryAction}
               onViewLeaderboard={() => onNavigate('leaderboard')}
               primaryActionLabel={characterPrimaryActionLabel}
+              primaryActionHref={isTemporaryGame ? undefined : shouldOfferQuoteFollowUp ? quoteHref : leaderboardHref}
               rows={displayedCharacterRows}
               secondaryActionLabel={characterSecondaryActionLabel}
+              secondaryActionHref={isTemporaryGame ? undefined : leaderboardHref}
               showHintCount={isTemporaryGame || usesRemoteCharacterResult}
               showShareButton={!isTemporaryGame}
               highlightPrimaryAction={isRandomAdvanceReady}
@@ -1117,3 +1128,4 @@ function buildSolvedQuoteRow(game: NonNullable<ReturnType<typeof buildQuoteGameD
     portraitUrl: game.answerCharacter.portraitUrl ?? null,
   };
 }
+import '../styles/game.css';

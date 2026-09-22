@@ -112,3 +112,4 @@ export function RandomGamePage({
     </main>
   );
 }
+import './RandomGamePage.css';

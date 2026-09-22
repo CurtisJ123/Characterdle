@@ -1,4 +1,5 @@
 import { CharacterPortrait } from './CharacterPortrait';
+import { GameAction } from './GameAction';
 import { GuestVictorySignupOverlay } from './GuestVictorySignupOverlay';
 import { GameShareButton } from '../ui/GameShareButton';
 import type {
@@ -20,9 +21,11 @@ interface QuoteGameBoardProps {
   onSecondaryAction?: () => void;
   onViewLeaderboard: () => void;
   primaryActionLabel?: string;
+  primaryActionHref?: string;
   quoteText: string;
   rows: QuoteGameRow[];
   secondaryActionLabel?: string;
+  secondaryActionHref?: string;
   showHintCount?: boolean;
   showShareButton?: boolean;
   highlightPrimaryAction?: boolean;
@@ -55,9 +58,11 @@ export function QuoteGameBoard({
   onSecondaryAction,
   onViewLeaderboard,
   primaryActionLabel,
+  primaryActionHref,
   quoteText,
   rows,
   secondaryActionLabel,
+  secondaryActionHref,
   showHintCount = false,
   showShareButton = true,
   highlightPrimaryAction = false,
@@ -144,18 +149,18 @@ export function QuoteGameBoard({
 
           <div className="button-stack quote-summary-actions">
             {showPrimaryAction && (
-              <button
+              <GameAction
                 className={highlightPrimaryAction ? 'primary-button quote-summary-button is-random-ready' : 'primary-button quote-summary-button'}
-                type="button"
+                href={primaryActionHref}
                 onClick={onPrimaryAction ?? onViewLeaderboard}
               >
                 {primaryActionLabel}
-              </button>
+              </GameAction>
             )}
             {showSecondaryAction && (
-              <button className="secondary-button quote-summary-button" type="button" onClick={onSecondaryAction}>
+              <GameAction className="secondary-button quote-summary-button" href={secondaryActionHref} onClick={onSecondaryAction}>
                 {secondaryActionLabel}
-              </button>
+              </GameAction>
             )}
             {showShareButton && (
               <GameShareButton

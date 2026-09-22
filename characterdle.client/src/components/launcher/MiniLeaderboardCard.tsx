@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from '../../types/leaderboard';
 import { UserAvatar } from '../ui/UserAvatar';
+import { RouteLink } from '../ui/RouteLink';
 
 const HOME_LEADERBOARD_LIMIT = 10;
 
@@ -8,14 +9,15 @@ interface MiniLeaderboardCardProps {
   isLoading: boolean;
   rows: LeaderboardEntry[];
   onViewAll: () => void;
+  viewAllHref: string;
 }
 
-export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll }: MiniLeaderboardCardProps) {
+export function MiniLeaderboardCard({ error, isLoading, rows, onViewAll, viewAllHref }: MiniLeaderboardCardProps) {
   return (
     <article className="glass-card mini-board">
       <div className="section-heading">
         <h2>Leaderboard</h2>
-        <button type="button" onClick={onViewAll}>View all</button>
+        <RouteLink className="mini-board-view-all" href={viewAllHref} onNavigate={onViewAll}>View all</RouteLink>
       </div>
       {error && <p className="muted-copy">Unable to load leaderboard.</p>}
       {!error && isLoading && <p className="muted-copy">Loading leaderboard...</p>}

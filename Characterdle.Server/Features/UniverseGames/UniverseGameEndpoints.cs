@@ -12,6 +12,12 @@ public static class UniverseGameEndpoints
     {
         var games = app.MapGroup("/api/universes/{universeId}/games").WithTags("UniverseGames");
 
+        games.MapGet("/{gameId:long}/availability/{mode}", GetGameAvailabilityAsync)
+            .WithName("GetUniverseGameAvailability")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         games.MapGet("/characters", GetCharactersAsync)
             .WithName("GetUniverseCharacterAvatarOptions")
             .Produces<IReadOnlyList<UniverseCharacterAvatarOptionResponse>>()
@@ -57,6 +63,36 @@ public static class UniverseGameEndpoints
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return app;
+    }
+
+    private static async Task<IResult> GetGameAvailabilityAsync(
+        string universeId,
+        long gameId,
+        string mode,
+        HttpResponse response,
+        UniverseCatalog universeCatalog,
+        IUniverseGameRepository repository,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        response.Headers.CacheControl = "no-store";
+        if (gameId <= 0 || mode is not "character" and not "quote" || !universeCatalog.TryGet(universeId, out var universe))
+            return Results.NotFound();
+
+        try
+        {
+            // Public existence metadata only: no answers, player data, or access grants.
+            // An explicit false distinguishes a missing game from an undeployed endpoint.
+            var available = await repository.IsGameAvailableAsync(universe, gameId, mode, cancellationToken);
+            return Results.Ok(new { available });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            loggerFactory.CreateLogger(typeof(UniverseGameEndpoints).FullName!)
+                .LogError(exception, "Unable to check game availability for {UniverseId} game {GameId}.", universeId, gameId);
+            response.Headers.RetryAfter = "60";
+            return Results.Problem(title: "Game availability is temporarily unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
     }
 
     private static async Task<IResult> GetCharactersAsync(

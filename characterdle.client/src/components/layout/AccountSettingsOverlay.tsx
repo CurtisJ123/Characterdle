@@ -561,3 +561,4 @@ export function AccountSettingsOverlay({
     </div>
   );
 }
+import '../../styles/accountSettings.css';

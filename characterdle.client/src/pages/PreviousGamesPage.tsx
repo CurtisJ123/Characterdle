@@ -1,4 +1,6 @@
 import { PreviousGamesGrid } from '../components/history/PreviousGamesGrid';
+import { RouteLink } from '../components/ui/RouteLink';
+import { buildRoutePath } from '../lib/routePaths';
 import { useAuth } from '../hooks/useAuth';
 import { usePreviousUniverseGames } from '../hooks/usePreviousUniverseGames';
 import { useUniverseGame } from '../hooks/useUniverseGame';
@@ -78,9 +80,9 @@ export function PreviousGamesPage({
     <main className="page archive-page">
       <section className="archive-shell">
         <div className="archive-header-row">
-          <button className="secondary-button archive-nav-button" type="button" onClick={() => onNavigate('launcher')}>
+          <RouteLink className="secondary-button archive-nav-button" href="/home" onNavigate={() => onNavigate('launcher')}>
             Home
-          </button>
+          </RouteLink>
           <div className="archive-title-block">
             <p className="eyebrow">{selectedUniverse.title}</p>
             <h1>{modeLabel} Archive</h1>
@@ -94,20 +96,22 @@ export function PreviousGamesPage({
             {archiveError && <p className="muted-copy">Unable to load archive.</p>}
           </div>
           <div className="archive-mode-toggle" aria-label="Archive mode">
-            <button
-              className={selectedGameMode === 'character' ? 'is-active' : ''}
-              type="button"
-              onClick={() => onOpenHistory('character')}
+            <RouteLink
+              className={`archive-mode-link${selectedGameMode === 'character' ? ' is-active' : ''}`}
+              href={buildRoutePath({ page: 'history', universeId: selectedUniverse.id, gameMode: 'character', gameId: null, authMode: 'login' })}
+              aria-current={selectedGameMode === 'character' ? 'page' : undefined}
+              onNavigate={() => onOpenHistory('character')}
             >
               Character
-            </button>
-            <button
-              className={selectedGameMode === 'quote' ? 'is-active' : ''}
-              type="button"
-              onClick={() => onOpenHistory('quote')}
+            </RouteLink>
+            <RouteLink
+              className={`archive-mode-link${selectedGameMode === 'quote' ? ' is-active' : ''}`}
+              href={buildRoutePath({ page: 'history', universeId: selectedUniverse.id, gameMode: 'quote', gameId: null, authMode: 'login' })}
+              aria-current={selectedGameMode === 'quote' ? 'page' : undefined}
+              onNavigate={() => onOpenHistory('quote')}
             >
               Quote
-            </button>
+            </RouteLink>
           </div>
         </div>
 
@@ -120,6 +124,7 @@ export function PreviousGamesPage({
             gameOutcomes={gameOutcomes}
             onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}
             universeTitle={selectedUniverse.title}
+            universeId={selectedUniverse.id}
           />
         )}
 
@@ -132,3 +137,4 @@ export function PreviousGamesPage({
     </main>
   );
 }
+import '../styles/history.css';

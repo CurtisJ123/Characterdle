@@ -329,3 +329,4 @@ export function AuthPage({ initialMode, onAuthModeChange, onNavigate }: AuthPage
     </main>
   );
 }
+import '../styles/auth.css';

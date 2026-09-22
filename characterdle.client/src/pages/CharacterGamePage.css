@@ -208,6 +208,9 @@
 }
 
 .game-mode-switch-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 112px;
   height: 38px;
   padding: 0 16px;

@@ -5,6 +5,7 @@ import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
 import { useUniverse } from '../hooks/useUniverse';
 import { getUniverseGamePath } from '../lib/siteRouting';
+import { buildRoutePath } from '../lib/routePaths';
 import type { GameMode } from '../types/game';
 import type { NavigateToPage } from '../types/routes';
 import type { UserProfile } from '../types/user';
@@ -74,9 +75,11 @@ export function LauncherPage({
             isLoading={isLeaderboardLoading}
             rows={leaderboardData?.rows ?? []}
             onViewAll={() => onNavigate('leaderboard')}
+            viewAllHref={buildRoutePath({ page: 'leaderboard', universeId: selectedUniverse.id, gameMode: 'character', gameId: null, authMode: 'login' })}
           />
         </aside>
       </section>
     </main>
   );
 }
+import '../styles/launcher.css';

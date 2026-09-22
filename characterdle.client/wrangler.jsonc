@@ -1,9 +1,13 @@
 {
   "name": "characterdle",
+  "main": "./dist-ssr/worker.js",
   "compatibility_date": "2026-06-04",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "run_worker_first": ["/*", "!/assets/*", "!/brand/*", "!/images/*"],
+    "html_handling": "drop-trailing-slash"
   },
   "workers_dev": true
 }

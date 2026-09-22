@@ -33,8 +33,10 @@ interface CharacterGameBoardProps {
   onSecondaryAction?: () => void;
   onViewLeaderboard: () => void;
   primaryActionLabel?: string;
+  primaryActionHref?: string;
   rows: CharacterGameRow[];
   secondaryActionLabel?: string;
+  secondaryActionHref?: string;
   showHintCount?: boolean;
   showShareButton?: boolean;
   highlightPrimaryAction?: boolean;
@@ -58,8 +60,10 @@ export function CharacterGameBoard({
   onSecondaryAction,
   onViewLeaderboard,
   primaryActionLabel,
+  primaryActionHref,
   rows,
   secondaryActionLabel,
+  secondaryActionHref,
   showHintCount = false,
   showShareButton = true,
   highlightPrimaryAction = false,
@@ -145,10 +149,12 @@ export function CharacterGameBoard({
           showShareButton={showShareButton}
           highlightPrimaryAction={highlightPrimaryAction}
           primaryActionLabel={primaryActionLabel}
+          primaryActionHref={primaryActionHref}
           primaryTitle="Correct"
           onPrimaryAction={onPrimaryAction ?? onViewLeaderboard}
           onSecondaryAction={onSecondaryAction}
           secondaryActionLabel={secondaryActionLabel}
+          secondaryActionHref={secondaryActionHref}
           status={status}
         />
       )}

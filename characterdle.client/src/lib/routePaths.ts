@@ -18,6 +18,8 @@ export function buildRoutePath(route: AppRoute): string {
   const universePrefix = getUniversePrefix(route.universeId);
 
   switch (route.page) {
+    case 'notFound':
+      return route.requestedPath ?? '/404';
     case 'landing':
       return '/';
     case 'launcher':

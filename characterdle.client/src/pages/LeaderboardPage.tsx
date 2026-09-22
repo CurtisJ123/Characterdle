@@ -285,3 +285,4 @@ export function LeaderboardPage() {
     </main>
   );
 }
+import '../styles/leaderboard.css';

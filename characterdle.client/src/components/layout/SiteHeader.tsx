@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, useEffect, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
+import { buildRoutePath } from '../../lib/routePaths';
+import type { GameMode } from '../../types/game';
 import type { AccountDeletionStatus, AccountSettingsValues } from '../../types/auth';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
 import { StreakProgressDropdown } from './StreakProgressDropdown';
 import { StreakEmblem } from '../ui/StreakEmblem';
 import { UserAvatar } from '../ui/UserAvatar';
-import { AccountSettingsOverlay } from './AccountSettingsOverlay';
+import { DeferredContent } from '../ui/DeferredContent';
 import { BrandButton } from './BrandButton';
 import { PremiumCrownIcon } from '../ui/PremiumCrownIcon';
+import { RouteLink } from '../ui/RouteLink';
+
+const AccountSettingsOverlay = lazy(() => import('./AccountSettingsOverlay').then(module => ({ default: module.AccountSettingsOverlay })));
 
 interface SiteHeaderProps {
   hasUnreadUpdates?: boolean;
@@ -16,6 +21,8 @@ interface SiteHeaderProps {
   availableStreakSavers: number;
   currentStreak: number;
   currentPage: Page;
+  currentGameMode: GameMode;
+  universeId: string;
   isPremiumActive: boolean;
   isPremiumLoading: boolean;
   isPremiumUser: boolean;
@@ -41,6 +48,8 @@ export function SiteHeader({
   availableStreakSavers,
   currentStreak,
   currentPage,
+  currentGameMode,
+  universeId,
   isPremiumActive,
   isPremiumLoading,
   isPremiumUser,
@@ -132,19 +141,19 @@ export function SiteHeader({
     <>
       <header className="site-header">
         <div className="header-inner">
-          <BrandButton onClick={() => onNavigate('launcher')} />
+          <BrandButton href="/home" onClick={() => onNavigate('launcher')} />
 
           <nav className="main-nav" aria-label="Primary navigation">
             {navItems.map((item) => (
-              <button
+              <RouteLink
                 key={item.id}
                 className={`nav-button ${activeNav === item.id ? 'is-active' : ''}`}
-                type="button"
+                href={buildRoutePath({ page: item.id, universeId, gameMode: currentGameMode, gameId: null, authMode: 'login' })}
                 aria-current={activeNav === item.id ? 'page' : undefined}
-                onClick={() => onNavigate(item.id)}
+                onNavigate={() => onNavigate(item.id)}
               >
                 {item.label}
-              </button>
+              </RouteLink>
             ))}
           </nav>
 
@@ -155,10 +164,10 @@ export function SiteHeader({
               <span>Updates</span>{hasUnreadUpdates && <i aria-hidden="true" />}
             </button>
             {canShowPremiumCta && (
-              <button
+              <RouteLink
                 className={`premium-cta-button${currentPage === 'premium' ? ' is-active' : ''}`}
-                type="button"
-                onClick={() => onNavigate('premium')}
+                href="/premium"
+                onNavigate={() => onNavigate('premium')}
               >
                 <PremiumCrownIcon className="premium-cta-icon" />
                 <span className="premium-cta-copy">
@@ -167,7 +176,7 @@ export function SiteHeader({
                     Under <span className="premium-cta-price">50¢</span> a week
                   </span>
                 </span>
-              </button>
+              </RouteLink>
             )}
             {isAuthenticated && (
               <div className="streak-menu-wrap" ref={streakMenuRef}>
@@ -236,6 +245,7 @@ export function SiteHeader({
         </div>
       </header>
       {isSettingsOpen && (
+        <DeferredContent>
         <AccountSettingsOverlay
           currentAutoUseStreakSavers={autoUseStreakSavers}
           currentAvatarUrl={userAvatarUrl ?? null}
@@ -250,6 +260,7 @@ export function SiteHeader({
           onOpenBillingPortal={onOpenBillingPortal}
           onSaveSettings={onSaveSettings}
         />
+        </DeferredContent>
       )}
     </>
   );

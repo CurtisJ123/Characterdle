@@ -1,51 +1,19 @@
-/* Future palette reference. Keep @import rules first; unused tokens live below. */
+/* Shared shell styles. Screen-specific CSS travels with its lazy page module. */
 @import './styles/shared.css';
+@import './components/auth/AuthFeedback.css';
 @import './components/layout/AppShell.css';
 @import './components/layout/BrandButton.css';
 @import './components/layout/SiteHeader.css';
 @import './components/layout/StreakProgressDropdown.css';
-@import './components/layout/AccountSettingsOverlay.css';
-@import './components/layout/AccountAvatarPicker.css';
-@import './components/layout/SiteHelpOverlay.css';
 @import './components/layout/SiteFooter.css';
 @import './pages/LandingPage.css';
-@import './pages/AuthPage.css';
-@import './components/auth/AuthModeToggle.css';
-@import './components/auth/AuthForm.css';
-@import './components/auth/GoogleAuthButton.css';
-@import './components/auth/ForgotPasswordForm.css';
-@import './components/auth/ResetPasswordForm.css';
-@import './components/auth/AuthenticatedPanel.css';
-@import './pages/LauncherPage.css';
-@import './components/launcher/UniverseCard.css';
-@import './components/launcher/UserProfileCard.css';
-@import './components/launcher/MiniLeaderboardCard.css';
-@import './pages/CharacterGamePage.css';
-@import './pages/RandomGamePage.css';
-@import './components/game/CharacterPortrait.css';
-@import './components/game/CharacterGuessRow.css';
-@import './components/game/AttributeChip.css';
-@import './components/game/CharacterHintPanel.css';
-@import './components/game/QuoteHintPills.css';
-@import './components/game/QuotePromptCard.css';
-@import './components/game/CharacterGameBoard.css';
-@import './components/game/QuoteGameBoard.css';
-@import './components/game/GameResultPanel.css';
-@import './components/game/GameComments.css';
-@import './components/game/GuestVictorySignupPrompt.css';
-@import './components/game/GuestVictorySignupOverlay.css';
-@import './components/game/PremiumArchiveGateOverlay.css';
-@import './pages/PreviousGamesPage.css';
-@import './components/history/PreviousGamesGrid.css';
-@import './pages/LeaderboardPage.css';
-@import './pages/PremiumPage.css';
-@import './pages/ProfilePage.css';
-@import './pages/LegalDocumentPage.css';
-@import './pages/SupportPage.css';
-@import './components/leaderboard/LeaderboardTable.css';
 @import './components/ui/MetricRow.css';
-@import './components/ui/GameShareButton.css';
 @import './components/ui/StreakEmblem.css';
 @import './components/ui/SupporterBadge.css';
 @import './components/ui/UserAvatar.css';
 @import './components/ui/LoadingOverlay.css';
+
+/* Only used while the interactive app is loading, including without JavaScript. */
+.prerender-nav { flex-wrap: wrap; gap: 12px; padding-block: 12px; }
+.prerender-nav a { text-decoration: none; }
+.prerender-nav .main-nav { flex-wrap: wrap; margin-left: 0; }

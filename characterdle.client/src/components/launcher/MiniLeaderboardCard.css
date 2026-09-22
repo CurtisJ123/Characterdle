@@ -18,7 +18,8 @@
   font-size: 1.08rem;
 }
 
-.section-heading button {
+.section-heading button,
+.mini-board-view-all {
   border: 0;
   border-radius: var(--radius-soft);
   padding: 7px 10px;

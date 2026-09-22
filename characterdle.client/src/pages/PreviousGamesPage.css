@@ -70,7 +70,7 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--white) 4%, transparent);
 }
 
-.archive-mode-toggle button {
+.archive-mode-link {
   border: 0;
   border-radius: var(--radius-pill);
   padding: 10px 16px;
@@ -80,10 +80,11 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  text-align: center;
   transition: background 160ms ease, color 160ms ease;
 }
 
-.archive-mode-toggle button.is-active {
+.archive-mode-link.is-active {
   color: var(--surface-base);
   background: var(--primary);
 }
@@ -111,7 +112,7 @@
     justify-content: stretch;
   }
 
-  .archive-mode-toggle button {
+  .archive-mode-link {
     flex: 1 1 0;
   }
 }

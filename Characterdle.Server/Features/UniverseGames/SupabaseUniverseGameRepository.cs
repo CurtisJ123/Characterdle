@@ -5,6 +5,14 @@ namespace Characterdle.Server.Features.UniverseGames;
 
 public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) : IUniverseGameRepository
 {
+    public async Task<bool> IsGameAvailableAsync(UniverseDefinition universe, long gameId, string mode, CancellationToken cancellationToken)
+    {
+        await using var command = UniverseGameAvailabilityCommand.Create(universe, gameId, mode);
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        command.Connection = connection;
+        return await command.ExecuteScalarAsync(cancellationToken) is true;
+    }
+
     public async Task<IReadOnlyList<UniverseCharacterAvatarOptionResponse>> GetCharacterAvatarOptionsAsync(
         UniverseDefinition universe,
         CancellationToken cancellationToken)

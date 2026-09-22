@@ -9,7 +9,9 @@ export function LoadingOverlay({ message, title }: LoadingOverlayProps) {
       <section className="loading-overlay-card">
         <img
           className="loading-overlay-logo"
-          src="/brand/characterdle-logo.png"
+          src="/brand/characterdle-logo-small.webp"
+          width={64}
+          height={64}
           alt=""
           aria-hidden="true"
         />

@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import { AdSenseBootstrap } from './AdSenseBootstrap';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { useAuth } from '../../hooks/useAuth';
 import type { useAnnouncements } from '../../hooks/useAnnouncements';
 import { AnnouncementPopup } from '../updates/AnnouncementPopup';
-import { UpdatesPage } from '../../pages/UpdatesPage';
-import { AdminPage } from '../../pages/AdminPage';
+import { DeferredContent } from '../ui/DeferredContent';
+import { initialPageComponents, pageModules } from '../../lib/pageModules';
 import { usePremium } from '../../hooks/usePremium';
 import { useProfile } from '../../hooks/useProfile';
 import { useUniverse } from '../../hooks/useUniverse';
@@ -17,19 +17,7 @@ import {
   syncPersistedGameResultsToLocalProgress,
 } from '../../lib/characterGameProgress';
 import { flushUniverseGameResultOutbox } from '../../lib/gameResultOutbox';
-import { AuthPage } from '../../pages/AuthPage';
-import { AboutPage } from '../../pages/AboutPage';
-import { CharacterGamePage } from '../../pages/CharacterGamePage';
-import { HowToPlayPage } from '../../pages/HowToPlayPage';
-import { LauncherPage } from '../../pages/LauncherPage';
 import { LandingPage } from '../../pages/LandingPage';
-import { LeaderboardPage } from '../../pages/LeaderboardPage';
-import { LegalDocumentPage } from '../../pages/LegalDocumentPage';
-import { PreviousGamesPage } from '../../pages/PreviousGamesPage';
-import { PremiumPage } from '../../pages/PremiumPage';
-import { ProfilePage } from '../../pages/ProfilePage';
-import { RandomGamePage } from '../../pages/RandomGamePage';
-import { SupportPage } from '../../pages/SupportPage';
 import { getGameResults } from '../../services/profileApi';
 import type { AccountSettingsValues } from '../../types/auth';
 import type { BillingCheckoutPlan } from '../../types/billing';
@@ -38,6 +26,21 @@ import type { UniverseStreak } from '../../types/leaderboard';
 import type { PremiumAccess } from '../../types/premium';
 import type { UniverseProfile } from '../../types/profile';
 import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
+
+const DeferredAuthPage = lazy(pageModules.auth);
+const DeferredAboutPage = lazy(pageModules.about);
+const DeferredCharacterGamePage = lazy(pageModules.game);
+const DeferredHowToPlayPage = lazy(pageModules.howToPlay);
+const DeferredLauncherPage = lazy(pageModules.launcher);
+const DeferredLeaderboardPage = lazy(pageModules.leaderboard);
+const DeferredLegalDocumentPage = lazy(pageModules.privacyPolicy);
+const DeferredPreviousGamesPage = lazy(pageModules.history);
+const DeferredPremiumPage = lazy(pageModules.premium);
+const DeferredProfilePage = lazy(pageModules.profile);
+const DeferredRandomGamePage = lazy(pageModules.random);
+const DeferredSupportPage = lazy(pageModules.support);
+const DeferredUpdatesPage = lazy(pageModules.updates);
+const DeferredAdminPage = lazy(pageModules.admin);
 
 interface LiveStreakState {
   scope: string;
@@ -73,6 +76,20 @@ export function AppShell({
   onOpenHistory,
   onOpenRandomGame,
 }: AppShellProps) {
+  const AuthPage = initialPageComponents.auth ?? DeferredAuthPage;
+  const AboutPage = initialPageComponents.about ?? DeferredAboutPage;
+  const CharacterGamePage = initialPageComponents.game ?? DeferredCharacterGamePage;
+  const HowToPlayPage = initialPageComponents.howToPlay ?? DeferredHowToPlayPage;
+  const LauncherPage = initialPageComponents.launcher ?? DeferredLauncherPage;
+  const LeaderboardPage = initialPageComponents.leaderboard ?? DeferredLeaderboardPage;
+  const LegalDocumentPage = initialPageComponents.privacyPolicy ?? initialPageComponents.termsOfService ?? DeferredLegalDocumentPage;
+  const PreviousGamesPage = initialPageComponents.history ?? DeferredPreviousGamesPage;
+  const PremiumPage = initialPageComponents.premium ?? DeferredPremiumPage;
+  const ProfilePage = initialPageComponents.profile ?? DeferredProfilePage;
+  const RandomGamePage = initialPageComponents.random ?? DeferredRandomGamePage;
+  const SupportPage = initialPageComponents.support ?? DeferredSupportPage;
+  const UpdatesPage = initialPageComponents.updates ?? DeferredUpdatesPage;
+  const AdminPage = initialPageComponents.admin ?? DeferredAdminPage;
   const {
     authError,
     deleteAccount,
@@ -307,6 +324,8 @@ export function AppShell({
         autoUseStreakSavers={premiumAccess?.autoUseStreakSavers ?? true}
         availableStreakSavers={premiumAccess?.availableStreakSavers ?? 0}
         currentPage={currentPage}
+        currentGameMode={currentGameMode}
+        universeId={selectedUniverse.id}
         currentStreakSaverSettingEnabled={premiumAccess?.streakProtection === true}
         isAuthenticated={isAuthenticated}
         isUserLoading={isLoading}
@@ -322,6 +341,7 @@ export function AppShell({
         userAvatarUrl={user?.avatarUrl}
         userDisplayName={user?.displayName}
       />
+      <DeferredContent resetKey={`${currentPage}:${currentPostSlug ?? ''}`}>
       {currentPage === 'landing' && (
         <LandingPage isAuthenticated={isAuthenticated} onAuthNavigate={onAuthNavigate} onNavigate={onNavigate} />
       )}
@@ -413,6 +433,7 @@ export function AppShell({
       {currentPage === 'howToPlay' && <HowToPlayPage onNavigate={onNavigate} />}
       {currentPage === 'privacyPolicy' && <LegalDocumentPage onNavigate={onNavigate} page="privacyPolicy" />}
       {currentPage === 'termsOfService' && <LegalDocumentPage onNavigate={onNavigate} page="termsOfService" />}
+      </DeferredContent>
       <SiteFooter onNavigate={onNavigate} />
       {announcements.post && !billingRedirectStatus && (currentPage !== 'landing' || (!window.location.hash && !window.location.search)) && !['game', 'random', 'auth', 'admin', 'updates', 'premium'].includes(currentPage) && (
         <AnnouncementPopup key={`${user?.id ?? 'guest'}:${announcements.post.id}`} post={announcements.post}

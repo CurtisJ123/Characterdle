@@ -2,13 +2,8 @@ const DEFAULT_IMAGE_URL = 'https://characterdle.com/android-chrome-512x512.png';
 const NOINDEX_ROBOTS = 'noindex,nofollow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
 const IS_STAGING_BUILD = import.meta.env.VITE_DEPLOYMENT_ENVIRONMENT?.trim().toLowerCase() === 'staging';
 
-export interface SeoDefinition {
-  canonicalUrl: string;
-  description: string;
-  robots: string;
-  structuredData: Record<string, unknown> | null;
-  title: string;
-}
+import type { SeoDefinition } from '../seo/metadata';
+export type { SeoDefinition } from '../seo/metadata';
 
 function ensureMeta(selector: string, attributeName: string, attributeValue: string): HTMLMetaElement {
   let element = document.head.querySelector<HTMLMetaElement>(selector);

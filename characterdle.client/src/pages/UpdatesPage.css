@@ -81,9 +81,6 @@
 .updates-editor-toolbar button[aria-pressed=true] { border-color: var(--primary); }
 .updates-preview { min-height: 400px; padding: 18px; border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); border-radius: 8px; }
 .is-hidden-comment { opacity: .55; }
-.updates-header-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; min-width: 44px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent); border-radius: 9px; background: transparent; color: var(--on-surface); cursor: pointer; font: inherit; font-size: .85rem; }
-.updates-header-button svg { width: 22px; height: 22px; color: var(--primary); }
-.updates-header-button i { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; background: var(--primary); border-radius: 50%; }
 .updates-popup { color: var(--on-surface); width: min(820px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; box-sizing: border-box; overflow: hidden; border-radius: 14px; background: linear-gradient(145deg, #302d24, #191c1c 80%); border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent); box-shadow: 0 24px 80px #0008; }
 .updates-popup::backdrop { background: #080a0acc; backdrop-filter: blur(4px); }
 .updates-popup-layout { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
@@ -114,7 +111,6 @@
   .admin-layout { grid-template-columns: minmax(0, 1fr); }
   .updates-page .admin-sidebar { display: flex; }
   .admin-sidebar button { flex: 1; text-align: center; }
-  .updates-header-button > span { display: none; }
 }
 @media (max-width: 430px) {
   html:has(.admin-page), body:has(.admin-page) { min-width: 0; }
