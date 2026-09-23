@@ -7,6 +7,7 @@ public sealed record LadderEvent(long Id, string Description, string? PortraitUr
     int EpisodeNumber, int EpisodeIndex, int Minute, int Second, string? Storyline,
     int CorrectPosition = 0, int InitialPosition = 0, string? CharacterName = null, string? EpisodeTitle = null);
 public sealed record LadderPuzzle(LadderGameReference Game, int Difficulty, IReadOnlyList<LadderEvent> Events);
+public sealed record LadderGameContext(LadderGameReference Game, long[][] Attempts, IReadOnlyList<string> Difficulties);
 public sealed record LadderEpisodeResponse(int SeasonNumber, int EpisodeNumber, string? Title);
 public sealed record LadderEventResponse(long Id, string Description, string? PortraitUrl, string? CharacterName,
     LadderEpisodeResponse? Episode = null);
@@ -31,9 +32,8 @@ public interface IEpisodeLadderRepository
 {
     Task<IReadOnlyList<LadderEvent>> GetEventCatalogAsync(CancellationToken cancellationToken);
     Task<LadderGameReference?> GetGameReferenceAsync(long? gameId, CancellationToken cancellationToken);
+    Task<LadderGameContext?> GetGameContextAsync(long? gameId, Guid? userId, int difficulty, CancellationToken cancellationToken);
     Task<LadderPuzzle?> GetPuzzleAsync(LadderGameReference game, CancellationToken cancellationToken, int difficulty = 1);
-    Task<long[][]> GetAttemptsAsync(Guid userId, long gameId, CancellationToken cancellationToken, int difficulty = 1);
-    Task<IReadOnlyList<string>> GetDifficultyStatesAsync(Guid userId, long gameId, CancellationToken cancellationToken);
     Task<EpisodeLadderResponse> SubmitAsync(LadderPuzzle puzzle, Guid? userId, Guid? guestId,
         long[][] attempts, bool importGuest, CancellationToken cancellationToken);
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { constrainLadderDragOffset, getLadderPreviewOffsets, LADDER_DRAG_SCALE, resolveLadderDropTarget } from '../src/lib/ladderDropTarget.ts';
+import { constrainLadderDragOffset, getLadderPreviewOffsets, LADDER_DRAG_EDGE_ROOM, LADDER_DRAG_SCALE, resolveLadderDropTarget } from '../src/lib/ladderDropTarget.ts';
 
 const bounds = [0, 1, 2, 3, 4].map(index => ({ top: 100 + index * 120, bottom: 200 + index * 120, left: 20, right: 320 }));
 const hit = (y: number, from = 0, locked: number[] = [], x = 200) => resolveLadderDropTarget(bounds, from, locked, x, y);
@@ -92,19 +92,34 @@ test('horizontal drift outside either side still uses the intended timeline posi
   }
 });
 
-test('dragged cards including their scale stay inside the original board at extreme offsets', () => {
+test('dragged cards have bounded extra room past both ends including their scale', () => {
   for (let from = 0; from < bounds.length; from++) {
     const source = bounds[from];
     const overflow = (source.bottom - source.top) * (LADDER_DRAG_SCALE - 1) / 2;
     for (const requested of [-1000000, -500, 0, 500, 1000000]) {
-      const offset = constrainLadderDragOffset(bounds, from, requested);
-      assert.ok(source.top + offset - overflow >= bounds[0].top);
-      assert.ok(source.bottom + offset + overflow <= bounds.at(-1)!.bottom);
+      const offset = constrainLadderDragOffset(bounds, from, requested, 1000);
+      assert.ok(source.top + offset - overflow >= bounds[0].top - LADDER_DRAG_EDGE_ROOM);
+      assert.ok(source.bottom + offset + overflow <= bounds.at(-1)!.bottom + LADDER_DRAG_EDGE_ROOM);
     }
   }
-  assert.equal(constrainLadderDragOffset(bounds, 2, 25), 25);
-  assert.equal(constrainLadderDragOffset(bounds, 2, NaN), 0);
-  assert.equal(constrainLadderDragOffset([], 0, 100), 0);
+  assert.equal(constrainLadderDragOffset(bounds, 2, 25, 1000), 25);
+  assert.equal(constrainLadderDragOffset(bounds, 2, -272, 1000), -272);
+  assert.equal(constrainLadderDragOffset(bounds, 2, 272, 1000), 272);
+  assert.equal(constrainLadderDragOffset(bounds, 2, NaN, 1000), 0);
+  assert.equal(constrainLadderDragOffset(bounds, 2, 100, NaN), 0);
+  assert.equal(constrainLadderDragOffset([], 0, 100, 1000), 0);
+});
+
+test('extra edge room stops at the original page boundaries when space is limited', () => {
+  const nearEdges = bounds.map(rect => ({ ...rect, top: rect.top - 90, bottom: rect.bottom - 90 }));
+  for (let from = 0; from < nearEdges.length; from++) {
+    const source = nearEdges[from];
+    const overflow = (source.bottom - source.top) * (LADDER_DRAG_SCALE - 1) / 2;
+    const topOffset = constrainLadderDragOffset(nearEdges, from, -1000000, 600);
+    const bottomOffset = constrainLadderDragOffset(nearEdges, from, 1000000, 600);
+    assert.ok(Math.abs(source.top + topOffset - overflow) < .001);
+    assert.ok(Math.abs(source.bottom + bottomOffset + overflow - 600) < .001);
+  }
 });
 
 test('hit zones follow variable card heights and document coordinates after scrolling', () => {

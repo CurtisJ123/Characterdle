@@ -310,14 +310,19 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         public bool LastImport, Conflict;
         public long[][] Saved = [];
         public Task<LadderGameReference?> GetGameReferenceAsync(long? gameId, CancellationToken ct) { Calls++; return Task.FromResult<LadderGameReference?>(EpisodeLadderRulesTests.Puzzle(gameId ?? 50, ArchiveIndex).Game); }
+        public Task<LadderGameContext?> GetGameContextAsync(long? gameId, Guid? userId, int difficulty, CancellationToken ct)
+        {
+            Calls++;
+            if (userId.HasValue) AttemptReads++;
+            return Task.FromResult<LadderGameContext?>(new(EpisodeLadderRulesTests.Puzzle(gameId ?? 50, ArchiveIndex).Game,
+                userId.HasValue ? Saved : [], ["playing", "pending", "pending", "pending", "pending"]));
+        }
         public Task<LadderPuzzle?> GetPuzzleAsync(LadderGameReference game, CancellationToken ct, int difficulty = 1) { PuzzleCalls++; return Task.FromResult<LadderPuzzle?>(EpisodeLadderRulesTests.Puzzle(game.Id, game.ArchiveIndex) with { Difficulty = difficulty }); }
         public Task<IReadOnlyList<LadderEvent>> GetEventCatalogAsync(CancellationToken ct)
         {
             CatalogCalls++;
             return Task.FromResult<IReadOnlyList<LadderEvent>>(EmptyCatalog ? [] : EpisodeLadderRulesTests.Catalog());
         }
-        public Task<long[][]> GetAttemptsAsync(Guid userId, long gameId, CancellationToken ct, int difficulty = 1) { AttemptReads++; return Task.FromResult(Saved); }
-        public Task<IReadOnlyList<string>> GetDifficultyStatesAsync(Guid userId, long gameId, CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>(["playing", "pending", "pending", "pending", "pending"]);
         public Task<EpisodeLadderResponse> SubmitAsync(LadderPuzzle puzzle, Guid? userId, Guid? guestId, long[][] attempts, bool importGuest, CancellationToken ct)
         {
             SubmitCalls++; LastUser = userId; LastImport = importGuest;

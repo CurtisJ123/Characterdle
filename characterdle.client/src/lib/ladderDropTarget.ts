@@ -9,13 +9,16 @@ export type LadderDropTarget = { mode: 'swap'; to: number }
   | { mode: 'insert'; to: number; boundary: number };
 
 export const LADDER_DRAG_SCALE = 1.015;
+export const LADDER_DRAG_EDGE_ROOM = 64;
 
-export function constrainLadderDragOffset(bounds: readonly LadderCardBounds[], from: number, offset: number): number {
+export function constrainLadderDragOffset(bounds: readonly LadderCardBounds[], from: number, offset: number,
+  pageHeight: number): number {
   const source = bounds[from];
-  if (!source || !Number.isFinite(offset)) return 0;
+  if (!source || !Number.isFinite(offset) || !Number.isFinite(pageHeight) || pageHeight <= 0) return 0;
   const scaleOverflow = (source.bottom - source.top) * (LADDER_DRAG_SCALE - 1) / 2;
-  const min = bounds[0].top - source.top + scaleOverflow;
-  const max = bounds.at(-1)!.bottom - source.bottom - scaleOverflow;
+  // Leave room to distinguish end insertions from swaps without creating page overflow.
+  const min = Math.max(0, bounds[0].top - LADDER_DRAG_EDGE_ROOM) - source.top + scaleOverflow;
+  const max = Math.min(pageHeight, bounds.at(-1)!.bottom + LADDER_DRAG_EDGE_ROOM) - source.bottom - scaleOverflow;
   return min > max ? 0 : Math.max(min, Math.min(max, offset));
 }
 

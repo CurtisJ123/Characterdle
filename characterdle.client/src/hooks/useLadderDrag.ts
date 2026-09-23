@@ -5,7 +5,7 @@ export function useLadderDrag(order: number[], locked: number[], disabled: boole
   move: (from: number, to: number, mode: 'swap' | 'insert') => void) {
   const cards = useRef(new Map<number, HTMLLIElement>());
   const [visual, setVisual] = useState<{ from: number; target: LadderDropTarget | null; offset: number } | null>(null);
-  const active = useRef<{ from: number; startY: number; originOffset: number; x: number; y: number; scrollY: number; lastScrollY: number; maxScrollY: number;
+  const active = useRef<{ from: number; startY: number; originOffset: number; x: number; y: number; scrollY: number; lastScrollY: number; pageHeight: number;
     bounds: LadderCardBounds[]; order: number[]; locked: number[]; pointerId: number; element: HTMLLIElement } | null>(null);
   const frame = useRef(0);
   const moves = useRef(new Map<number, Animation>());
@@ -56,9 +56,9 @@ export function useLadderDrag(order: number[], locked: number[], disabled: boole
     const drag = active.current;
     if (!drag) return;
     drag.lastScrollY = window.scrollY;
-    // Keep the scaled card inside the original board so it cannot expand scrollable overflow.
+    // Allow some movement past the board while preserving the original page height.
     const offset = constrainLadderDragOffset(drag.bounds, drag.from,
-      drag.originOffset + drag.y - drag.startY + window.scrollY - drag.scrollY);
+      drag.originOffset + drag.y - drag.startY + window.scrollY - drag.scrollY, drag.pageHeight);
     const target = resolveLadderDropTarget(drag.bounds, drag.from, drag.locked, drag.x, drag.y + window.scrollY);
     setVisual({ from: drag.from, target, offset });
   }
@@ -67,7 +67,7 @@ export function useLadderDrag(order: number[], locked: number[], disabled: boole
     if (!drag) return;
     const speed = drag.y < 70 ? -8 : drag.y > window.innerHeight - 70 ? 8 : 0;
     const minY = Math.max(0, drag.bounds[0].top - 70);
-    const maxY = Math.min(drag.maxScrollY, Math.max(0, drag.bounds.at(-1)!.bottom + 70 - window.innerHeight));
+    const maxY = Math.max(0, Math.min(drag.pageHeight, drag.bounds.at(-1)!.bottom + 70) - window.innerHeight);
     let nextY = window.scrollY;
     if (speed < 0 && nextY > minY) nextY = Math.max(minY, nextY + speed);
     if (speed > 0 && nextY < maxY) nextY = Math.min(maxY, nextY + speed);
@@ -94,7 +94,7 @@ export function useLadderDrag(order: number[], locked: number[], disabled: boole
     event.currentTarget.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture(event.pointerId);
     active.current = { from, startY: event.clientY, originOffset: 0, x: event.clientX, y: event.clientY, scrollY: window.scrollY, lastScrollY: window.scrollY,
-      maxScrollY: Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+      pageHeight: document.documentElement.scrollHeight,
       pointerId: event.pointerId, element: event.currentTarget, order: [...order], locked: [...locked],
       bounds: order.map(id => {
         const card = cards.current.get(id)!;

@@ -114,7 +114,9 @@ public static class EpisodeLadderEndpoints
             if (restoreOnly && user is not null)
                 return Results.BadRequest(new { message = "Signed-in progress is restored automatically." });
 
-            var game = await repository.GetGameReferenceAsync(gameId, cancellationToken);
+            var savedContext = request is null
+                ? await repository.GetGameContextAsync(gameId, user?.UserId, difficulty, cancellationToken) : null;
+            var game = request is null ? savedContext?.Game : await repository.GetGameReferenceAsync(gameId, cancellationToken);
             if (game is null) return Results.NotFound(new { message = "This daily game is not available." });
             if (game.ArchiveIndex > 3)
             {
@@ -128,9 +130,8 @@ public static class EpisodeLadderEndpoints
 
             if (request is null)
             {
-                var saved = user is null ? [] : await repository.GetAttemptsAsync(user.UserId, game.Id, cancellationToken, difficulty);
-                return Results.Ok(EpisodeLadderRules.Replay(puzzle, saved) with { Difficulties = user is null ? null
-                    : await repository.GetDifficultyStatesAsync(user.UserId, game.Id, cancellationToken) });
+                return Results.Ok(EpisodeLadderRules.Replay(puzzle, savedContext!.Attempts) with
+                    { Difficulties = user is null ? null : savedContext.Difficulties });
             }
             var replay = EpisodeLadderRules.Replay(puzzle, request.Attempts!);
             // Reconstruct guest feedback without recording a play, result, profile, or streak.

@@ -6,72 +6,108 @@ using NpgsqlTypes;
 
 namespace Characterdle.Server.Features.EpisodeLadder;
 
-public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, UniverseCatalog universes) : IEpisodeLadderRepository
+public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, UniverseCatalog universes,
+    EpisodeLadderPuzzleCache puzzleCache) : IEpisodeLadderRepository
 {
-    public async Task<LadderGameReference?> GetGameReferenceAsync(long? gameId, CancellationToken cancellationToken)
+    public async Task<LadderGameReference?> GetGameReferenceAsync(long? gameId, CancellationToken cancellationToken) =>
+        (await GetGameContextAsync(gameId, null, 1, cancellationToken))?.Game;
+
+    public async Task<LadderGameContext?> GetGameContextAsync(long? gameId, Guid? userId, int difficulty,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        return await ReadGameContextAsync(connection, null, gameId, userId, difficulty, cancellationToken);
+    }
+
+    private static async Task<LadderGameContext?> ReadGameContextAsync(NpgsqlConnection connection,
+        NpgsqlTransaction? transaction, long? gameId, Guid? userId, int difficulty, CancellationToken cancellationToken)
     {
         const string sql = """
-            select games.id, games.datetime,
-                (select count(*)::int from public."GOTGames" newer
-                 where newer.datetime > games.datetime and newer.datetime <= now())
-            from public."GOTGames" games
-            where games.datetime <= now() and (@gameId is null or games.id = @gameId)
-            order by games.datetime desc limit 1;
+            with selected_game as materialized (
+                select games.id, games.datetime,
+                    (select count(*)::int from public."GOTGames" newer
+                     where newer.datetime > games.datetime and newer.datetime <= now()) as archive_index
+                from public."GOTGames" games
+                where games.datetime <= now() and (@gameId is null or games.id = @gameId)
+                order by games.datetime desc limit 1
+            )
+            select game.id, game.datetime, game.archive_index,
+                progress.difficulty::int, progress.attempts::text, progress.status
+            from selected_game game
+            left join public."GOTEpisodeLadderProgress" progress
+                on progress.game_id = game.id and progress.user_id = @userId;
             """;
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("gameId", NpgsqlDbType.Bigint, (object?)gameId ?? DBNull.Value);
+        command.Parameters.AddWithValue("userId", NpgsqlDbType.Uuid, (object?)userId ?? DBNull.Value);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken)
-            ? new LadderGameReference(reader.GetInt64(0), reader.GetFieldValue<DateTimeOffset>(1), reader.GetInt32(2)) : null;
+        LadderGameReference? game = null;
+        long[][] attempts = [];
+        var states = Enumerable.Repeat("pending", 5).ToArray();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            game ??= new LadderGameReference(reader.GetInt64(0), reader.GetFieldValue<DateTimeOffset>(1), reader.GetInt32(2));
+            if (reader.IsDBNull(3)) continue;
+            var level = reader.GetInt32(3);
+            states[level - 1] = reader.GetString(5);
+            if (level == difficulty) attempts = JsonSerializer.Deserialize<long[][]>(reader.GetString(4)) ?? [];
+        }
+        return game is null ? null : new LadderGameContext(game, attempts, states);
     }
 
     public async Task<LadderPuzzle?> GetPuzzleAsync(LadderGameReference game, CancellationToken cancellationToken, int difficulty = 1)
     {
+        if (difficulty is < 1 or > 5) throw new LadderValidationException("Choose a difficulty from 1 to 5.");
+        if (puzzleCache.Get(game, difficulty) is { } cached) return cached;
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        var existing = await ReadPuzzleAsync(connection, null, game, difficulty, cancellationToken, requireCompleteSet: true);
-        if (existing is not null) return existing;
+        var puzzles = await ReadPuzzlesAsync(connection, null, game, cancellationToken);
+        if (puzzles.Count == 5)
+        {
+            puzzleCache.Set(puzzles);
+            return puzzles.Single(p => p.Difficulty == difficulty);
+        }
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         await LockAsync(connection, transaction, $"episode-ladder-puzzle:{game.Id}", cancellationToken);
+        // Re-read after the lock: another request may have generated the missing levels.
+        puzzles = await ReadPuzzlesAsync(connection, transaction, game, cancellationToken);
         IReadOnlyList<LadderEvent>? catalog = null;
-        LadderPuzzle? selected = null;
+        var generated = new List<LadderPuzzle>();
         for (var level = 1; level <= 5; level++)
         {
-            var puzzle = await ReadPuzzleAsync(connection, transaction, game, level, cancellationToken);
-            if (puzzle is not null)
-            {
-                if (level == difficulty) selected = puzzle;
-                continue;
-            }
+            if (puzzles.Any(p => p.Difficulty == level)) continue;
             catalog ??= await ReadCatalogAsync(connection, transaction, cancellationToken);
-            puzzle = EpisodeLadderRules.Generate(game, catalog, level);
+            var puzzle = EpisodeLadderRules.Generate(game, catalog, level);
             if (puzzle is null) return null;
-            if (level == difficulty) selected = puzzle;
-
-            await using (var command = new NpgsqlCommand("""
-            insert into public."GOTEpisodeLadderGames" (game_id, difficulty) values (@gameId, @difficulty);
-            """, connection, transaction))
-            {
-                command.Parameters.AddWithValue("gameId", game.Id);
-                command.Parameters.AddWithValue("difficulty", level);
-                await command.ExecuteNonQueryAsync(cancellationToken);
-            }
-            foreach (var entry in puzzle.Events)
-            {
-                await using var command = new NpgsqlCommand("""
-                insert into public."GOTEpisodeLadderGameEvents" (game_id, difficulty, event_id, correct_position, initial_position)
-                values (@gameId, @difficulty, @eventId, @correct, @initial);
-                """, connection, transaction);
-                command.Parameters.AddWithValue("gameId", game.Id);
-                command.Parameters.AddWithValue("difficulty", level);
-                command.Parameters.AddWithValue("eventId", entry.Id);
-                command.Parameters.AddWithValue("correct", entry.CorrectPosition);
-                command.Parameters.AddWithValue("initial", entry.InitialPosition);
-                await command.ExecuteNonQueryAsync(cancellationToken);
-            }
+            puzzles.Add(puzzle);
+            generated.Add(puzzle);
         }
+        await using var batch = CreatePuzzleInsertBatch(connection, transaction, generated);
+        if (batch.BatchCommands.Count > 0) await batch.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return selected;
+        puzzleCache.Set(puzzles);
+        return puzzles.Single(p => p.Difficulty == difficulty);
+    }
+
+    internal static NpgsqlBatch CreatePuzzleInsertBatch(NpgsqlConnection connection, NpgsqlTransaction transaction,
+        IReadOnlyList<LadderPuzzle> puzzles)
+    {
+        var batch = new NpgsqlBatch(connection, transaction);
+        foreach (var puzzle in puzzles)
+        {
+            var command = new NpgsqlBatchCommand("""
+                insert into public."GOTEpisodeLadderGames" (game_id, difficulty, answer_event_ids, initial_order)
+                values (@gameId, @difficulty, @answers, @initial);
+                """);
+            command.Parameters.AddWithValue("gameId", puzzle.Game.Id);
+            command.Parameters.AddWithValue("difficulty", puzzle.Difficulty);
+            command.Parameters.AddWithValue("answers", NpgsqlDbType.Array | NpgsqlDbType.Bigint,
+                puzzle.Events.OrderBy(e => e.CorrectPosition).Select(e => e.Id).ToArray());
+            command.Parameters.AddWithValue("initial", NpgsqlDbType.Array | NpgsqlDbType.Smallint,
+                puzzle.Events.OrderBy(e => e.InitialPosition).Select(e => (short)e.CorrectPosition).ToArray());
+            batch.BatchCommands.Add(command);
+        }
+        return batch;
     }
 
     public async Task<IReadOnlyList<LadderEvent>> GetEventCatalogAsync(CancellationToken cancellationToken)
@@ -105,13 +141,7 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
         return catalog;
     }
 
-    public async Task<long[][]> GetAttemptsAsync(Guid userId, long gameId, CancellationToken cancellationToken, int difficulty = 1)
-    {
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        return await ReadAttemptsAsync(connection, null, userId, gameId, difficulty, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<string>> GetDifficultyStatesAsync(Guid userId, long gameId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<string>> GetDifficultyStatesAsync(Guid userId, long gameId, CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand("""
             select difficulty::int, status from public."GOTEpisodeLadderProgress"
@@ -255,41 +285,36 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
             ? JsonSerializer.Deserialize<long[][]>(json) ?? [] : [];
     }
 
-    private static async Task<LadderPuzzle?> ReadPuzzleAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
-        LadderGameReference game, int difficulty, CancellationToken cancellationToken, bool requireCompleteSet = false)
+    private static async Task<List<LadderPuzzle>> ReadPuzzlesAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
+        LadderGameReference game, CancellationToken cancellationToken)
     {
         const string sql = """
             select events.id, events.event_desc, characters.portrait_url,
                 events.season_number, events.episode_number, 0 as episode_index,
                 events.event_minute, events.event_second, events.storyline, characters.display_name, episodes.title,
-                selected.correct_position::int, selected.initial_position::int, ladder.difficulty::int
+                selected.correct_position::int,
+                array_position(ladder.initial_order, selected.correct_position::smallint)::int, ladder.difficulty::int
             from public."GOTEpisodeLadderGames" ladder
-            join public."GOTEpisodeLadderGameEvents" selected on selected.game_id = ladder.game_id and selected.difficulty = ladder.difficulty
+            cross join lateral unnest(ladder.answer_event_ids) with ordinality as selected(event_id, correct_position)
             join public."GOTEvents" events on events.id = selected.event_id
             join public."GOTEpisodeTitles" episodes using (season_number, episode_number)
             left join public."GOTCharacters" characters on characters.id = events.character_id
-            where ladder.game_id = @gameId and ladder.difficulty = @difficulty
-                and (not @requireCompleteSet or 5 = (
-                    select count(*) from (
-                        select difficulty from public."GOTEpisodeLadderGameEvents"
-                        where game_id = @gameId and difficulty between 1 and 5
-                        group by difficulty having count(*) = 5
-                    ) complete_difficulties
-                ))
-            order by selected.initial_position;
+            where ladder.game_id = @gameId
+            order by ladder.difficulty, array_position(ladder.initial_order, selected.correct_position::smallint);
             """;
         await using var command = new NpgsqlCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("gameId", game.Id);
-        command.Parameters.AddWithValue("difficulty", difficulty);
-        command.Parameters.AddWithValue("requireCompleteSet", requireCompleteSet);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        var events = new List<LadderEvent>();
+        var levels = new Dictionary<int, List<LadderEvent>>();
         while (await reader.ReadAsync(cancellationToken))
         {
+            var difficulty = reader.GetInt32(13);
+            if (!levels.TryGetValue(difficulty, out var events)) levels[difficulty] = events = [];
             events.Add(ReadEvent(reader) with { CorrectPosition = reader.GetInt32(11), InitialPosition = reader.GetInt32(12) });
-            difficulty = reader.GetInt32(13);
         }
-        return events.Count == 5 ? new LadderPuzzle(game, difficulty, events) : null;
+        if (levels.Values.Any(events => events.Count != 5))
+            throw new InvalidOperationException("The stored ladder puzzle is incomplete.");
+        return levels.Select(level => new LadderPuzzle(game, level.Key, level.Value)).ToList();
     }
 
     private static LadderEvent ReadEvent(NpgsqlDataReader reader) => new(reader.GetInt64(0), reader.GetString(1),

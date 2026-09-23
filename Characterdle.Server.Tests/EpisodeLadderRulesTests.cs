@@ -108,12 +108,27 @@ public sealed class EpisodeLadderRulesTests
     }
 
     [Theory]
-    [InlineData(1, 15)]
-    [InlineData(2, 10)]
-    [InlineData(3, 6)]
-    [InlineData(4, 4)]
-    [InlineData(5, 0)]
-    public void DailyAndRandomGenerationUseFiveDistinctEpisodesAndExactGaps(int difficulty, int totalGaps)
+    [InlineData(3, "9EC03648AAE870508CFE50599895FBBFB29674B444029A358D54D9D94CB55C36")]
+    [InlineData(4, "B3B2E36684470F9B6825CA8963081C4C246AB819AC2910F806D84975FD55046C")]
+    [InlineData(5, "3001FDB7E65AA2CD362A89891C52B2EE316977B09CEEFA4D6545DF3518721A95")]
+    public void HigherDifficultiesKeepTheirVersionThreePuzzles(int difficulty, string expected)
+    {
+        var catalog = Catalog();
+        var entries = Enumerable.Range(1, 100).SelectMany(day =>
+            EpisodeLadderRules.Generate(Puzzle(day).Game, catalog, difficulty)!.Events
+                .Select(e => $"{day}:{e.Id}:{e.CorrectPosition}:{e.InitialPosition}"));
+        var actual = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(string.Join('|', entries))));
+        Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData(1, 15, 2, 6)]
+    [InlineData(2, 10, 1, 4)]
+    [InlineData(3, 6, 0, 6)]
+    [InlineData(4, 4, 0, 4)]
+    [InlineData(5, 0, 0, 0)]
+    public void DailyAndRandomGenerationUseFiveDistinctEpisodesAndExactGaps(int difficulty, int totalGaps, int minGap, int maxGap)
     {
         var catalog = Catalog();
         for (var gameId = 1; gameId <= 100; gameId++)
@@ -130,11 +145,82 @@ public sealed class EpisodeLadderRulesTests
                 Assert.Equal(5, generated.Events.Select(e => (e.SeasonNumber, e.EpisodeNumber)).Distinct().Count());
                 Assert.Equal(5, generated.Events.Select(e => e.Id).Distinct().Count());
                 Assert.False(generated.Events.All(e => e.CorrectPosition == e.InitialPosition));
-                Assert.All(Gaps(generated), gap => Assert.True(gap >= 0));
+                Assert.All(Gaps(generated), gap => Assert.InRange(gap, minGap, maxGap));
                 Assert.Equal(totalGaps, Gaps(generated).Sum());
                 if (difficulty == 5) Assert.All(Gaps(generated), gap => Assert.Equal(0, gap));
             }
         }
+    }
+
+    [Theory]
+    [InlineData(1, 2, 6)]
+    [InlineData(2, 1, 4)]
+    public void BoundedSpacingStillVariesAcrossEveryGapPosition(int difficulty, int minGap, int maxGap)
+    {
+        var catalog = Catalog();
+        var gaps = Enumerable.Range(1, 1000).Select(day => Gaps(EpisodeLadderRules.Generate(Puzzle(day).Game, catalog, difficulty)!)).ToArray();
+        Assert.True(gaps.Select(values => string.Join(',', values)).Distinct().Count() > 20);
+        for (var position = 0; position < 4; position++)
+        {
+            Assert.Contains(gaps, values => values[position] == minGap);
+            Assert.Contains(gaps, values => values[position] == maxGap);
+        }
+        Assert.Contains(gaps, values => values.Distinct().Count() >= 3);
+    }
+
+    [Theory]
+    [InlineData(1, 15, 2, 6)]
+    [InlineData(2, 10, 1, 4)]
+    public void EveryBoundedPatternWorksWithOnlyItsFiveEpisodes(int difficulty, int total, int min, int max)
+    {
+        var catalog = Catalog();
+        // Exercise every ordered pattern, including anchors at the end of the series.
+        for (var first = min; first <= max; first++)
+        for (var second = min; second <= max; second++)
+        for (var third = min; third <= max; third++)
+        for (var fourth = min; fourth <= max; fourth++)
+        {
+            int[] gaps = [first, second, third, fourth];
+            if (gaps.Sum() != total) continue;
+            var episodes = new List<int> { 73 - total - 4 };
+            foreach (var gap in gaps) episodes.Add(episodes[^1] + gap + 1);
+            var sparse = catalog.Where(e => episodes.Contains(e.EpisodeIndex)).ToArray();
+            foreach (var puzzle in new[] { EpisodeLadderRules.Generate(Puzzle().Game, sparse, difficulty),
+                         EpisodeLadderRules.GenerateRandom(sparse, difficulty) })
+            {
+                Assert.NotNull(puzzle);
+                Assert.Equal(gaps, Gaps(puzzle));
+                Assert.Equal(episodes, puzzle.Events.Select(e => e.EpisodeIndex));
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(1, 20)]
+    [InlineData(2, 15)]
+    public void BoundedSpacingNeverRelaxesLimitsToFitAnInvalidCatalog(int difficulty, int lastEpisode)
+    {
+        // The old selector accepted the right total span with three consecutive pairs.
+        var sparse = Catalog().Where(e => new[] { 1, 2, 3, 4, lastEpisode }.Contains(e.EpisodeIndex)).ToArray();
+        Assert.Null(EpisodeLadderRules.Generate(Puzzle().Game, sparse, difficulty));
+        Assert.Null(EpisodeLadderRules.GenerateRandom(sparse, difficulty));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void BoundedGenerationKeepsStorylineVarietyAndIgnoresCatalogOrder(int difficulty)
+    {
+        var catalog = Catalog();
+        var original = catalog.ToArray();
+        for (var day = 1; day <= 50; day++)
+        {
+            var puzzle = EpisodeLadderRules.Generate(Puzzle(day).Game, catalog, difficulty)!;
+            var reversed = EpisodeLadderRules.Generate(Puzzle(day).Game, catalog.Reverse().ToArray(), difficulty)!;
+            Assert.Equal(puzzle.Events, reversed.Events);
+            Assert.Equal(5, puzzle.Events.Select(e => e.Storyline).Distinct().Count());
+        }
+        Assert.Equal(original, catalog);
     }
 
     [Fact]

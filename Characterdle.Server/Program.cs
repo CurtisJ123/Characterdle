@@ -89,6 +89,7 @@ builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
 builder.Services.AddScoped<IEpisodeLadderLeaderboardRepository, EpisodeLadderLeaderboardRepository>();
 builder.Services.AddScoped<IGameCommentRepository, GameCommentRepository>();
 builder.Services.AddScoped<IEpisodeLadderRepository, EpisodeLadderRepository>();
+builder.Services.AddSingleton<EpisodeLadderPuzzleCache>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<RandomLadderSession>();
