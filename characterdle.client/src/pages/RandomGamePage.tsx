@@ -17,7 +17,7 @@ interface RandomGamePageProps {
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
   onOpenRandomGame: (gameMode: GameMode, universeId?: string) => void;
-  onStreakUpdated: (streak: UniverseStreak) => void;
+  onStreakUpdated: (streak: UniverseStreak, completed?: boolean) => void;
   onStartCheckout: (plan: BillingCheckoutPlan) => Promise<void>;
   premiumAccess: PremiumAccess | null;
   selectedGameMode: GameMode;
@@ -81,7 +81,7 @@ export function RandomGamePage({
       )}
 
       <section className="glass-card random-route-shell">
-        <p className="eyebrow">Universe: {selectedUniverse.title}</p>
+        <p className="eyebrow">{selectedUniverse.title}</p>
         <h1>Random {modeLabel} Game</h1>
         {isLoading ? (
           <p className="muted-copy">

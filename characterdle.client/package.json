@@ -12,6 +12,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:seo": "node --test --test-isolation=none tests/prerender.test.mjs",
     "test:navigation": "node --test --test-isolation=none tests/navigation.test.mjs",
+    "test:leaderboard": "node --test --test-isolation=none tests/leaderboardCache.test.mjs",
+    "test:account": "node --experimental-strip-types --test --test-isolation=none tests/accountResource.test.ts tests/accountApi.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

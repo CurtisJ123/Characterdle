@@ -22,6 +22,7 @@ interface PreviousGamesPageProps {
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
   premiumAccess: PremiumAccess | null;
+  isPremiumLoading?: boolean;
   selectedGameMode: GameMode;
 }
 
@@ -30,6 +31,7 @@ export function PreviousGamesPage({
   onOpenGame,
   onOpenHistory,
   premiumAccess,
+  isPremiumLoading = false,
   selectedGameMode,
 }: PreviousGamesPageProps) {
   const { selectedUniverse } = useUniverse();
@@ -62,7 +64,7 @@ export function PreviousGamesPage({
     ? [{ id: currentGame.id, dateTime: currentGame.dateTime }, ...(data?.games ?? [])]
     : data?.games ?? [];
   const archiveError = error ?? currentGameError;
-  const isArchiveLoading = isLoading || isCurrentGameLoading;
+  const isArchiveLoading = isLoading || isCurrentGameLoading || isPremiumLoading;
   const gameOutcomes = new Map(
     games.map((game) => {
       const ladderStatus = selectedGameMode === 'episode_ladder' ? readLadderProgress(progressOwnerKey, game.id)?.status : null;

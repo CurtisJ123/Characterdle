@@ -152,6 +152,24 @@ test('shared header, feedback, and guest signup styling does not depend on visit
   assert.match(game, /\.google-auth-button\s*\{/);
 });
 
+test('direct Ladder visits include shared component styles without loading Character or Quote boards', async () => {
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  for (const entry of [pageEntries.episodeLadder, pageEntries.randomEpisodeLadder]) {
+    const css = (await Promise.all(collectStyles(manifest, [entry])
+      .map(file => readFile(new URL(file, dist), 'utf8')))).join('\n');
+    assert.match(css, /\.game-comments\s*\{/);
+    assert.match(css, /\.game-comments-form\s*\{[^}]*display:\s*grid/);
+    assert.match(css, /\.game-comments-form textarea\s*\{/);
+    assert.match(css, /\.history-avatar\s*\{/);
+    assert.match(css, /\.premium-archive-gate-overlay\s*\{[^}]*position:\s*fixed/);
+    // Page variants must outrank generic .page padding, regardless of chunk arrival order.
+    assert.match(css, /\.page\.game-page\s*\{[^}]*padding-top:\s*18px/);
+    assert.match(css, /\.page\.game-page\s*\{[^}]*padding-top:\s*12px/);
+    assert.match(css, /\.page\.episode-ladder-page\s*\{[^}]*padding-bottom:\s*48px/);
+    assert.doesNotMatch(css, /\.quote-prompt-card\s*\{|\.character-board\s*\{/);
+  }
+});
+
 test('all sitemap routes have distinct initial metadata, visible content, and built styles', async () => {
   const sitemap = await readFile(new URL('sitemap.xml', dist), 'utf8');
   const titles = new Set();
@@ -214,7 +232,7 @@ test('daily character metadata stays descriptive while the initial game header s
   assert.equal(seo.title, 'Game Of Thrones Characterdle');
   assert.match(seo.description, /free daily Game of Thrones character guessing game/);
   assert.equal(seo.canonicalUrl, 'https://characterdle.com/got');
-  assert.match(html, /<section class="game-hero"><p class="eyebrow">Universe: Game of Thrones<\/p><h1>Daily Character Game<\/h1><\/section>/);
+  assert.match(html, /<section class="game-hero"><p class="eyebrow">Game of Thrones<\/p><h1>Daily Character Game<\/h1><\/section>/);
   assert.doesNotMatch(html, /game-introduction|inspired by Wordle/);
   const body = html.slice(html.indexOf('<body'));
   assert.ok(!body.includes(seo.description), 'The SEO description should not appear as visible game-page copy.');

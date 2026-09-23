@@ -1,4 +1,5 @@
 import type { BillingCheckoutPlan } from '../../types/billing';
+import './PremiumArchiveGateOverlay.css';
 
 interface PremiumArchiveGateOverlayProps {
   featureLabel?: string;

@@ -8,7 +8,7 @@ public sealed class EpisodeLadderRulesTests
     internal static LadderPuzzle Puzzle(long gameId = 50, int archiveIndex = 0) => new(
         new LadderGameReference(gameId, DateTimeOffset.Parse("2026-09-11T04:00:00Z"), archiveIndex), 3,
         Enumerable.Range(1, 5).Select(id => new LadderEvent(id, $"Test event {id}", null,
-            1, id, id, 10, 0, $"Story {id}", id, 6 - id)).ToArray());
+            1, id, id, 10, 0, $"Story {id}", id, 6 - id, EpisodeTitle: $"Episode title {id}")).ToArray());
 
     [Fact]
     public void NewGameDoesNotExposeTheAnswerOrTiming()
@@ -19,7 +19,34 @@ public sealed class EpisodeLadderRulesTests
         Assert.Empty(result.Attempts);
         Assert.Equal("playing", result.Status);
         Assert.Equal(new long[] { 5, 4, 3, 2, 1 }, result.InitialOrder);
-        Assert.Equal(new[] { "Id", "Description", "PortraitUrl", "CharacterName" }, typeof(LadderEventResponse).GetProperties().Select(p => p.Name));
+        Assert.All(result.Events, entry => Assert.Null(entry.Episode));
+        Assert.Equal(new[] { "Id", "Description", "PortraitUrl", "CharacterName", "Episode" }, typeof(LadderEventResponse).GetProperties().Select(p => p.Name));
+    }
+
+    [Fact]
+    public void EpisodeDetailsAreOnlyReturnedForCorrectEventsAndPersistAcrossAttempts()
+    {
+        var first = EpisodeLadderRules.Replay(Puzzle(), [[1, 3, 2, 5, 4]]);
+        Assert.Equal(new LadderEpisodeResponse(1, 1, "Episode title 1"), first.Events.Single(e => e.Id == 1).Episode);
+        Assert.All(first.Events.Where(e => e.Id != 1), entry => Assert.Null(entry.Episode));
+
+        var next = EpisodeLadderRules.Replay(Puzzle(), [[1, 3, 2, 5, 4], [1, 2, 3, 5, 4]]);
+        Assert.All(next.Events.Where(e => e.Id <= 3), entry =>
+            Assert.Equal(new LadderEpisodeResponse(1, (int)entry.Id, $"Episode title {entry.Id}"), entry.Episode));
+        Assert.All(next.Events.Where(e => e.Id > 3), entry => Assert.Null(entry.Episode));
+        Assert.Null(next.Solution);
+    }
+
+    [Fact]
+    public void CompletedGamesKeepEarnedEpisodeDetailsWithoutGivingIncorrectCardsFeedback()
+    {
+        var lost = EpisodeLadderRules.Replay(Puzzle(), Enumerable.Repeat(new long[] { 5, 4, 3, 2, 1 }, 4).ToArray());
+        Assert.Equal("lost", lost.Status);
+        Assert.NotNull(lost.Events.Single(e => e.Id == 3).Episode);
+        Assert.All(lost.Events.Where(e => e.Id != 3), entry => Assert.Null(entry.Episode));
+
+        var won = EpisodeLadderRules.Replay(Puzzle(), [[1, 2, 3, 4, 5]]);
+        Assert.All(won.Events, entry => Assert.NotNull(entry.Episode));
     }
 
     [Fact]

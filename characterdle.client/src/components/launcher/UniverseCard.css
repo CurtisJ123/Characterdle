@@ -230,9 +230,18 @@
 
   .card-action-group {
     width: 100%;
+    align-items: stretch;
   }
 
-  .card-action-group button {
+  .card-action-group button,
+  .card-action-group a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 6px;
+    text-align: center;
   }
 }

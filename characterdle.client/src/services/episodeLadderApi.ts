@@ -1,4 +1,5 @@
 import { buildApiUrl } from '../lib/runtimeConfig';
+import { clearLeaderboardCache } from './leaderboardApi';
 import type { EpisodeLadderGame, RandomLadderRound } from '../types/episodeLadder';
 
 export class EpisodeLadderApiError extends Error {
@@ -15,10 +16,11 @@ export async function requestEpisodeLadder(
   gameId: number | null,
   token: string | null,
   signal?: AbortSignal,
-  submission?: { attempts: number[][]; guestId?: string; importGuest?: boolean },
+  submission?: { attempts: number[][]; guestId?: string; importGuest?: boolean; restoreGuest?: boolean },
   difficulty = 1,
+  background = false,
 ): Promise<EpisodeLadderGame> {
-  const suffix = submission ? (submission.importGuest ? '/import' : '/attempts') : '';
+  const suffix = submission ? (submission.restoreGuest ? '/restore' : submission.importGuest ? '/import' : '/attempts') : '';
   const response = await fetch(buildApiUrl(`/api/universes/got/episode-ladder/${gameId ?? 'current'}${suffix}?difficulty=${difficulty}`), {
     method: submission ? 'POST' : 'GET',
     headers: {
@@ -28,6 +30,7 @@ export async function requestEpisodeLadder(
     },
     body: submission ? JSON.stringify({ attempts: submission.attempts, guestId: submission.guestId, difficulty }) : undefined,
     cache: 'no-store',
+    priority: background ? 'low' : 'auto',
     signal,
   });
   if (!response.ok) {
@@ -35,7 +38,11 @@ export async function requestEpisodeLadder(
     throw new EpisodeLadderApiError(response.status,
       payload.message ?? payload.title ?? 'Unable to load Episode Ladder. Please try again.', payload.current);
   }
-  return await response.json() as EpisodeLadderGame;
+  const game = await response.json() as EpisodeLadderGame;
+  if (token && submission && game.status !== 'playing') {
+    clearLeaderboardCache('got');
+  }
+  return game;
 }
 
 export async function requestRandomLadder(token: string | null, signal: AbortSignal,

@@ -20,6 +20,7 @@ public static class EpisodeLadderEndpoints
         group.MapGet("/{gameId:long}", GetAsync);
         group.MapPost("/{gameId:long}/attempts", SubmitAsync);
         group.MapPost("/{gameId:long}/import", ImportAsync);
+        group.MapPost("/{gameId:long}/restore", RestoreAsync);
         group.MapGet("/random", GetRandomAsync);
         group.MapPost("/random/attempts", SubmitRandomAsync);
         return app;
@@ -88,10 +89,16 @@ public static class EpisodeLadderEndpoints
         CancellationToken cancellationToken) => RunAsync(universeId, gameId, request.Difficulty, request, true, context,
             userAccessor, premiumRepository, repository, profiles, loggerFactory, cancellationToken);
 
+    private static Task<IResult> RestoreAsync(string universeId, long gameId, SubmitLadderRequest request, HttpContext context,
+        ICurrentSupabaseUserAccessor userAccessor, IPremiumRepository premiumRepository,
+        IEpisodeLadderRepository repository, ILoggerFactory loggerFactory, CancellationToken cancellationToken) =>
+        RunAsync(universeId, gameId, request.Difficulty, request, false, context, userAccessor, premiumRepository,
+            repository, null, loggerFactory, cancellationToken, restoreOnly: true);
+
     private static async Task<IResult> RunAsync(string universeId, long? gameId, int difficulty, SubmitLadderRequest? request,
         bool importGuest, HttpContext context, ICurrentSupabaseUserAccessor userAccessor,
         IPremiumRepository premiumRepository, IEpisodeLadderRepository repository, ILeaderboardRepository? profiles,
-        ILoggerFactory loggerFactory, CancellationToken cancellationToken)
+        ILoggerFactory loggerFactory, CancellationToken cancellationToken, bool restoreOnly = false)
     {
         if (universeId != "got" || gameId is <= 0) return Results.NotFound();
         if (difficulty is < 1 or > 5) return Results.BadRequest(new { message = "Choose a difficulty from 1 to 5." });
@@ -102,8 +109,10 @@ public static class EpisodeLadderEndpoints
                 return Results.Unauthorized();
             if (request is not null && (request.Attempts is null || request.Attempts.Length > 4
                 || request.Attempts.Any(order => order is null || order.Length != 5)
-                || (user is null && (request.GuestId is null || request.GuestId == Guid.Empty))))
+                || (!restoreOnly && user is null && (request.GuestId is null || request.GuestId == Guid.Empty))))
                 return Results.BadRequest(new { message = "Invalid Episode Ladder submission." });
+            if (restoreOnly && user is not null)
+                return Results.BadRequest(new { message = "Signed-in progress is restored automatically." });
 
             var game = await repository.GetGameReferenceAsync(gameId, cancellationToken);
             if (game is null) return Results.NotFound(new { message = "This daily game is not available." });
@@ -124,6 +133,8 @@ public static class EpisodeLadderEndpoints
                     : await repository.GetDifficultyStatesAsync(user.UserId, game.Id, cancellationToken) });
             }
             var replay = EpisodeLadderRules.Replay(puzzle, request.Attempts!);
+            // Reconstruct guest feedback without recording a play, result, profile, or streak.
+            if (restoreOnly) return Results.Ok(replay);
             if (importGuest && replay.Status != "won")
                 throw new LadderValidationException("Only completed guest victories can be imported.");
             if (user is not null)

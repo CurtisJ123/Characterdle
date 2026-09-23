@@ -4,6 +4,7 @@ import type {
   UniverseStreak,
 } from '../types/leaderboard';
 import { buildApiUrl } from '../lib/runtimeConfig';
+import { clearEpisodeLadderLeaderboardCache } from './episodeLadderLeaderboardApi';
 
 const leaderboardRequests = new Map<string, Promise<UniverseLeaderboard>>();
 const MAX_PERSISTED_GUESSES = 50;
@@ -13,6 +14,7 @@ function createLeaderboardCacheKey(universeId: string, requestScope: string): st
 }
 
 export function clearLeaderboardCache(universeId?: string) {
+  clearEpisodeLadderLeaderboardCache(universeId);
   if (!universeId) {
     leaderboardRequests.clear();
     return;

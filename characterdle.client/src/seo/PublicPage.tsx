@@ -34,7 +34,9 @@ export function PublicPage({ route, updates, error }: {
       <section className="launcher-grid"><div className="universe-grid">{universes.map(universe =>
         <UniverseCard key={universe.id} universe={universe} playHref={`/${universe.id}`}
           quoteHref={universe.isPlayable ? `/${universe.id}/game/quote` : undefined}
-          onPlay={noop} onPlayQuote={universe.isPlayable ? noop : undefined} />)}</div></section>
+          episodeLadderHref={universe.isPlayable && universe.id === 'got' ? '/got/game/episode_ladder' : undefined}
+          onPlay={noop} onPlayQuote={universe.isPlayable ? noop : undefined}
+          onPlayEpisodeLadder={universe.isPlayable && universe.id === 'got' ? noop : undefined} />)}</div></section>
     </main>; break;
     case 'updates': content = <main className="page updates-page">
       {route.postSlug ? <><a className="updates-back" href="/updates">All updates</a>
@@ -50,7 +52,7 @@ export function PublicPage({ route, updates, error }: {
       if (isGotDailyCharacter) {
         content = <main className="page centered-page game-page">
           <section className="game-hero">
-            <p className="eyebrow">Universe: Game of Thrones</p>
+            <p className="eyebrow">Game of Thrones</p>
             <h1>Daily Character Game</h1>
           </section>
           <p id="prerender-status" className="muted-copy" role="status">Loading interactive features...</p>

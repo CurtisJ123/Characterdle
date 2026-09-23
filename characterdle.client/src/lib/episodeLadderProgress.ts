@@ -85,6 +85,7 @@ export function migrateGuestLadderVictories(userId: string, token: string): Prom
         if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5) continue;
         const game = await requestEpisodeLadder(gameId, token, AbortSignal.timeout(15000), { attempts: stored.attempts, importGuest: true }, difficulty);
         storeLadderProgress(`user:${userId}`, game);
+        window.dispatchEvent(new CustomEvent('ladder-guest-imported', { detail: { userId, game } }));
         localStorage.setItem(storageKey, JSON.stringify({ ...stored, migratedTo: userId }));
       } catch (error) {
         if (error instanceof EpisodeLadderApiError && error.status === 409 && error.current?.status !== 'playing') {

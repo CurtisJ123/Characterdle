@@ -42,7 +42,10 @@ public static class EpisodeLadderRules
 
         var startingEvents = puzzle.Events.OrderBy(e => e.InitialPosition).ToArray();
         return new EpisodeLadderResponse(puzzle.Game.Id, puzzle.Game.DateTime, puzzle.Difficulty, MaxAttempts,
-            startingEvents.Select(e => new LadderEventResponse(e.Id, e.Description, e.PortraitUrl, e.CharacterName)).ToArray(),
+            // Episode metadata is earned per correct position, never sent for an unsolved card.
+            startingEvents.Select(e => new LadderEventResponse(e.Id, e.Description, e.PortraitUrl, e.CharacterName,
+                locked.Contains(e.CorrectPosition - 1)
+                    ? new LadderEpisodeResponse(e.SeasonNumber, e.EpisodeNumber, e.EpisodeTitle) : null)).ToArray(),
             startingEvents.Select(e => e.Id).ToArray(), feedback, locked.Order().ToArray(), status,
             status == "playing" ? null : puzzle.Events.OrderBy(e => e.CorrectPosition)
                 .Select(e => new LadderSolutionResponse(e.Id, e.SeasonNumber, e.EpisodeNumber, e.Minute, e.Second)).ToArray());

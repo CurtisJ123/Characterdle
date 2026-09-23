@@ -5,9 +5,11 @@ namespace Characterdle.Server.Features.EpisodeLadder;
 public sealed record LadderGameReference(long Id, DateTimeOffset DateTime, int ArchiveIndex);
 public sealed record LadderEvent(long Id, string Description, string? PortraitUrl, int SeasonNumber,
     int EpisodeNumber, int EpisodeIndex, int Minute, int Second, string? Storyline,
-    int CorrectPosition = 0, int InitialPosition = 0, string? CharacterName = null);
+    int CorrectPosition = 0, int InitialPosition = 0, string? CharacterName = null, string? EpisodeTitle = null);
 public sealed record LadderPuzzle(LadderGameReference Game, int Difficulty, IReadOnlyList<LadderEvent> Events);
-public sealed record LadderEventResponse(long Id, string Description, string? PortraitUrl, string? CharacterName);
+public sealed record LadderEpisodeResponse(int SeasonNumber, int EpisodeNumber, string? Title);
+public sealed record LadderEventResponse(long Id, string Description, string? PortraitUrl, string? CharacterName,
+    LadderEpisodeResponse? Episode = null);
 public sealed record LadderAttemptResponse(IReadOnlyList<long> Order, IReadOnlyList<string> Feedback);
 public sealed record LadderSolutionResponse(long Id, int SeasonNumber, int EpisodeNumber, int Minute, int Second);
 public sealed record EpisodeLadderResponse(long GameId, DateTimeOffset DateTime, int Difficulty, int MaxAttempts,

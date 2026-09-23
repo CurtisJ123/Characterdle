@@ -1,6 +1,9 @@
 import type { Page } from '../types/routes';
 import type { GameMode } from '../types/game';
 
+let warmedEpisodeLadderPage: typeof import('../pages/EpisodeLadderPage').EpisodeLadderPage | undefined;
+export const getWarmedEpisodeLadderPage = () => warmedEpisodeLadderPage;
+
 // Shared by React.lazy and startup so a direct visit keeps its prerendered HTML
 // until the requested page's JavaScript and CSS are ready.
 export const pageModules = {
@@ -8,7 +11,10 @@ export const pageModules = {
   launcher: () => import('../pages/LauncherPage').then(module => ({ default: module.LauncherPage })),
   game: () => import('../pages/CharacterGamePage').then(module => ({ default: module.CharacterGamePage })),
   random: () => import('../pages/RandomGamePage').then(module => ({ default: module.RandomGamePage })),
-  episodeLadder: () => import('../pages/EpisodeLadderPage').then(module => ({ default: module.EpisodeLadderPage })),
+  episodeLadder: () => import('../pages/EpisodeLadderPage').then(module => {
+    warmedEpisodeLadderPage = module.EpisodeLadderPage;
+    return { default: module.EpisodeLadderPage };
+  }),
   randomEpisodeLadder: () => import('../pages/RandomEpisodeLadderPage').then(module => ({ default: module.RandomEpisodeLadderPage })),
   history: () => import('../pages/PreviousGamesPage').then(module => ({ default: module.PreviousGamesPage })),
   leaderboard: () => import('../pages/LeaderboardPage').then(module => ({ default: module.LeaderboardPage })),

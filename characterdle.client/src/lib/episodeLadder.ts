@@ -2,15 +2,20 @@ import type { EpisodeLadderGame } from '../types/episodeLadder';
 
 export const LADDER_DIFFICULTIES = ['Easy', 'Medium', 'Hard', 'Expert', 'Impossible'];
 
-// Reorder only the free slots, never shifting an event out of a locked position.
-export function moveLadderEvent(order: number[], from: number, to: number, locked: readonly number[]): number[] {
-  if (from === to || from < 0 || to < 0 || from >= order.length || to >= order.length
+export function moveLadderEvent(order: number[], from: number, to: number, locked: readonly number[],
+  mode: 'swap' | 'insert' = 'swap'): number[] {
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from === to || from < 0 || to < 0 || from >= order.length || to >= order.length
     || locked.includes(from) || locked.includes(to)) return order;
-  const slots = order.map((_, index) => index).filter(index => !locked.includes(index));
-  const values = slots.map(index => order[index]);
-  values.splice(slots.indexOf(to), 0, values.splice(slots.indexOf(from), 1)[0]);
   const next = [...order];
-  slots.forEach((slot, index) => { next[slot] = values[index]; });
+  if (mode === 'swap') {
+    [next[from], next[to]] = [next[to], next[from]];
+  } else {
+    // Reorder only unlocked slots, leaving correct events in their exact positions.
+    const slots = order.map((_, index) => index).filter(index => !locked.includes(index));
+    const values = slots.map(index => order[index]);
+    values.splice(slots.indexOf(to), 0, values.splice(slots.indexOf(from), 1)[0]);
+    slots.forEach((slot, index) => { next[slot] = values[index]; });
+  }
   return next;
 }
 

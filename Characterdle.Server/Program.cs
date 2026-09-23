@@ -86,6 +86,7 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(supabaseConnectionStr
 builder.Services.AddSingleton(UniverseCatalog.CreateDefault());
 builder.Services.AddScoped<IUniverseGameRepository, SupabaseUniverseGameRepository>();
 builder.Services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+builder.Services.AddScoped<IEpisodeLadderLeaderboardRepository, EpisodeLadderLeaderboardRepository>();
 builder.Services.AddScoped<IGameCommentRepository, GameCommentRepository>();
 builder.Services.AddScoped<IEpisodeLadderRepository, EpisodeLadderRepository>();
 builder.Services.AddDataProtection();
@@ -178,6 +179,7 @@ app.MapGet("/api/client-config", (HttpContext httpContext, IOptions<SupabaseOpti
     .ExcludeFromDescription();
 app.MapUniverseGameEndpoints();
 app.MapLeaderboardEndpoints();
+app.MapEpisodeLadderLeaderboardEndpoints();
 app.MapGameCommentEndpoints();
 app.MapEpisodeLadderEndpoints();
 app.MapAnnouncementEndpoints();

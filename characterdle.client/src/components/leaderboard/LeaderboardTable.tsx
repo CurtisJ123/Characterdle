@@ -22,18 +22,32 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
   const winsLabel = mode === 'quote' ? 'Quote Wins' : 'Character Wins';
 
   return (
-    <section className="leaderboard-table glass-card" aria-label="Global leaderboard">
-      <div className="table-row table-head">
-        <span>Rank</span>
-        <span>Player</span>
-        <span>{winsLabel}</span>
-        <span>Avg. Guesses</span>
-        <span>Attempts</span>
+    <LeaderboardStatsTable
+      columns={[winsLabel, 'Avg. Guesses', 'Attempts']}
+      rows={rows.map(row => ({ ...row, values: [row.wins, formatAverageGuesses(row.averageGuesses), row.plays] }))}
+    />
+  );
+}
+
+type LeaderboardStatsRow = Pick<ModeLeaderboardEntry,
+  'userId' | 'rank' | 'displayName' | 'avatarUrl' | 'showSupporterBadge' | 'isCurrentUser'> & {
+  values: [string | number, string | number, string | number];
+};
+
+export function LeaderboardStatsTable({ columns, rows, label = 'Global leaderboard' }: {
+  columns: [string, string, string];
+  rows: LeaderboardStatsRow[];
+  label?: string;
+}) {
+  return (
+    <section className="leaderboard-table glass-card" role="table" aria-label={label} tabIndex={0}>
+      <div className="table-row table-head" role="row">
+        {['Rank', 'Player', ...columns].map(column => <span role="columnheader" key={column}>{column}</span>)}
       </div>
       {rows.map((row) => (
-        <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} key={row.userId}>
-          <span className="rank-medal">{row.rank}</span>
-          <div className="player-cell">
+        <div className={`table-row ${row.isCurrentUser ? 'is-current-user' : ''}`} role="row" key={row.userId}>
+          <span className="rank-medal" role="cell">{row.rank}</span>
+          <div className="player-cell" role="cell">
             <UserAvatar avatarUrl={row.avatarUrl} displayName={row.displayName} isPremium={row.showSupporterBadge} size="leaderboard" className="avatar" />
             <div className="player-copy">
               <div className="player-name-row">
@@ -43,9 +57,7 @@ export function LeaderboardTable({ mode, rows }: LeaderboardTableProps) {
               {row.isCurrentUser && <small>You</small>}
             </div>
           </div>
-          <strong>{row.wins}</strong>
-          <strong>{formatAverageGuesses(row.averageGuesses)}</strong>
-          <strong>{row.plays}</strong>
+          {row.values.map((value, index) => <strong role="cell" key={columns[index]}>{value}</strong>)}
         </div>
       ))}
     </section>

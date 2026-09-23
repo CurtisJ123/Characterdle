@@ -12,7 +12,13 @@ export interface EpisodeLadderGame {
   dateTime: string;
   difficulty: number;
   maxAttempts: number;
-  events: { id: number; description: string; portraitUrl: string | null; characterName: string | null }[];
+  events: {
+    id: number;
+    description: string;
+    portraitUrl: string | null;
+    characterName: string | null;
+    episode?: { seasonNumber: number; episodeNumber: number; title: string | null } | null;
+  }[];
   initialOrder: number[];
   attempts: LadderAttempt[];
   lockedPositions: number[];

@@ -1,61 +1,84 @@
-import { useEffect, useRef, useState } from 'react';
-import { ladderGuestId, migrateGuestLadderVictories, readLadderProgress, readLegacyLadderProgress, readLadderDifficultyStates, storeLadderProgress } from '../lib/episodeLadderProgress';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { ladderGuestId, migrateGuestLadderVictories, readLadderDifficultyStates, storeLadderProgress } from '../lib/episodeLadderProgress';
+import { ladderScope } from '../lib/episodeLadderCache';
 import { EpisodeLadderApiError, requestEpisodeLadder } from '../services/episodeLadderApi';
+import { beginLadderMutation, ladderCache, loadLadderGame } from '../services/episodeLadderLoader';
 import type { EpisodeLadderGame } from '../types/episodeLadder';
 
-export function useEpisodeLadder(gameId: number | null, userId: string | undefined, token: string | null, authLoading: boolean, difficulty = 1) {
-  const [state, setState] = useState<{
-    scope: string; game: EpisodeLadderGame | null; order: number[]; error: string | null; locked: boolean; submitting: boolean;
-  }>({ scope: '', game: null, order: [], error: null, locked: false, submitting: false });
+export function useEpisodeLadder(gameId: number | null, userId: string | undefined, token: string | null,
+  authLoading: boolean, difficulty = 1, fullArchiveAccess = false) {
+  const owner = userId ? `user:${userId}` : 'guest';
+  const scope = ladderScope(userId, fullArchiveAccess);
+  const view = `${scope}:${gameId}:${difficulty}`;
+  const snapshot = useSyncExternalStore(ladderCache.subscribe, () => ladderCache.peek(scope, gameId, difficulty), () => undefined);
+  const [state, setState] = useState<{ view: string; error: string | null; locked: boolean; submitting: boolean;
+    streak?: EpisodeLadderGame['streak'] }>({ view: '', error: null, locked: false, submitting: false });
   const [revision, setRevision] = useState(0);
   const request = useRef<AbortController | null>(null);
   const busy = useRef(false);
-  const owner = userId ? `user:${userId}` : 'guest';
-  const scope = `${gameId}:${difficulty}:${owner}:${token}:${revision}`;
-  const loading = authLoading || state.scope !== scope;
-  const game = loading ? null : state.game;
-  const order = loading ? [] : state.order;
-
-  function apply(next: EpisodeLadderGame) {
-    storeLadderProgress(owner, next);
-    setState({ scope, game: { ...next, difficulties: next.difficulties ?? readLadderDifficultyStates(owner, next.gameId) }, order: next.attempts.at(-1)?.order ?? next.initialOrder, error: null, locked: false, submitting: false });
-  }
+  const currentState = state.view === view ? state : null;
+  const loading = authLoading || (!snapshot && !currentState?.error);
+  const game = authLoading || !snapshot ? null : currentState?.streak ? { ...snapshot.game, streak: currentState.streak } : snapshot.game;
+  const order = snapshot?.order ?? [];
 
   useEffect(() => {
     if (authLoading) return;
+    let cancelled = false;
     const controller = new AbortController();
     request.current = controller;
     busy.current = false;
-    void (async () => {
+    async function refresh(force = false) {
+      if (busy.current) return;
       try {
         if (userId && token) await migrateGuestLadderVictories(userId, token);
-        if (controller.signal.aborted) return;
-        let next = await requestEpisodeLadder(gameId, token, controller.signal, undefined, difficulty);
-        if (!userId) {
-          const saved = readLadderProgress('guest', next.gameId, difficulty) ?? readLegacyLadderProgress('guest', next);
-          if (saved?.attempts.length) {
-            next = await requestEpisodeLadder(next.gameId, null, controller.signal,
-              { attempts: saved.attempts, guestId: ladderGuestId() }, difficulty);
-          }
+        if (cancelled || busy.current) return;
+        const next = await loadLadderGame(scope, gameId, difficulty, token, { force });
+        if (!cancelled) {
+          storeLadderProgress(owner, next.game);
+          setState(previous => ({ view, error: null, locked: false, submitting: false,
+            streak: previous.view === view ? previous.streak : null }));
         }
-        if (controller.signal.aborted) return;
-        storeLadderProgress(owner, next);
-        setState({ scope, game: { ...next, difficulties: next.difficulties ?? readLadderDifficultyStates(owner, next.gameId) }, order: next.attempts.at(-1)?.order ?? next.initialOrder, error: null, locked: false, submitting: false });
       } catch (failure) {
-        if (controller.signal.aborted) return;
-        setState({ scope, game: null, order: [], submitting: false,
-          locked: failure instanceof EpisodeLadderApiError && failure.status === 403,
+        if (cancelled || (failure instanceof Error && failure.name === 'AbortError')) return;
+        setState({ view, submitting: false,
+          locked: failure instanceof EpisodeLadderApiError && [401, 403].includes(failure.status),
           error: failure instanceof Error ? failure.message : 'Unable to load Episode Ladder.' });
       }
-    })();
-    return () => controller.abort();
-  }, [gameId, difficulty, userId, token, authLoading, owner, scope]);
+    }
+    void refresh();
+    const revisit = () => {
+      if (document.hidden) return;
+      const cached = ladderCache.peek(scope, gameId, difficulty);
+      void refresh(!cached || Date.now() - cached.receivedAt > 30_000);
+    };
+    const sync = () => { void refresh(true); };
+    const interval = window.setInterval(() => { if (!document.hidden) void refresh(); }, 60_000);
+    window.addEventListener('focus', revisit);
+    window.addEventListener('online', sync);
+    window.addEventListener('ladder-progress-changed', sync);
+    return () => {
+      cancelled = true; controller.abort();
+      if (busy.current) ladderCache.invalidate(scope, gameId, difficulty);
+      window.clearInterval(interval);
+      window.removeEventListener('focus', revisit);
+      window.removeEventListener('online', sync);
+      window.removeEventListener('ladder-progress-changed', sync);
+    };
+  }, [gameId, difficulty, userId, token, authLoading, owner, scope, view, revision]);
+
+  function apply(next: EpisodeLadderGame) {
+    storeLadderProgress(owner, next);
+    if (!userId) next = { ...next, difficulties: readLadderDifficultyStates(owner, next.gameId) };
+    ladderCache.set(scope, next);
+    setState({ view, error: null, locked: false, submitting: false, streak: next.streak });
+  }
 
   async function submit() {
-    if (!game || game.status !== 'playing' || busy.current || loading) return false;
+    const controller = request.current;
+    if (!controller || controller.signal.aborted || !game || game.status !== 'playing' || busy.current || loading) return false;
     busy.current = true;
-    setState(previous => ({ ...previous, submitting: true, error: null }));
-    const controller = request.current!;
+    const finish = beginLadderMutation(scope, game.gameId, difficulty);
+    setState({ view, submitting: true, error: null, locked: false });
     try {
       const next = await requestEpisodeLadder(game.gameId, token, controller.signal, {
         attempts: [...game.attempts.map(attempt => attempt.order), order],
@@ -67,15 +90,19 @@ export function useEpisodeLadder(gameId: number | null, userId: string | undefin
     } catch (failure) {
       if (controller.signal.aborted) return false;
       if (failure instanceof EpisodeLadderApiError && failure.current) apply(failure.current);
-      setState(previous => ({ ...previous, error: failure instanceof Error ? failure.message : 'Your order could not be submitted. Try again.' }));
+      const locked = failure instanceof EpisodeLadderApiError && [401, 403].includes(failure.status);
+      if (locked) ladderCache.invalidate(scope, gameId, difficulty);
+      setState(previous => ({ ...previous, view, locked,
+        error: failure instanceof Error ? failure.message : 'Your order could not be submitted. Try again.' }));
       return false;
     } finally {
+      finish();
       if (!controller.signal.aborted) { busy.current = false; setState(previous => ({ ...previous, submitting: false })); }
     }
   }
 
-  return { game, order, setOrder: (next: number[]) => setState(previous => ({ ...previous, order: next })),
-    difficulties: state.game?.difficulties ?? [],
-    error: loading ? null : state.error, locked: !loading && state.locked, loading,
-    submitting: !loading && state.submitting, submit, retry: () => setRevision(value => value + 1) };
+  return { game, order, setOrder: (next: number[]) => { if (game) ladderCache.setOrder(scope, game.gameId, difficulty, next); },
+    difficulties: snapshot?.game.difficulties ?? [], error: currentState?.error ?? null,
+    locked: currentState?.locked ?? false, loading, submitting: currentState?.submitting ?? false, submit,
+    retry: () => { ladderCache.invalidate(scope, gameId, difficulty); setRevision(value => value + 1); } };
 }

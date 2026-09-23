@@ -1,4 +1,4 @@
-.game-page {
+.page.game-page {
   position: relative;
   padding-top: 18px;
 }
@@ -32,17 +32,19 @@
 }
 
 .game-top-actions {
-  position: absolute;
-  top: 10px;
-  right: 0;
+  position: static;
+  width: 100%;
   z-index: 2;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
+  margin-bottom: 24px;
 }
 
-@media (min-width: 641px) and (max-width: 1100px) {
-  .game-top-actions:has(.episode-ladder-button) { position: static; justify-content: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
+.game-mode-links {
+  display: contents;
 }
 
 .game-action-button {
@@ -215,7 +217,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 112px;
+  width: 144px;
+  flex-shrink: 0;
   height: 38px;
   padding: 0 16px;
   border-color: var(--primary);
@@ -489,13 +492,6 @@
 }
 
 @media (max-width: 520px) {
-  .game-top-actions {
-    position: static;
-    width: 100%;
-    justify-content: flex-end;
-    margin-bottom: 16px;
-  }
-
   .game-hero {
     margin-top: 0;
   }
@@ -523,7 +519,7 @@
     min-width: 0;
   }
 
-  .game-page {
+  .page.game-page {
     padding-top: 12px;
   }
 
@@ -553,17 +549,25 @@
     grid-row: 1;
   }
 
+  .game-mode-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
   .game-mode-switch-button {
     width: 100%;
     min-width: 0;
     min-height: 44px;
-    grid-column: 3;
-    grid-row: 1;
+    height: 44px;
+    grid-area: auto;
+    padding-inline: 6px;
   }
 
-  .episode-ladder-button {
+  .game-mode-links > :only-child {
     grid-column: 1 / -1;
-    grid-row: 3;
   }
 
   .random-game-button,
@@ -571,8 +575,8 @@
     width: 100%;
     min-width: 0;
     min-height: 44px;
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-column: 3;
+    grid-row: 1;
     justify-content: center;
     padding-inline: 12px;
   }

@@ -236,14 +236,6 @@
 }
 
 @media (max-width: 760px) {
-  .header-actions {
-    position: relative;
-  }
-
-  .header-actions .streak-menu-wrap {
-    position: static;
-  }
-
   .streak-dropdown {
     width: min(360px, calc(100vw - 24px));
     grid-template-columns: 1fr;

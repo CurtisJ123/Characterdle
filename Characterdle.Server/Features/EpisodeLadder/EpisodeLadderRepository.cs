@@ -28,6 +28,9 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
     public async Task<LadderPuzzle?> GetPuzzleAsync(LadderGameReference game, CancellationToken cancellationToken, int difficulty = 1)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var existing = await ReadPuzzleAsync(connection, null, game, difficulty, cancellationToken, requireCompleteSet: true);
+        if (existing is not null) return existing;
+
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         await LockAsync(connection, transaction, $"episode-ladder-puzzle:{game.Id}", cancellationToken);
         IReadOnlyList<LadderEvent>? catalog = null;
@@ -82,13 +85,13 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
     {
         const string catalogSql = """
             with episodes as (
-                select season_number, episode_number,
+                select season_number, episode_number, title,
                     row_number() over (order by season_number, episode_number)::int as episode_index
                 from public."GOTEpisodeTitles"
             )
             select events.id, events.event_desc, characters.portrait_url,
                 events.season_number, events.episode_number, episodes.episode_index,
-                events.event_minute, events.event_second, events.storyline, characters.display_name
+                events.event_minute, events.event_second, events.storyline, characters.display_name, episodes.title
             from public."GOTEvents" events
             join episodes using (season_number, episode_number)
             left join public."GOTCharacters" characters on characters.id = events.character_id
@@ -253,36 +256,47 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
     }
 
     private static async Task<LadderPuzzle?> ReadPuzzleAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
-        LadderGameReference game, int difficulty, CancellationToken cancellationToken)
+        LadderGameReference game, int difficulty, CancellationToken cancellationToken, bool requireCompleteSet = false)
     {
         const string sql = """
             select events.id, events.event_desc, characters.portrait_url,
                 events.season_number, events.episode_number, 0 as episode_index,
-                events.event_minute, events.event_second, events.storyline, characters.display_name,
+                events.event_minute, events.event_second, events.storyline, characters.display_name, episodes.title,
                 selected.correct_position::int, selected.initial_position::int, ladder.difficulty::int
             from public."GOTEpisodeLadderGames" ladder
             join public."GOTEpisodeLadderGameEvents" selected on selected.game_id = ladder.game_id and selected.difficulty = ladder.difficulty
             join public."GOTEvents" events on events.id = selected.event_id
+            join public."GOTEpisodeTitles" episodes using (season_number, episode_number)
             left join public."GOTCharacters" characters on characters.id = events.character_id
-            where ladder.game_id = @gameId and ladder.difficulty = @difficulty order by selected.initial_position;
+            where ladder.game_id = @gameId and ladder.difficulty = @difficulty
+                and (not @requireCompleteSet or 5 = (
+                    select count(*) from (
+                        select difficulty from public."GOTEpisodeLadderGameEvents"
+                        where game_id = @gameId and difficulty between 1 and 5
+                        group by difficulty having count(*) = 5
+                    ) complete_difficulties
+                ))
+            order by selected.initial_position;
             """;
         await using var command = new NpgsqlCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("gameId", game.Id);
         command.Parameters.AddWithValue("difficulty", difficulty);
+        command.Parameters.AddWithValue("requireCompleteSet", requireCompleteSet);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var events = new List<LadderEvent>();
         while (await reader.ReadAsync(cancellationToken))
         {
-            events.Add(ReadEvent(reader) with { CorrectPosition = reader.GetInt32(10), InitialPosition = reader.GetInt32(11) });
-            difficulty = reader.GetInt32(12);
+            events.Add(ReadEvent(reader) with { CorrectPosition = reader.GetInt32(11), InitialPosition = reader.GetInt32(12) });
+            difficulty = reader.GetInt32(13);
         }
-        return events.Count == 0 ? null : new LadderPuzzle(game, difficulty, events);
+        return events.Count == 5 ? new LadderPuzzle(game, difficulty, events) : null;
     }
 
     private static LadderEvent ReadEvent(NpgsqlDataReader reader) => new(reader.GetInt64(0), reader.GetString(1),
         reader.IsDBNull(2) ? null : SafePortrait(reader.GetString(2)), reader.GetInt32(3), reader.GetInt32(4),
         reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.IsDBNull(8) ? null : reader.GetString(8),
-        CharacterName: reader.IsDBNull(9) ? null : reader.GetString(9));
+        CharacterName: reader.IsDBNull(9) ? null : reader.GetString(9),
+        EpisodeTitle: reader.IsDBNull(10) ? null : reader.GetString(10));
 
     private static string? SafePortrait(string value) =>
         (value.StartsWith("/images/", StringComparison.Ordinal) && !value.Contains('\\'))

@@ -1,6 +1,8 @@
 .leaderboard-mode-toggle {
   width: fit-content;
   display: inline-flex;
+  max-width: 100%;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 14px;
@@ -197,7 +199,7 @@
   }
 
   .leaderboard-mode-toggle button {
-    flex: 1 1 0;
+    flex: 1 1 40%;
   }
 
   .pulse-card {

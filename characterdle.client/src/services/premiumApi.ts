@@ -1,4 +1,5 @@
 import { buildApiUrl } from '../lib/runtimeConfig';
+import { AccountApiError } from '../lib/accountResource';
 import type { PremiumState } from '../types/premium';
 
 async function throwPremiumApiError(response: Response, fallbackMessage: string): Promise<never> {
@@ -31,11 +32,13 @@ async function throwPremiumApiError(response: Response, fallbackMessage: string)
     // Use the fallback message when the response body is not JSON.
   }
 
-  throw new Error(message);
+  throw new AccountApiError(message, response.status);
 }
 
-export async function getPremiumState(accessToken: string): Promise<PremiumState> {
+export async function getPremiumState(accessToken: string, signal?: AbortSignal): Promise<PremiumState> {
   const response = await fetch(buildApiUrl('/api/premium'), {
+    signal,
+    cache: 'no-store',
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${accessToken}`,

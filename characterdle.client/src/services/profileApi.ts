@@ -2,6 +2,7 @@ import type { AccountDeletionStatus } from '../types/auth';
 import type { UniverseProfile } from '../types/profile';
 import type { PersistedGameResult } from '../types/profile';
 import { buildApiUrl } from '../lib/runtimeConfig';
+import { AccountApiError } from '../lib/accountResource';
 
 async function throwProfileApiError(response: Response, fallbackMessage: string): Promise<never> {
   let message = fallbackMessage;
@@ -33,14 +34,17 @@ async function throwProfileApiError(response: Response, fallbackMessage: string)
     // Fall back to the default message when the response body is not JSON.
   }
 
-  throw new Error(message);
+  throw new AccountApiError(message, response.status);
 }
 
 export async function getProfile(
   accessToken: string,
   universeId: string,
+  signal?: AbortSignal,
 ): Promise<UniverseProfile> {
   const response = await fetch(buildApiUrl(`/api/profile/${encodeURIComponent(universeId)}`), {
+    signal,
+    cache: 'no-store',
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${accessToken}`,
@@ -54,7 +58,20 @@ export async function getProfile(
   return await response.json() as UniverseProfile;
 }
 
-export async function getGameResults(
+const pendingGameResults = new Map<string, Promise<PersistedGameResult[]>>();
+
+export function getGameResults(accessToken: string, universeId: string): Promise<PersistedGameResult[]> {
+  const key = JSON.stringify([accessToken, universeId]);
+  const pending = pendingGameResults.get(key);
+  if (pending) return pending;
+  const request = fetchGameResults(accessToken, universeId).finally(() => {
+    if (pendingGameResults.get(key) === request) pendingGameResults.delete(key);
+  });
+  pendingGameResults.set(key, request);
+  return request;
+}
+
+async function fetchGameResults(
   accessToken: string,
   universeId: string,
 ): Promise<PersistedGameResult[]> {

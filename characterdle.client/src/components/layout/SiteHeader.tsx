@@ -1,4 +1,4 @@
-import { lazy, useEffect, useRef, useState } from 'react';
+import { lazy, useEffect, useId, useRef, useState } from 'react';
 import { navItems } from '../../data/navigation';
 import { buildRoutePath } from '../../lib/routePaths';
 import type { GameMode } from '../../types/game';
@@ -70,6 +70,10 @@ export function SiteHeader({
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStreakMenuOpen, setIsStreakMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuId = useId();
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const streakMenuRef = useRef<HTMLDivElement>(null);
   const activeNav = currentPage === 'game' || currentPage === 'random' ? 'launcher' : currentPage;
@@ -77,7 +81,7 @@ export function SiteHeader({
   const canShowPremiumCta = isAuthenticated && !isPremiumLoading && !isPremiumActive;
 
   useEffect(() => {
-    if (!isProfileMenuOpen && !isStreakMenuOpen) {
+    if (!isProfileMenuOpen && !isStreakMenuOpen && !isMobileMenuOpen) {
       return;
     }
 
@@ -89,12 +93,18 @@ export function SiteHeader({
       if (!streakMenuRef.current?.contains(event.target as Node)) {
         setIsStreakMenuOpen(false);
       }
+
+      if (!mobileMenuRef.current?.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setIsProfileMenuOpen(false);
         setIsStreakMenuOpen(false);
+        setIsMobileMenuOpen(false);
+        if (isMobileMenuOpen) mobileMenuButtonRef.current?.focus();
       }
     }
 
@@ -105,7 +115,26 @@ export function SiteHeader({
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isProfileMenuOpen, isStreakMenuOpen]);
+  }, [isProfileMenuOpen, isStreakMenuOpen, isMobileMenuOpen]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1281px)');
+    const closeMobileMenu = () => {
+      if (desktop.matches) setIsMobileMenuOpen(false);
+    };
+    desktop.addEventListener('change', closeMobileMenu);
+    return () => desktop.removeEventListener('change', closeMobileMenu);
+  }, []);
+
+  function closeMobileMenu() {
+    setIsMobileMenuOpen(false);
+    mobileMenuButtonRef.current?.focus();
+  }
+
+  function handleMobileNavigation(page: Page) {
+    closeMobileMenu();
+    onNavigate(page);
+  }
 
   function handleProfileClick() {
     if (!isAuthenticated) {
@@ -123,6 +152,7 @@ export function SiteHeader({
   }
 
   function handleStreakToggle() {
+    setIsMobileMenuOpen(false);
     setIsProfileMenuOpen(false);
     setIsStreakMenuOpen((isOpen) => !isOpen);
   }
@@ -142,6 +172,62 @@ export function SiteHeader({
       <header className="site-header">
         <div className="header-inner">
           <BrandButton href="/home" onClick={() => onNavigate('launcher')} />
+
+          <div className="mobile-header-navigation" ref={mobileMenuRef}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setIsMobileMenuOpen(false);
+            }}>
+            <button className="mobile-menu-toggle" type="button" ref={mobileMenuButtonRef}
+              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMobileMenuOpen} aria-controls={mobileMenuId}
+              onClick={() => {
+                setIsProfileMenuOpen(false);
+                setIsStreakMenuOpen(false);
+                setIsMobileMenuOpen((isOpen) => !isOpen);
+              }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d={isMobileMenuOpen ? 'M6 6l12 12M6 18L18 6' : 'M4 6h16M4 12h16M4 18h16'} />
+              </svg>
+              {hasUnreadUpdates && <span className="mobile-menu-unread" aria-hidden="true" />}
+            </button>
+            <div className="mobile-header-menu" id={mobileMenuId} hidden={!isMobileMenuOpen}>
+              <nav aria-label="Mobile navigation">
+                {navItems.map((item) => (
+                  <RouteLink key={item.id}
+                    href={buildRoutePath({ page: item.id, universeId, gameMode: currentGameMode, gameId: null, authMode: 'login' })}
+                    aria-current={activeNav === item.id ? 'page' : undefined}
+                    onNavigate={() => handleMobileNavigation(item.id)}>
+                    {item.label}
+                  </RouteLink>
+                ))}
+                <button type="button" onClick={() => handleMobileNavigation('updates')} aria-haspopup="dialog"
+                  aria-label={hasUnreadUpdates ? 'Updates, new announcement' : 'Updates'}>
+                  Updates {hasUnreadUpdates && <span className="mobile-update-label">New</span>}
+                </button>
+              </nav>
+              <div className="mobile-account-actions">
+                {isAuthenticated ? (
+                  <>
+                    <RouteLink className="mobile-profile-link" href="/profile" onNavigate={() => handleMobileNavigation('profile')}>
+                      <UserAvatar avatarUrl={userAvatarUrl} displayName={profileLabel} isPremium={isPremiumUser} size="header" />
+                      <span><strong>{profileLabel}</strong><small>View profile</small></span>
+                    </RouteLink>
+                    <button type="button" onClick={() => { closeMobileMenu(); handleSettingsOpen(); }}>Settings</button>
+                    {isAdmin && <RouteLink href="/admin" onNavigate={() => handleMobileNavigation('admin')}>Admin</RouteLink>}
+                    {canShowPremiumCta && <RouteLink className="mobile-premium-link" href="/premium" onNavigate={() => handleMobileNavigation('premium')}>
+                      <PremiumCrownIcon className="premium-cta-icon" /> Go Premium
+                    </RouteLink>}
+                    <button type="button" onClick={() => { closeMobileMenu(); handleSignOut(); }}>Log out</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => { closeMobileMenu(); onAuthNavigate('login'); }}>Log in</button>
+                    <button type="button" onClick={() => { closeMobileMenu(); onAuthNavigate('signup'); }}>Sign up</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
           <nav className="main-nav" aria-label="Primary navigation">
             {navItems.map((item) => (

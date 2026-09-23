@@ -2,16 +2,18 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { GameComments } from '../components/game/GameComments';
 import { EpisodeLadderPortrait } from '../components/game/EpisodeLadderPortrait';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
-import { GameShareButton } from '../components/ui/GameShareButton';
 import { DiceIcon } from '../components/ui/DiceIcon';
 import { RouteLink } from '../components/ui/RouteLink';
 import { buildRoutePath } from '../lib/routePaths';
 import { useAuth } from '../hooks/useAuth';
 import { useEpisodeLadder } from '../hooks/useEpisodeLadder';
+import { useEpisodeLadderPreload } from '../hooks/useEpisodeLadderPreload';
 import { useLadderDrag } from '../hooks/useLadderDrag';
 import calendarDaysIcon from '../assets/calendar-days-heroicons.svg';
 import questionMarkCircleIcon from '../assets/question-mark-circle-heroicons.svg';
+import lockClosedIcon from '../assets/lock-closed-heroicons.svg';
 import { LADDER_DIFFICULTIES, moveLadderEvent } from '../lib/episodeLadder';
+import { getLadderPreviewOffsets, LADDER_DRAG_SCALE } from '../lib/ladderDropTarget';
 import type { BillingCheckoutPlan } from '../types/billing';
 import type { GameMode } from '../types/game';
 import type { PremiumAccess } from '../types/premium';
@@ -27,6 +29,7 @@ export interface EpisodeLadderPageProps {
   onOpenHistory: (mode: GameMode, universeId?: string) => void;
   onOpenRandomGame: (mode: GameMode, universeId?: string) => void;
   premiumAccess: PremiumAccess | null;
+  isPremiumLoading?: boolean;
   onStartCheckout: (plan: BillingCheckoutPlan) => Promise<void>;
   onStreakUpdated?: (streak: UniverseStreak) => void;
 }
@@ -38,7 +41,11 @@ function LockIcon() {
 export function EpisodeLadderPage(props: EpisodeLadderPageProps) {
   const { user, session, isLoading: authLoading } = useAuth();
   const [difficulty, setDifficulty] = useState(1);
-  const ladder = useEpisodeLadder(props.selectedGameId, user?.id, session?.access_token ?? null, authLoading, difficulty);
+  const accountLoading = authLoading || props.isPremiumLoading === true;
+  const ladder = useEpisodeLadder(props.selectedGameId, user?.id, session?.access_token ?? null, accountLoading, difficulty, props.premiumAccess?.fullArchiveAccess);
+  useEpisodeLadderPreload({ ready: !accountLoading && !!ladder.game && !ladder.submitting && !ladder.locked,
+    userId: user?.id, token: session?.access_token ?? null, fullArchiveAccess: props.premiumAccess?.fullArchiveAccess,
+    gameId: props.selectedGameId, levels: [1, 2, 3, 4, 5].filter(level => level !== difficulty).join(','), warmPage: false });
   const notifyStreak = useEffectEvent((streak: UniverseStreak) => props.onStreakUpdated?.(streak));
   const streak = ladder.game?.streak;
   useEffect(() => { if (streak) notifyStreak(streak); }, [streak]);
@@ -55,10 +62,11 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
   const gameHref = (mode: GameMode) => buildRoutePath({ page: isRandom ? 'random' : 'game',
     universeId: 'got', gameMode: mode, gameId: isRandom ? null : selectedGameId, authMode: 'login' });
   const { game, order, setOrder, loading, submitting, error } = ladder;
+  const gameNumber = game?.gameId ?? selectedGameId;
   const [helpOpen, setHelpOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [revealing, setRevealing] = useState(false);
-  const resultRef = useRef<HTMLElement>(null);
+  const completionRef = useRef<HTMLDivElement>(null);
   const revealTimer = useRef<number | undefined>(undefined);
   const isComplete = game?.status === 'won' || game?.status === 'lost';
   const lastAttempt = game?.attempts.at(-1);
@@ -68,6 +76,8 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
   const nextButton = useRef<HTMLButtonElement>(null);
   const advance = useEffectEvent(() => onNextRandomGame?.());
   const drag = useLadderDrag(order, game?.lockedPositions ?? [], !!inputDisabled, move);
+  const previewOffsets = getLadderPreviewOffsets(order.length, drag.visual?.from ?? -1,
+    game?.lockedPositions ?? [], drag.visual?.target ?? null);
 
   useEffect(() => () => window.clearTimeout(revealTimer.current), []);
   useEffect(() => {
@@ -93,19 +103,21 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
     target?.closest('main')?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }, [isRandom, game, drag.cards]);
 
-  function move(from: number, to: number) {
+  function move(from: number, to: number, mode: 'swap' | 'insert' = 'swap') {
     if (!game || inputDisabled) return;
-    const next = moveLadderEvent(order, from, to, game.lockedPositions);
+    const next = moveLadderEvent(order, from, to, game.lockedPositions, mode);
     if (next === order) return;
+    drag.prepareMove(next, drag.visual ? order[from] : undefined);
     setOrder(next);
-    setAnnouncement(`Moved to position ${to + 1}.`);
+    setAnnouncement(mode === 'swap' ? `Swapped events in positions ${from + 1} and ${to + 1}.`
+      : `Moved event from position ${from + 1} to ${to + 1}. Locked events stayed in place.`);
     requestAnimationFrame(() => {
       drag.cards.current.get(order[from])?.focus({ preventScroll: true });
     });
   }
 
   async function submit() {
-    if (inputDisabled || !game) return;
+    if (inputDisabled || drag.visual || !game) return;
     const saved = await ladder.submit();
     // The hook owns saving; this delay is presentation only and never changes an attempt.
     if (saved) {
@@ -113,32 +125,41 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
       const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 950;
       revealTimer.current = window.setTimeout(() => {
         setRevealing(false);
-        resultRef.current?.scrollIntoView({ behavior: duration ? 'smooth' : 'auto', block: 'center' });
+        completionRef.current?.scrollIntoView({ behavior: duration ? 'smooth' : 'auto', block: 'nearest' });
       }, duration);
     }
   }
 
   return (
     <main className="page game-page episode-ladder-page">
-      <nav className="game-top-actions ladder-navigation" aria-label="Game modes">
+      <nav className="game-top-actions" aria-label="Game modes">
         <RouteLink className="game-action-button history-button" href="/got/archive/episode_ladder" aria-label="View previous Episode Ladder games" title="View previous games" onNavigate={() => onOpenHistory('episode_ladder', 'got')}><img src={calendarDaysIcon} alt="" /></RouteLink>
         <button className="game-action-button help-button" type="button" aria-label="How to play Episode Ladder" title="How to play" onClick={() => setHelpOpen(true)}><img src={questionMarkCircleIcon} alt="" /></button>
-        {isRandom ? <RouteLink className="game-action-button current-game-button ladder-random-entry" href="/got/game/episode_ladder" onNavigate={() => onOpenGame('episode_ladder', null, 'got')}>Current Game</RouteLink> :
-          <RouteLink className="game-action-button random-game-button ladder-random-entry" href="/got/random/episode_ladder"
-            title={premiumAccess?.practiceMode ? 'Play a randomly generated game.' : 'Requires Premium. Play a randomly generated game.'}
+        {isRandom ? <RouteLink className="game-action-button current-game-button" href="/got/game/episode_ladder" onNavigate={() => onOpenGame('episode_ladder', null, 'got')}>
+          <span className="current-game-icon-wrap" aria-hidden="true"><svg className="current-game-icon" viewBox="0 0 24 24" fill="none"><path d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+          <span className="current-game-label">Current Game</span>
+        </RouteLink> :
+          <RouteLink className={`game-action-button random-game-button${!premiumAccess?.practiceMode ? ' is-locked' : ''}`} href="/got/random/episode_ladder"
+            title={premiumAccess?.practiceMode ? 'Play a randomly generated game.' : undefined}
+            aria-describedby={!premiumAccess?.practiceMode ? 'random-game-premium-tooltip' : undefined}
             onNavigate={() => onOpenRandomGame('episode_ladder', 'got')}>
-            <span className="ladder-dice"><DiceIcon />{!premiumAccess?.practiceMode && <span className="ladder-dice-lock"><LockIcon /></span>}</span>
-            Random Game
+            <span className="random-game-icon-wrap" aria-hidden="true"><DiceIcon className="random-game-icon" /></span>
+            <span className="random-game-label">Random Game</span>
+            {!premiumAccess?.practiceMode && <>
+              <span className="random-game-lock" aria-hidden="true"><img src={lockClosedIcon} alt="" /></span>
+              <span id="random-game-premium-tooltip" className="random-game-premium-tooltip" role="tooltip">
+                <strong>Requires Premium</strong><span>Play a randomly generated game.</span>
+              </span>
+            </>}
           </RouteLink>}
-        <span className="ladder-mode-links">
+        <span className="game-mode-links">
           <RouteLink className="game-action-button game-mode-switch-button" href={gameHref('character')} onNavigate={() => isRandom ? onOpenRandomGame('character', 'got') : onOpenGame('character', selectedGameId, 'got')}>Characterdle</RouteLink>
           <RouteLink className="game-action-button game-mode-switch-button" href={gameHref('quote')} onNavigate={() => isRandom ? onOpenRandomGame('quote', 'got') : onOpenGame('quote', selectedGameId, 'got')}>Quote</RouteLink>
         </span>
       </nav>
       <header className="game-hero ladder-hero">
-        <p className="eyebrow">Game of Thrones{isRandom ? ' / Practice' : game ? ` #${game.gameId}` : ''}</p>
-        <h1>{isRandom ? 'Random Episode Ladder' : 'Episode Ladder'}</h1>
-        <p>Five events. Four attempts. Earliest to latest.</p>
+        <p className="eyebrow">Game of Thrones</p>
+        <h1>{isRandom ? 'Random Episode Ladder' : `Episode Ladder${gameNumber !== null ? ` #${gameNumber}` : ''}`}</h1>
         <div className="ladder-difficulties" role="group" aria-label="Difficulty">
           {LADDER_DIFFICULTIES.map((label, index) => {
             const status = ladder.difficulties[index];
@@ -154,10 +175,12 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
         <button className="secondary-button" type="button" onClick={() => setHelpOpen(false)}>Close</button>
         <p className="card-kicker">How to play</p><h2>Episode Ladder</h2>
         <p>Order five events by episode, earliest to latest. Each event comes from a different episode. You have four attempts per difficulty.</p>
-        <ul><li>Drag a card, or use its grip on a touch screen. You can also focus a card and use the Up/Down keys.</li>
+        <ul><li>Drop onto the middle of a card to swap positions. The highlighted card nudges toward your starting position. Drop near a card's top or bottom edge, or between cards, to insert instead; a small gap opens where it will go. Dropping above or below the board moves the event to the first or last available position. Only unlocked events shift.</li>
+          <li>On touch screens, drag using the grip. With a keyboard, focus a card and use Up/Down to swap with the next unlocked card. Press Escape to cancel a drag.</li>
           <li>Green events are correct and locked. Yellow means one position away. Grey means farther away.</li>
           <li>Flashbacks follow episode and on-screen order, not story chronology.</li>
-          <li>Start with Easy and work up to Impossible. Impossible uses five consecutive episodes; easier difficulties spread events farther apart. Completed difficulties turn grey.</li></ul>
+          <li>Start with Easy and work up to Impossible. Impossible uses five consecutive episodes; easier difficulties spread events farther apart. Completed difficulties turn grey.</li>
+          <li>Daily and archive difficulties cannot be replayed after a win or loss. Random games are separate practice rounds.</li></ul>
       </dialog>}
       {ladder.locked && <PremiumArchiveGateOverlay gameLabel="Episode Ladder" onGoHome={() => onNavigate('launcher')}
         {...(isRandom ? { featureLabel: 'Premium random game', headline: 'Subscribe to premium to play random games.',
@@ -170,6 +193,7 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
       {game && !loading && <>
         <section className="ladder-board" aria-label="Event timeline">
           <div className="ladder-board-heading"><span>Earliest</span><span>{game.attempts.length} / {game.maxAttempts} attempts</span></div>
+          <div className="ladder-events-wrap">
           <ol className={`ladder-events${revealing ? ' is-revealing' : ''}`}>
             {order.map((id, position) => {
               const event = game.events.find(item => item.id === id)!;
@@ -179,34 +203,39 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
               const previous = freeSlots[slot - 1];
               const next = freeSlots[slot + 1];
               const feedback = tone === 'correct' ? 'Correct, locked' : tone === 'adjacent' ? 'One position away' : tone === 'incorrect' ? 'More than one position away' : 'Not checked';
-              return <li key={id} className={`ladder-event is-${tone}${drag.visual?.from === position ? ' is-dragging' : ''}${drag.visual?.to === position && drag.visual.from !== position ? ' is-drop-target' : ''}`}
-                tabIndex={locked || inputDisabled ? -1 : 0} aria-label={`Event ${position + 1}: ${event.description}. ${feedback}`}
+              const episodeLabel = locked && event.episode
+                ? `Season ${event.episode.seasonNumber}, Episode ${event.episode.episodeNumber}${event.episode.title ? `: ${event.episode.title}` : ''}` : null;
+              return <li key={id} className={`ladder-event is-${tone}${drag.visual?.from === position ? ' is-dragging' : ''}${drag.visual?.target?.mode === 'swap' && drag.visual.target.to === position ? ' is-drop-target' : ''}${drag.visual?.target?.mode === 'insert' && previewOffsets[position] ? ' is-insert-neighbor' : ''}`}
+                tabIndex={locked || inputDisabled ? -1 : 0} aria-label={`Event ${position + 1}: ${event.description}. ${feedback}${episodeLabel ? `. ${episodeLabel}` : ''}`}
                 ref={element => { if (element) drag.cards.current.set(id, element); else drag.cards.current.delete(id); }}
-                style={drag.visual?.from === position ? { transform: `translateY(${drag.visual.offset}px) scale(1.015)` } : undefined}
+                style={drag.visual?.from === position ? { transform: `translateY(${drag.visual.offset}px) scale(${LADDER_DRAG_SCALE})` }
+                  : previewOffsets[position] ? { translate: `0 ${previewOffsets[position]}px` } : undefined}
                 onDragStart={event => event.preventDefault()}
                 onPointerDown={event => drag.start(event, position)} onPointerMove={drag.pointerMove} onPointerUp={drag.end}
                 onPointerCancel={drag.cancel} onLostPointerCapture={drag.cancel}
                 onKeyDown={event => {
-                  if (event.key === 'Escape') drag.cancel();
+                  if (event.key === 'Escape') { drag.cancel(); return; }
+                  if (drag.visual) { if (event.key.startsWith('Arrow')) event.preventDefault(); return; }
                   if (event.key === 'ArrowDown' && next !== undefined) { event.preventDefault(); move(position, next); }
                   if (event.key === 'ArrowUp' && previous !== undefined) { event.preventDefault(); move(position, previous); }
                 }}>
                 <span className="ladder-position" aria-label={`Position ${position + 1}`}>{position + 1}</span>
                 <EpisodeLadderPortrait event={event} />
-                <div className="ladder-event-copy"><p>{event.description}</p><span className="ladder-feedback">{tone === 'ungraded' ? '' : feedback}</span></div>
+                <div className="ladder-event-copy"><p>{event.description}</p>{episodeLabel && <span className="ladder-feedback">{episodeLabel}</span>}</div>
                 {locked ? <span className="ladder-lock" aria-label="Correct event locked in place"><LockIcon /></span> : !isComplete &&
                   <span className="ladder-grip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5h0m6 0h0M9 12h0m6 0h0M9 19h0m6 0h0" /></svg></span>}
               </li>;
             })}
           </ol>
-          <div className="ladder-board-heading"><span>Latest</span><span>{game.lockedPositions.length} / 5 locked</span></div>
+          </div>
+          <div className="ladder-board-heading"><span>Latest</span><span>{game.lockedPositions.length} / 5 correct</span></div>
           <p className="ladder-announcement" role="status">{announcement}</p>
-          <p className="ladder-announcement" role="status">{game.status === 'won' ? 'Timeline complete.' : game.status === 'lost' ? 'No attempts left. The correct timeline is shown below.' : `${game.attempts.length} attempts used. ${game.lockedPositions.length} events locked.`}</p>
-          {!isComplete && <button className="primary-button ladder-submit" type="button" disabled={inputDisabled} onClick={() => { void submit(); }}>
+          <p className="ladder-announcement" role="status">{game.status === 'won' ? 'Timeline complete.' : game.status === 'lost' ? 'No attempts left. This difficulty is complete.' : `${game.attempts.length} attempts used. ${game.lockedPositions.length} events correct.`}</p>
+          {!isComplete && <button className="primary-button ladder-submit" type="button" disabled={inputDisabled || !!drag.visual} onClick={() => { void submit(); }}>
             {submitting ? 'Checking...' : revealing ? 'Revealing...' : 'Check order'}
           </button>}
           <div className="ladder-legend" aria-label="Feedback key">
-            <span><i className="is-correct" />Correct &amp; locked</span><span><i className="is-adjacent" />One away</span><span><i className="is-incorrect" />Farther away</span>
+            <span><i className="is-correct" />Correct</span><span><i className="is-adjacent" />One away</span>
           </div>
         </section>
         {game.attempts.length > 0 && <section className="ladder-attempts" aria-label="Previous attempts">
@@ -214,22 +243,10 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
             <span>{index + 1}</span>{attempt.feedback.map((tone, slot) => <i key={slot} className={`is-${tone}`} aria-hidden="true" />)}
           </div>)}
         </section>}
-        {isComplete && <section ref={resultRef} className="ladder-result glass-card" aria-label="Episode Ladder result">
-          <p className="card-kicker">{game.status === 'won' ? 'Timeline complete' : 'The correct timeline'}</p>
-          <h2>{game.status === 'won' ? `Solved in ${game.attempts.length} ${game.attempts.length === 1 ? 'attempt' : 'attempts'}` : 'A little out of time'}</h2>
-          {game.solution && <ol className="ladder-solution">{game.solution.map(event => <li key={event.id}>
-            <span>{game.events.find(item => item.id === event.id)?.description}</span>
-            <small>S{event.seasonNumber} E{event.episodeNumber}</small>
-          </li>)}</ol>}
-          <div className="ladder-result-actions">
+        {isComplete && (selectedDifficulty < 5 || isRandom) && <div ref={completionRef} className="ladder-completion-actions">
             {selectedDifficulty < 5 && <button className="primary-button" type="button" disabled={revealing} onClick={() => onSelectDifficulty(selectedDifficulty + 1)}>Play {LADDER_DIFFICULTIES[selectedDifficulty]}</button>}
-            {isRandom ? <button ref={nextButton} className={`primary-button ladder-next${nextReady ? ' is-ready' : ''}`} type="button" disabled={!nextReady} onClick={onNextRandomGame}>Next Random Game</button> :
-            <GameShareButton payload={{ mode: 'episode_ladder', gameId: game.gameId, universeId: 'got', universeName: 'Game of Thrones',
-              status: game.status as 'won' | 'lost', guessCount: game.attempts.length, rows: game.attempts,
-              hintCount: 0, streak: 0, difficulty: game.difficulty, maxAttempts: game.maxAttempts }} />}
-            <button className="secondary-button" onClick={() => onOpenGame('character', selectedGameId, 'got')}>Play Character</button>
-          </div>
-        </section>}
+            {isRandom && <button ref={nextButton} className={`primary-button ladder-next${nextReady ? ' is-ready' : ''}`} type="button" disabled={!nextReady} onClick={onNextRandomGame}>Next Random Game</button>}
+        </div>}
         {!isRandom && isComplete && !revealing && user && session?.access_token && <GameComments accessToken={session.access_token} userId={user.id} universeId="got" gameId={game.gameId} mode="episode_ladder" />}
       </>}
     </main>

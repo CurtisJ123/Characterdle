@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { LeaderboardTable } from '../components/leaderboard/LeaderboardTable';
+import { LeaderboardHero } from '../components/leaderboard/LeaderboardHero';
 import { StreakLeaderboardTable } from '../components/leaderboard/StreakLeaderboardTable';
+import { EpisodeLadderLeaderboardView } from '../components/leaderboard/EpisodeLadderLeaderboard';
 import { MetricRow } from '../components/ui/MetricRow';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useEpisodeLadderLeaderboard } from '../hooks/useEpisodeLadderLeaderboard';
 import { useUniverse } from '../hooks/useUniverse';
 import type { GameMode } from '../types/game';
 import type {
@@ -61,14 +64,20 @@ function compareNullableNumbers(left: number | null, right: number | null): numb
 }
 
 export function LeaderboardPage() {
-  const [selectedView, setSelectedView] = useState<LeaderboardView>('character');
+  const [selectedView, setSelectedView] = useState<LeaderboardView>('streak');
   const selectedMode: GameMode = selectedView === 'quote' ? 'quote' : 'character';
-  const { session, user } = useAuth();
+  const { session, user, isLoading: isAuthLoading } = useAuth();
   const { selectedUniverse } = useUniverse();
   const { data, error, isLoading } = useLeaderboard(
     selectedUniverse.id,
     session?.access_token ?? null,
     user?.id ?? 'guest',
+  );
+  const ladder = useEpisodeLadderLeaderboard(
+    selectedUniverse.id,
+    session?.access_token ?? null,
+    user?.id ?? 'guest',
+    selectedUniverse.id === 'got' && !isAuthLoading,
   );
   const rows = data?.rows ?? [];
   const streakRows = data?.streakRows ?? [];
@@ -144,19 +153,17 @@ export function LeaderboardPage() {
   const featuredDisplayName = selectedView === 'streak'
     ? topStreakPlayer?.displayName
     : topPlayer?.displayName;
-  const featuredInitials = featuredDisplayName
-    ? featuredDisplayName
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase()
-    : '--';
 
   return (
     <main className="page">
       <div className="leaderboard-mode-toggle" aria-label="Leaderboard mode">
+        <button
+          className={selectedView === 'streak' ? 'is-active' : ''}
+          type="button"
+          onClick={() => setSelectedView('streak')}
+        >
+          Streaks
+        </button>
         <button
           className={selectedView === 'character' ? 'is-active' : ''}
           type="button"
@@ -171,61 +178,31 @@ export function LeaderboardPage() {
         >
           Quote
         </button>
-        <button
-          className={selectedView === 'streak' ? 'is-active' : ''}
+        {selectedUniverse.id === 'got' && <button
+          className={selectedView === 'episode_ladder' ? 'is-active' : ''}
           type="button"
-          onClick={() => setSelectedView('streak')}
+          onClick={() => setSelectedView('episode_ladder')}
         >
-          Streaks
-        </button>
+          Episode Ladder
+        </button>}
       </div>
 
-      <section className="leaderboard-hero">
-        <article className="champion-card glass-card">
-          <div className="champion-avatar-shell">
-            <div className="champion-avatar" aria-hidden="true">
-              {featuredInitials}
-            </div>
-          </div>
-          <div className="champion-copy">
-            <h1>
-              {selectedView === 'streak'
-                ? topStreakPlayer?.displayName ?? 'No streaks yet'
-                : topPlayer?.displayName ?? 'No ranked players yet'}
-            </h1>
-            <dl className="champion-stats">
-              {selectedView === 'streak' ? (
-                <>
-                  <div className="champion-stat-card">
-                    <dt>Current Streak</dt>
-                    <dd>{topStreakPlayer?.currentStreak ?? 0} days</dd>
-                  </div>
-                  <div className="champion-stat-card">
-                    <dt>Longest Streak</dt>
-                    <dd>{topStreakPlayer?.longestStreak ?? 0} days</dd>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="champion-stat-card">
-                    <dt>{modeLabel} Wins</dt>
-                    <dd>{topPlayer?.wins ?? 0}</dd>
-                  </div>
-                  <div className="champion-stat-card">
-                    <dt>Win Rate</dt>
-                    <dd>{formatRate(topPlayer ? getWinRate(topPlayer.wins, topPlayer.plays) : null)}</dd>
-                  </div>
-                  <div className="champion-stat-card">
-                    <dt>Avg. Guesses</dt>
-                    <dd>{topPlayer?.averageGuesses?.toFixed(1) ?? '--'}</dd>
-                  </div>
-                </>
-              )}
-            </dl>
-          </div>
-        </article>
-
-        <aside className="glass-card pulse-card">
+      {selectedView === 'episode_ladder' && selectedUniverse.id === 'got' ? (
+        <EpisodeLadderLeaderboardView data={ladder.data} loading={ladder.isLoading}
+          error={ladder.error?.message ?? null} onRetry={ladder.retry} />
+      ) : <>
+      <LeaderboardHero
+        displayName={featuredDisplayName}
+        emptyTitle={selectedView === 'streak' ? 'No streaks yet' : 'No ranked players yet'}
+        stats={selectedView === 'streak' ? [
+          { label: 'Current Streak', value: `${topStreakPlayer?.currentStreak ?? 0} days` },
+          { label: 'Longest Streak', value: `${topStreakPlayer?.longestStreak ?? 0} days` },
+        ] : [
+          { label: `${modeLabel} Wins`, value: topPlayer?.wins ?? 0 },
+          { label: 'Win Rate', value: formatRate(topPlayer ? getWinRate(topPlayer.wins, topPlayer.plays) : null) },
+          { label: 'Avg. Guesses', value: topPlayer?.averageGuesses?.toFixed(1) ?? '--' },
+        ]}
+      >
           {selectedView === 'streak' ? (
             <>
               <h2>{currentUserStreak ? 'Your Streak Standing' : 'Streak Overview'}</h2>
@@ -263,8 +240,7 @@ export function LeaderboardPage() {
               )}
             </>
           )}
-        </aside>
-      </section>
+      </LeaderboardHero>
 
       {error && <p className="error-copy">Unable to load leaderboard.</p>}
       {isLoading && !error && <p className="muted-copy">Loading leaderboard...</p>}
@@ -282,6 +258,7 @@ export function LeaderboardPage() {
       {!isLoading && !error && selectedView === 'streak' && streakRows.length > 0 && (
         <StreakLeaderboardTable rows={streakRows} />
       )}
+      </>}
     </main>
   );
 }

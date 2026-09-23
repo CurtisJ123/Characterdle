@@ -1,5 +1,6 @@
 import { universes } from '../data/universeCatalog';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useEpisodeLadderPreload } from '../hooks/useEpisodeLadderPreload';
 import { MiniLeaderboardCard } from '../components/launcher/MiniLeaderboardCard';
 import { UserProfileCard } from '../components/launcher/UserProfileCard';
 import { UniverseCard } from '../components/launcher/UniverseCard';
@@ -14,6 +15,8 @@ interface LauncherPageProps {
   accessToken: string | null;
   authError: Error | null;
   isPremiumUser: boolean;
+  isPremiumLoading?: boolean;
+  fullArchiveAccess?: boolean;
   isUserLoading: boolean;
   onNavigate: NavigateToPage;
   onOpenGame: (gameMode: GameMode, gameId: number | null, universeId?: string) => void;
@@ -24,6 +27,8 @@ export function LauncherPage({
   accessToken,
   authError,
   isPremiumUser,
+  isPremiumLoading = false,
+  fullArchiveAccess,
   isUserLoading,
   onNavigate,
   onOpenGame,
@@ -35,6 +40,9 @@ export function LauncherPage({
     accessToken,
     user?.id ?? 'guest',
   );
+
+  useEpisodeLadderPreload({ ready: !isUserLoading && !isPremiumLoading && !isLeaderboardLoading && !!leaderboardData,
+    userId: user?.id, token: accessToken, fullArchiveAccess });
 
   function handleOpenUniverseGame(universeId: string, gameMode: GameMode) {
     const selectedUniverse = universes.find((universe) => universe.id === universeId);
@@ -61,9 +69,11 @@ export function LauncherPage({
               key={universe.id}
               playHref={getUniverseGamePath(universe.id, 'character', null)}
               quoteHref={universe.isPlayable ? getUniverseGamePath(universe.id, 'quote', null) : undefined}
+              episodeLadderHref={universe.isPlayable && universe.id === 'got' ? getUniverseGamePath(universe.id, 'episode_ladder', null) : undefined}
               universe={universe}
               onPlay={() => handleOpenUniverseGame(universe.id, 'character')}
               onPlayQuote={universe.isPlayable ? () => handleOpenUniverseGame(universe.id, 'quote') : undefined}
+              onPlayEpisodeLadder={universe.isPlayable && universe.id === 'got' ? () => handleOpenUniverseGame(universe.id, 'episode_ladder') : undefined}
             />
           ))}
         </div>

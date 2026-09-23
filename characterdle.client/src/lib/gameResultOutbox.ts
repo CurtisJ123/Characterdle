@@ -18,6 +18,7 @@ interface StoredGameResultOutbox {
 }
 
 export interface GameResultFlushOutcome {
+  completed: boolean;
   streak: UniverseStreak;
   universeId: string;
 }
@@ -221,6 +222,7 @@ async function flushPersistedResults(
       const streak = await submitUniverseGameResult(accessToken, entry.payload);
       removeEntryIfCurrent(userId, entry);
       outcomes.push({
+        completed: entry.payload.status !== 'playing',
         streak,
         universeId: entry.payload.universeId,
       });

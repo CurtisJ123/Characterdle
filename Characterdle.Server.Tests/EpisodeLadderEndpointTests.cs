@@ -117,11 +117,49 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
         Assert.Null(game.Solution);
+        Assert.All(game.Events, entry => Assert.Null(entry.Episode));
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.Contains("Authorization", response.Headers.Vary);
         var post = await _client.PostAsJsonAsync($"{Root}/50/attempts", new { attempts = new long[][] { [5, 4, 3, 2, 1] }, guestId = Guid.NewGuid() });
         Assert.Equal(HttpStatusCode.OK, post.StatusCode);
         Assert.Null(_store.LastUser);
+        Assert.Equal(0, _profiles.CallCount);
+    }
+
+    [Fact]
+    public async Task GuestRestoreReconstructsFeedbackWithoutRecordingAnything()
+    {
+        var response = await _client.PostAsJsonAsync($"{Root}/50/restore", new { attempts = new long[][] { [5, 4, 3, 2, 1] } });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
+        Assert.Single(game.Attempts);
+        Assert.Null(game.Solution);
+        Assert.True(response.Headers.CacheControl!.NoStore);
+        Assert.Equal(0, _store.SubmitCalls);
+        Assert.Equal(0, _store.AttemptReads);
+        Assert.Equal(0, _profiles.CallCount);
+    }
+
+    [Fact]
+    public async Task GuestRestoreValidatesOrdersAndDoesNotBypassArchiveAccess()
+    {
+        var invalid = await _client.PostAsJsonAsync($"{Root}/50/restore", new { attempts = new long[][] { [1, 1, 1, 1, 1] } });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        _store.ArchiveIndex = 4;
+        var forbidden = await _client.PostAsJsonAsync($"{Root}/50/restore", new { attempts = new long[][] { [1, 2, 3, 4, 5] } });
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.Equal(0, _store.SubmitCalls);
+        Assert.Equal(0, _profiles.CallCount);
+    }
+
+    [Fact]
+    public async Task GuestRestoreRejectsSignedInOrInvalidCredentials()
+    {
+        SignIn();
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync($"{Root}/50/restore", new { attempts = Array.Empty<long[]>() })).StatusCode);
+        SignIn("bad-token");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.PostAsJsonAsync($"{Root}/50/restore", new { attempts = Array.Empty<long[]>() })).StatusCode);
+        Assert.Equal(0, _store.SubmitCalls);
         Assert.Equal(0, _profiles.CallCount);
     }
 
@@ -228,10 +266,29 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         _store.Saved = [[5, 4, 3, 2, 1]];
         var game = await _client.GetFromJsonAsync<EpisodeLadderResponse>($"{Root}/current");
         Assert.Single(game!.Attempts);
+        Assert.Equal(new LadderEpisodeResponse(1, 3, "Episode title 3"), game.Events.Single(e => e.Id == 3).Episode);
+        Assert.All(game.Events.Where(e => e.Id != 3), entry => Assert.Null(entry.Episode));
         _store.Conflict = true;
         var response = await _client.PostAsJsonAsync($"{Root}/50/attempts", new { attempts = new long[][] { [1, 2, 3, 4, 5] } });
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("current", await response.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OldCompletedDifficultiesRemainFinishedAndCannotAcceptAnotherAttempt(bool won)
+    {
+        SignIn(); _premium.Enabled = true; _store.ArchiveIndex = 90;
+        _store.Saved = won ? [[1, 2, 3, 4, 5]]
+            : Enumerable.Repeat(new long[] { 5, 4, 3, 2, 1 }, 4).ToArray();
+        var game = await _client.GetFromJsonAsync<EpisodeLadderResponse>($"{Root}/50");
+        Assert.Equal(won ? "won" : "lost", game!.Status);
+        Assert.Equal(_store.Saved.Length, game.Attempts.Count);
+        var response = await _client.PostAsJsonAsync($"{Root}/50/attempts",
+            new { attempts = _store.Saved.Append(new long[] { 1, 2, 3, 4, 5 }).ToArray() });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, _store.SubmitCalls);
     }
 
     [Theory]

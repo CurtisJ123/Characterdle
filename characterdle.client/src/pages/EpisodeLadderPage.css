@@ -1,37 +1,34 @@
-.episode-ladder-page {
+.page.episode-ladder-page {
   --ladder-correct: #2f805c;
   --ladder-adjacent: #bb9036;
   --ladder-incorrect: #50524d;
-  display: flex; flex-direction: column; align-items: center; width: min(1200px, calc(100% - 32px));
+  display: flex; flex-direction: column; align-items: center;
   box-sizing: border-box;
   margin-inline: auto;
   padding-bottom: 48px;
   color: var(--on-surface);
 }
-.episode-ladder-page .ladder-navigation { position: static; width: 100%; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-bottom: 24px; }
-.ladder-mode-links { display: contents; }
-.ladder-random-entry { display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
-.ladder-dice { position: relative; width: 28px; height: 28px; flex-shrink: 0; color: var(--primary); }
-.ladder-dice > svg { width: 100%; height: 100%; }
-.ladder-dice-lock { position: absolute; right: -3px; bottom: -2px; display: flex; background: var(--surface-container-lowest, #171a19); border-radius: 3px; }
-.ladder-dice-lock svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; }
 .ladder-next.is-ready { animation: ladder-ready 2.8s ease-in-out infinite; }
 @keyframes ladder-ready { 50% { box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 32%, transparent); filter: brightness(1.06); } }
 .episode-ladder-page .ladder-hero { width: 100%; max-width: 900px; text-align: center; margin: 12px auto 26px; }
 .ladder-hero > p { margin: 10px 0; }
 .ladder-board { min-width: 0; width: min(100%, 900px); }
 .ladder-board-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--primary); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; padding: 8px 2px; }
-.ladder-events { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 12px; }
+.ladder-events-wrap { position: relative; margin: 8px 0; }
+.ladder-events { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
 .ladder-event {
   position: relative; display: flex; align-items: center; gap: 16px; min-width: 0; min-height: 94px; padding: 16px 18px; touch-action: pan-y;
   background: linear-gradient(110deg, color-mix(in srgb, var(--primary) 9%, #1b1d1b), #1b1d1b);
   border: 1px solid color-mix(in srgb, var(--primary) 26%, transparent); border-radius: var(--radius-control);
   box-shadow: 0 6px 16px #0002;
+  translate: 0 0; scale: 1;
+  transition: translate 280ms ease-out, scale 280ms ease-out, border-color 280ms ease-out, box-shadow 280ms ease-out;
 }
 .ladder-event[tabindex="0"] { cursor: grab; }
-.ladder-event.is-dragging { z-index: 10; cursor: grabbing; user-select: none; box-shadow: 0 18px 40px #0008; border-color: var(--primary); }
-.ladder-event.is-drop-target { outline: 2px dashed var(--primary); outline-offset: 3px; }
+.ladder-event.is-dragging { z-index: 10; cursor: grabbing; user-select: none; box-shadow: 0 18px 40px #0008; border-color: var(--primary); transition: none; translate: 0 0; scale: 1; }
+.ladder-event.is-drop-target { scale: .985; border-color: var(--primary); outline: 1px solid color-mix(in srgb, var(--primary) 65%, transparent); outline-offset: 4px; box-shadow: 0 8px 22px #0004, 0 0 12px color-mix(in srgb, var(--primary) 12%, transparent); }
 .ladder-event:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.ladder-event.is-dragging:focus-visible { outline: none; }
 .ladder-event.is-correct { border-color: var(--ladder-correct); background: linear-gradient(100deg, #244b37, #1b2820); }
 .ladder-event.is-adjacent { border-color: var(--ladder-adjacent); background: linear-gradient(100deg, #463b23, #26251e); }
 .ladder-event.is-incorrect { border-color: var(--ladder-incorrect); background: linear-gradient(100deg, #30312d, #222420); }
@@ -40,7 +37,7 @@
 .ladder-portrait .history-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .ladder-event-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .ladder-event-copy p { margin: 0; line-height: 1.5; font-size: 1rem; }
-.ladder-feedback { display: block; margin-top: 4px; min-height: 1em; font-size: .75rem; color: #d4d5c8; }
+.ladder-feedback { display: block; margin-top: 4px; line-height: 1.5; font-size: .75rem; color: #d4d5c8; }
 .ladder-lock svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .ladder-grip { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; color: var(--primary); touch-action: none; cursor: grab; }
 .ladder-grip svg { width: 24px; height: 28px; stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
@@ -51,7 +48,7 @@
 .ladder-legend i { width: 12px; height: 12px; border-radius: 3px; }
 .ladder-legend .is-correct, .ladder-attempt .is-correct { background: var(--ladder-correct); }
 .ladder-legend .is-adjacent, .ladder-attempt .is-adjacent { background: var(--ladder-adjacent); }
-.ladder-legend .is-incorrect, .ladder-attempt .is-incorrect { background: var(--ladder-incorrect); }
+.ladder-attempt .is-incorrect { background: var(--ladder-incorrect); }
 .ladder-help-dialog { width: min(620px, calc(100% - 32px)); max-height: 85dvh; margin: auto; padding: 28px; color: var(--on-surface); overflow-y: auto; line-height: 1.65; }
 .ladder-help-dialog::backdrop { background: #000a; backdrop-filter: blur(5px); }
 .ladder-help-dialog > button { float: right; }
@@ -61,14 +58,8 @@
 .ladder-attempt { display: flex; align-items: center; gap: 6px; }
 .ladder-attempt > span { width: 22px; color: var(--primary); font-size: .8rem; }
 .ladder-attempt i { width: 26px; height: 26px; border-radius: 4px; }
-.ladder-result { width: min(100%, 900px); margin-top: 24px; padding: 28px; scroll-margin-top: 100px; }
-.ladder-result h2 { font-family: var(--heading-font); }
-.ladder-solution { padding-left: 22px; margin: 24px 0; }
-.ladder-solution li { padding: 10px 0 10px 8px; line-height: 1.5; }
-.ladder-solution li::marker { color: var(--primary); font-family: var(--body-font); }
-.ladder-solution small { display: block; color: var(--primary); margin-top: 4px; font-family: var(--body-font); }
-.ladder-result-actions { display: flex; flex-wrap: wrap; gap: 12px; }
-.ladder-result-actions > * { flex: 1; min-width: 150px; }
+.ladder-completion-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; width: min(100%, 900px); margin-bottom: 24px; scroll-margin-block: 24px; }
+.ladder-completion-actions > button { min-height: 50px; width: min(100%, 380px); }
 .ladder-message { text-align: center; padding: 24px; }
 .ladder-announcement { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ladder-events.is-revealing .ladder-event { animation: ladder-reveal 850ms ease-in-out both; }
@@ -86,15 +77,8 @@
 .ladder-level:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 @media (max-width: 640px) {
   html:has(.episode-ladder-page), body:has(.episode-ladder-page) { min-width: 0; }
-  .episode-ladder-page { width: 100%; padding-inline: 12px; }
-  .episode-ladder-page .ladder-navigation { display: grid; grid-template-columns: 44px 44px minmax(0, 1fr); gap: 8px; }
-  .ladder-navigation .history-button, .ladder-navigation .help-button { width: 44px; height: 44px; }
-  .ladder-navigation .ladder-random-entry { min-width: 0; width: 100%; height: 44px; grid-column: 3; grid-row: 1; font-size: .8rem; }
-  .ladder-mode-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; grid-row: 2; grid-column: 1 / -1; }
-  .ladder-navigation .game-mode-switch-button { min-width: 0; height: 44px; width: 100%; grid-area: auto; padding-inline: 6px; }
   .ladder-difficulties { gap: 6px; }
   .ladder-level { padding: 10px 14px; font-size: .85rem; }
-  .ladder-hero > p:not(.eyebrow) { font-size: .85rem; }
   .ladder-board-heading { font-size: .7rem; letter-spacing: .04em; }
   .ladder-events { gap: 10px; }
   .ladder-event { gap: 8px; padding: 10px; min-height: 100px; }
@@ -104,11 +88,9 @@
   .ladder-feedback { font-size: .65rem; }
   .ladder-lock { width: 44px; }
   .ladder-legend { font-size: .7rem; gap: 8px 10px; }
-  .ladder-result { padding: 18px; }
-  .ladder-result h2 { font-size: 1.5rem; }
-  .ladder-solution { overflow-wrap: anywhere; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .ladder-event { transition: none; }
   .ladder-events.is-revealing .ladder-event, .ladder-next.is-ready { animation: none; }
   .ladder-next.is-ready { box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 24%, transparent); }
 }
