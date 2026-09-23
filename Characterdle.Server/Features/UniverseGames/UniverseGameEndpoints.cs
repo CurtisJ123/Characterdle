@@ -76,7 +76,8 @@ public static class UniverseGameEndpoints
         CancellationToken cancellationToken)
     {
         response.Headers.CacheControl = "no-store";
-        if (gameId <= 0 || mode is not "character" and not "quote" || !universeCatalog.TryGet(universeId, out var universe))
+        if (gameId <= 0 || mode is not "character" and not "quote" and not "episode_ladder"
+            || (mode == "episode_ladder" && universeId != "got") || !universeCatalog.TryGet(universeId, out var universe))
             return Results.NotFound();
 
         try

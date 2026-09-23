@@ -76,9 +76,31 @@ public sealed class GameCommentRepository(NpgsqlDataSource dataSource) : IGameCo
         return await reader.ReadAsync(cancellationToken) ? ReadComment(reader) : null;
     }
 
-    private static string CompletedGameSql(UniverseDefinition universe, string mode)
+    internal static string CompletedGameSql(UniverseDefinition universe, string mode)
     {
         // Identifiers come exclusively from the server's universe catalog. Request values are parameters.
+        if (mode == "episode_ladder")
+        {
+            // Ladder has one discussion per day, unlocked by all five saved results, including losses.
+            // Unlike Character/Quote, completed Ladder difficulties never expire or become replayable.
+            return """
+                select 1
+                from public."GOTGames" as games
+                join public."PlayerProfiles" as player on player.user_id = @userId
+                where @universeId = 'got'
+                  and games.id = @gameId
+                  and games.datetime <= now()
+                  and (
+                    select count(distinct progress.difficulty)
+                    from public."GOTEpisodeLadderProgress" as progress
+                    where progress.user_id = @userId
+                      and progress.game_id = games.id
+                      and progress.difficulty between 1 and 5
+                      and progress.status in ('won', 'lost')
+                  ) = 5
+                """;
+        }
+
         var quoteCondition = mode == "quote" ? "and games.quote_id is not null" : string.Empty;
         return $"""
             select 1

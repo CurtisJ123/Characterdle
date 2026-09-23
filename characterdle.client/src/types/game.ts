@@ -1,7 +1,7 @@
 import type { Page } from './routes';
 
 export type AttributeTone = 'correct' | 'partial' | 'neutral';
-export type GameMode = 'character' | 'quote';
+export type GameMode = 'character' | 'quote' | 'episode_ladder';
 
 export interface NavItem {
   id: Page;

@@ -235,15 +235,17 @@
     drop-shadow(0 2px 3px color-mix(in srgb, var(--black) 16%, transparent));
 }
 
+@media (max-width: 1280px) {
+  .streak-dropdown-tooltip-panel {
+    display: none;
+  }
+
+  .streak-dropdown-savers-trigger {
+    cursor: default;
+  }
+}
+
 @media (max-width: 760px) {
-  .header-actions {
-    position: relative;
-  }
-
-  .header-actions .streak-menu-wrap {
-    position: static;
-  }
-
   .streak-dropdown {
     width: min(360px, calc(100vw - 24px));
     grid-template-columns: 1fr;
@@ -257,11 +259,5 @@
 
   .streak-dropdown-progress-bar {
     max-width: 220px;
-  }
-
-  .streak-dropdown-tooltip-panel {
-    left: 0;
-    right: auto;
-    width: min(240px, calc(100vw - 72px));
   }
 }

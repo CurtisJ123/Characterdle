@@ -39,7 +39,7 @@ export function useRandomUniverseGame(
   });
 
   const loadRandomGame = useCallback(
-    () => getRandomUniverseGame(universeId, mode, accessToken),
+    () => getRandomUniverseGame(universeId, mode === 'quote' ? 'quote' : 'character', accessToken),
     [accessToken, mode, universeId],
   );
 

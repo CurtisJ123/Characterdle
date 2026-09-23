@@ -1,5 +1,6 @@
 using Npgsql;
 using Characterdle.Server.Features.Premium;
+using Characterdle.Server.Features.EpisodeLadder;
 
 namespace Characterdle.Server.Features.UniverseGames;
 
@@ -100,6 +101,19 @@ public sealed class UniverseGameScheduler(
                     universe.Id,
                     todayLocalDate);
             }
+        }
+
+        // Keep a missing event catalog from interrupting Character/Quote generation or streak maintenance.
+        try
+        {
+            var ladderRepository = scope.ServiceProvider.GetRequiredService<IEpisodeLadderRepository>();
+            var currentGame = await ladderRepository.GetGameReferenceAsync(null, cancellationToken);
+            if (currentGame is not null && await ladderRepository.GetPuzzleAsync(currentGame, cancellationToken) is null)
+                logger.LogWarning("Episode Ladder has insufficient enabled events to generate the current game.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogError(exception, "Episode Ladder generation failed; existing daily games are unaffected.");
         }
     }
 

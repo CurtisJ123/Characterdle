@@ -202,7 +202,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
             );
             """;
 
-    private static async Task<UniverseStreakResponse> LoadStreakAsync(
+    internal static async Task<UniverseStreakResponse> LoadStreakAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid userId,

@@ -16,6 +16,7 @@ import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { DiceIcon } from '../components/ui/DiceIcon';
 import { RouteLink } from '../components/ui/RouteLink';
 import { useAuth } from '../hooks/useAuth';
+import { useEpisodeLadderPreload } from '../hooks/useEpisodeLadderPreload';
 import { useCharacterGame } from '../hooks/useCharacterGame';
 import { useQuoteGame } from '../hooks/useQuoteGame';
 import { useUniverseGameResults } from '../hooks/useUniverseGameResults';
@@ -48,8 +49,9 @@ interface CharacterGamePageProps {
   onOpenHistory: (gameMode: GameMode, universeId?: string) => void;
   onOpenRandomGame: (gameMode: GameMode, universeId?: string) => void;
   onRefreshRandomGame?: () => void;
-  onStreakUpdated: (streak: UniverseStreak) => void;
+  onStreakUpdated: (streak: UniverseStreak, completed?: boolean) => void;
   premiumAccess: PremiumAccess | null;
+  isPremiumLoading?: boolean;
   selectedGameId: number | null;
   selectedGameMode: GameMode;
 }
@@ -77,11 +79,11 @@ export function CharacterGamePage({
   onRefreshRandomGame,
   onStreakUpdated,
   premiumAccess,
+  isPremiumLoading = false,
   selectedGameId,
   selectedGameMode,
 }: CharacterGamePageProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const [showDelayedGuestSignupPrompt, setShowDelayedGuestSignupPrompt] = useState(false);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
@@ -129,21 +131,9 @@ export function CharacterGamePage({
   const quoteGame = useQuoteGame(quoteGameData, quoteResult, progressOwnerKey, !isTemporaryGame);
   const isQuoteMode = selectedGameMode === 'quote';
   const isGameLoading = isLoading && !data && !error;
-
-  useEffect(() => {
-    if (!isGameLoading) {
-      setShowLoadingOverlay(false);
-      return;
-    }
-
-    const overlayTimer = window.setTimeout(() => {
-      setShowLoadingOverlay(true);
-    }, 250);
-
-    return () => {
-      window.clearTimeout(overlayTimer);
-    };
-  }, [isGameLoading]);
+  useEpisodeLadderPreload({ ready: !isAuthLoading && !isPremiumLoading && !isLoading && !!data && !isTemporaryGame && selectedUniverse.id === 'got',
+    userId: user?.id, token: session?.access_token ?? null, fullArchiveAccess: premiumAccess?.fullArchiveAccess,
+    gameId: selectedGameId });
 
   useEffect(() => {
     setQuery('');
@@ -471,7 +461,7 @@ export function CharacterGamePage({
 
         for (const outcome of outcomes) {
           if (outcome.universeId === currentGame.universeId) {
-            onStreakUpdated(outcome.streak);
+            onStreakUpdated(outcome.streak, outcome.completed);
           }
         }
       } catch (submissionError) {
@@ -626,7 +616,7 @@ export function CharacterGamePage({
 
         for (const outcome of outcomes) {
           if (outcome.universeId === currentQuoteGame.universeId) {
-            onStreakUpdated(outcome.streak);
+            onStreakUpdated(outcome.streak, outcome.completed);
           }
         }
       } catch (submissionError) {
@@ -737,9 +727,7 @@ export function CharacterGamePage({
       : isQuoteMode
         ? `Archive Quote Game #${selectedGameId}`
         : `Archive Character Game #${selectedGameId}`;
-  const heroEyebrow = resolvedGameVariant === 'archive'
-    ? `${selectedUniverse.title} archive`
-    : `Universe: ${selectedUniverse.title}`;
+  const heroEyebrow = selectedUniverse.title;
   const searchPlaceholder = isQuoteMode
     ? 'Guess the speaker'
     : 'Type a name';
@@ -783,7 +771,7 @@ export function CharacterGamePage({
   const isRandomAdvanceReady = isTemporaryGame
     && isComplete
     && !isHelpOpen
-    && !showLoadingOverlay
+    && !isGameLoading
     && !!randomAdvanceAction;
   const hintTooltipMessage = isTemporaryGame
     ? 'Random games are practice-only and never saved.'
@@ -795,7 +783,7 @@ export function CharacterGamePage({
       || !isComplete
       || !randomAdvanceAction
       || isHelpOpen
-      || showLoadingOverlay
+      || isGameLoading
     ) {
       return;
     }
@@ -829,7 +817,7 @@ export function CharacterGamePage({
     return () => {
       window.removeEventListener('keydown', handleRandomAdvance);
     };
-  }, [isComplete, isHelpOpen, isTemporaryGame, randomAdvanceAction, showLoadingOverlay]);
+  }, [isComplete, isGameLoading, isHelpOpen, isTemporaryGame, randomAdvanceAction]);
 
   const searchForm = (
     <form className="search-box" aria-label="Submit a guess" onSubmit={handleSubmit}>
@@ -899,14 +887,14 @@ export function CharacterGamePage({
 
   return (
     <main className="page centered-page game-page">
-      {showLoadingOverlay && (
+      {isGameLoading && (
         <LoadingOverlay
           title="Please wait"
           message={isTemporaryGame ? `Loading random ${selectedGameMode} game...` : 'Loading game...'}
         />
       )}
 
-      <div className="game-top-actions" aria-label="Game actions">
+      <nav className="game-top-actions" aria-label="Game modes">
         <RouteLink
           className="game-action-button history-button"
           href={buildRoutePath({ ...gameRoute, page: 'history', gameId: null })}
@@ -979,26 +967,37 @@ export function CharacterGamePage({
             )}
           </button>
         )}
-        <GameAction
-          className="game-action-button game-mode-switch-button"
-          href={isTemporaryGame ? undefined : isQuoteMode ? characterHref : quoteHref}
-          onClick={() => {
-            if (isTemporaryGame) {
-              onOpenRandomGame(isQuoteMode ? 'character' : 'quote');
-              return;
-            }
+        <span className="game-mode-links">
+          <GameAction
+            className="game-action-button game-mode-switch-button"
+            href={isTemporaryGame ? undefined : isQuoteMode ? characterHref : quoteHref}
+            onClick={() => {
+              if (isTemporaryGame) {
+                onOpenRandomGame(isQuoteMode ? 'character' : 'quote');
+                return;
+              }
 
-            onOpenGame(isQuoteMode ? 'character' : 'quote', selectedGameId);
-          }}
-        >
-          {isQuoteMode ? 'Characterdle' : 'Quote'}
-        </GameAction>
+              onOpenGame(isQuoteMode ? 'character' : 'quote', selectedGameId);
+            }}
+          >
+            {isQuoteMode ? 'Characterdle' : 'Quote'}
+          </GameAction>
+          {!isTemporaryGame && selectedUniverse.id === 'got' && (
+            <GameAction
+              className="game-action-button game-mode-switch-button episode-ladder-button"
+              href={buildRoutePath({ ...gameRoute, page: 'game', gameMode: 'episode_ladder', gameId: selectedGameId })}
+              onClick={() => onOpenGame('episode_ladder', selectedGameId)}
+            >
+              Episode Ladder
+            </GameAction>
+          )}
+        </span>
         {user?.isAdmin && (
           <button className="game-action-button debug-reset-button" type="button" onClick={handleResetGame}>
             Debug Reset
           </button>
         )}
-      </div>
+      </nav>
       <SiteHelpOverlay isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
       {isPremiumArchiveLocked && (
         <PremiumArchiveGateOverlay

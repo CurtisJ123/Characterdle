@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { clearAccountData } from '../lib/accountData';
 import type { PropsWithChildren } from 'react';
 import type { Session, User, UserAttributes } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -110,8 +111,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const accountOwner = useRef<string | null>(null);
 
   function applySession(nextSession: Session | null) {
+    const nextOwner = nextSession?.user.id ?? null;
+    if (nextOwner !== accountOwner.current) {
+      accountOwner.current = nextOwner;
+      clearAccountData();
+    }
     if (nextSession) {
       migrateGuestGameVictoriesToUser(nextSession.user.id);
     }

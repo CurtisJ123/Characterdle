@@ -34,7 +34,9 @@ export function PublicPage({ route, updates, error }: {
       <section className="launcher-grid"><div className="universe-grid">{universes.map(universe =>
         <UniverseCard key={universe.id} universe={universe} playHref={`/${universe.id}`}
           quoteHref={universe.isPlayable ? `/${universe.id}/game/quote` : undefined}
-          onPlay={noop} onPlayQuote={universe.isPlayable ? noop : undefined} />)}</div></section>
+          episodeLadderHref={universe.isPlayable && universe.id === 'got' ? '/got/game/episode_ladder' : undefined}
+          onPlay={noop} onPlayQuote={universe.isPlayable ? noop : undefined}
+          onPlayEpisodeLadder={universe.isPlayable && universe.id === 'got' ? noop : undefined} />)}</div></section>
     </main>; break;
     case 'updates': content = <main className="page updates-page">
       {route.postSlug ? <><a className="updates-back" href="/updates">All updates</a>
@@ -50,7 +52,7 @@ export function PublicPage({ route, updates, error }: {
       if (isGotDailyCharacter) {
         content = <main className="page centered-page game-page">
           <section className="game-hero">
-            <p className="eyebrow">Universe: Game of Thrones</p>
+            <p className="eyebrow">Game of Thrones</p>
             <h1>Daily Character Game</h1>
           </section>
           <p id="prerender-status" className="muted-copy" role="status">Loading interactive features...</p>
@@ -60,7 +62,9 @@ export function PublicPage({ route, updates, error }: {
       }
       content = <main className="page informational-page"><section className="glass-card informational-hero">
         <div className="informational-hero-copy"><h1>{seo.title.split(' | ')[0]}</h1><p className="muted-copy">{seo.description}</p>
-          {route.page === 'game' && <p className="muted-copy">{route.gameMode === 'quote'
+          {route.page === 'game' && <p className="muted-copy">{route.gameMode === 'episode_ladder'
+            ? 'Order five events from earliest to latest. Correct positions lock in place, and each difficulty gives you four attempts.'
+            : route.gameMode === 'quote'
             ? 'Read the quote and guess the Game of Thrones character who said it. Hints can help you narrow down the speaker.'
             : 'Guess a Game of Thrones character. Compare identity, houses, roles, seasons, and status to narrow down the answer.'}</p>}
           <p id="prerender-status" className="muted-copy" role="status">Loading interactive features...</p>
@@ -70,8 +74,10 @@ export function PublicPage({ route, updates, error }: {
           <a className="secondary-button" href="/how-to-play">How to play</a>
           <a className="secondary-button" href="/got">Character game</a>
           <a className="secondary-button" href="/got/game/quote">Quote game</a>
+          <a className="secondary-button" href="/got/game/episode_ladder">Episode Ladder</a>
           <a className="secondary-button" href="/got/archive/character">Character archive</a>
           <a className="secondary-button" href="/got/archive/quote">Quote archive</a>
+          <a className="secondary-button" href="/got/archive/episode_ladder">Episode Ladder archive</a>
         </nav>
       </section></main>;
     }

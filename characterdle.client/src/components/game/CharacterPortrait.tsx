@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getCharacterPortraitCandidates } from '../../lib/characterPortraits';
 import type { UniverseCharacter } from '../../types/universeGame';
+import './CharacterPortrait.css';
 
 interface CharacterPortraitProps {
   character: Pick<UniverseCharacter, 'displayName' | 'portraitUrl'>;

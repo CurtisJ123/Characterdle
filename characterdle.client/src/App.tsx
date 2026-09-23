@@ -1,7 +1,6 @@
 import { lazy, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { AppShell } from './components/layout/AppShell';
-import { ArchiveRouteGuard } from './components/layout/ArchiveRouteGuard';
 import { SeoManager } from './components/seo/SeoManager';
 import { useUniverse } from './hooks/useUniverse';
 import { useAuth } from './hooks/useAuth';
@@ -185,11 +184,12 @@ function App() {
     );
   }
 
-  const content = (
+  return (
     <>
       <SeoManager route={route} />
       {latestUpdatePopup}
       <AppShell
+        route={route}
         announcements={announcements}
         currentPostSlug={route.postSlug}
         authMode={route.authMode}
@@ -204,9 +204,6 @@ function App() {
       />
     </>
   );
-  return route.page === 'game' && route.gameId !== null
-    ? <ArchiveRouteGuard key={buildRoutePath(route)} route={route}>{content}</ArchiveRouteGuard>
-    : content;
 }
 
 export default App;

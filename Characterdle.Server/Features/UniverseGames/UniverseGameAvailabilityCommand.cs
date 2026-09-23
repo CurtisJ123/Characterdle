@@ -6,7 +6,7 @@ public static class UniverseGameAvailabilityCommand
 {
     public static NpgsqlCommand Create(UniverseDefinition universe, long gameId, string mode)
     {
-        if (mode is not "character" and not "quote") throw new ArgumentException("Invalid game mode.", nameof(mode));
+        if (mode is not "character" and not "quote" and not "episode_ladder") throw new ArgumentException("Invalid game mode.", nameof(mode));
         // Identifiers come only from the server-owned UniverseCatalog, never request data.
         var quoteCheck = mode != "quote" ? string.Empty
             : string.IsNullOrWhiteSpace(universe.QuoteTableName) ? "and false"

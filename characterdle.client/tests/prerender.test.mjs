@@ -118,7 +118,8 @@ test('prerendered routes include required page styles but exclude unrelated priv
   for (const pathname of publicPaths) {
     const route = routeForPath(pathname);
     const html = await readFile(new URL(file(pathname), dist), 'utf8');
-    const needed = [...baseStyles, ...(pageEntries[route.page] ? collectStyles(manifest, [pageEntries[route.page]]) : [])];
+    const stylePage = route.gameMode === 'episode_ladder' && route.page === 'game' ? 'episodeLadder' : route.page;
+    const needed = [...baseStyles, ...(pageEntries[stylePage] ? collectStyles(manifest, [pageEntries[stylePage]]) : [])];
     for (const style of needed) assert.ok(html.includes(`href="/${style}"`), `${pathname} needs ${style}`);
     for (const style of privateStyles) assert.ok(!html.includes(`href="/${style}"`), `${pathname} must not load ${style}`);
   }
@@ -151,6 +152,24 @@ test('shared header, feedback, and guest signup styling does not depend on visit
   assert.match(game, /\.google-auth-button\s*\{/);
 });
 
+test('direct Ladder visits include shared component styles without loading Character or Quote boards', async () => {
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  for (const entry of [pageEntries.episodeLadder, pageEntries.randomEpisodeLadder]) {
+    const css = (await Promise.all(collectStyles(manifest, [entry])
+      .map(file => readFile(new URL(file, dist), 'utf8')))).join('\n');
+    assert.match(css, /\.game-comments\s*\{/);
+    assert.match(css, /\.game-comments-form\s*\{[^}]*display:\s*grid/);
+    assert.match(css, /\.game-comments-form textarea\s*\{/);
+    assert.match(css, /\.history-avatar\s*\{/);
+    assert.match(css, /\.premium-archive-gate-overlay\s*\{[^}]*position:\s*fixed/);
+    // Page variants must outrank generic .page padding, regardless of chunk arrival order.
+    assert.match(css, /\.page\.game-page\s*\{[^}]*padding-top:\s*18px/);
+    assert.match(css, /\.page\.game-page\s*\{[^}]*padding-top:\s*12px/);
+    assert.match(css, /\.page\.episode-ladder-page\s*\{[^}]*padding-bottom:\s*48px/);
+    assert.doesNotMatch(css, /\.quote-prompt-card\s*\{|\.character-board\s*\{/);
+  }
+});
+
 test('all sitemap routes have distinct initial metadata, visible content, and built styles', async () => {
   const sitemap = await readFile(new URL('sitemap.xml', dist), 'utf8');
   const titles = new Set();
@@ -174,6 +193,32 @@ test('all sitemap routes have distinct initial metadata, visible content, and bu
   assert.doesNotMatch(sitemap, /<lastmod>/); // Build dates are not content modification dates.
 });
 
+test('Episode Ladder uses mode-specific routes, metadata, CSS and archive availability checks', async () => {
+  for (const pathname of ['/got/game/episode_ladder', '/got/game/episode_ladder/50', '/got/archive/episode_ladder', '/got/random/episode_ladder']) {
+    const route = routeForPath(pathname);
+    assert.equal(route.gameMode, 'episode_ladder');
+    const seo = resolveSeo(route);
+    assert.match(seo.title, /Episode Ladder/);
+    assert.equal(seo.canonicalUrl, `https://characterdle.com${pathname}`);
+    assert.equal(seo.robots.startsWith('noindex'), route.page === 'random');
+  }
+  const manifest = JSON.parse(await readFile(new URL('.vite/manifest.json', dist), 'utf8'));
+  for (const [pathname, entry] of [['/got/game/episode_ladder', 'episodeLadder'], ['/got/random/episode_ladder', 'randomEpisodeLadder']]) {
+    const html = renderDocument(pageTemplate, routeForPath(pathname));
+    for (const style of collectStyles(manifest, [pageEntries[entry]])) assert.ok(html.includes(`href="/${style}"`));
+  }
+  for (const available of [true, false]) {
+    const handler = renderRequest(async url => {
+      assert.equal(url, 'https://api.example.test/api/universes/got/games/50/availability/episode_ladder');
+      return Response.json({ available });
+    });
+    assert.equal((await handler(request('/got/game/episode_ladder/50'), assets)).status, available ? 200 : 404);
+  }
+  for (const pathname of ['/got/game/episode_ladder/0', '/got/game/episode_ladder/50/extra', '/got/game/episodle', '/got/random/episode_ladder/50']) {
+    assert.equal(routeForPath(pathname), null, pathname);
+  }
+});
+
 test('every public route can be rendered noindex for staging', () => {
   for (const pathname of publicPaths) {
     const html = renderDocument(pageTemplate, routeForPath(pathname), { noindex: true });
@@ -187,7 +232,7 @@ test('daily character metadata stays descriptive while the initial game header s
   assert.equal(seo.title, 'Game Of Thrones Characterdle');
   assert.match(seo.description, /free daily Game of Thrones character guessing game/);
   assert.equal(seo.canonicalUrl, 'https://characterdle.com/got');
-  assert.match(html, /<section class="game-hero"><p class="eyebrow">Universe: Game of Thrones<\/p><h1>Daily Character Game<\/h1><\/section>/);
+  assert.match(html, /<section class="game-hero"><p class="eyebrow">Game of Thrones<\/p><h1>Daily Character Game<\/h1><\/section>/);
   assert.doesNotMatch(html, /game-introduction|inspired by Wordle/);
   const body = html.slice(html.indexOf('<body'));
   assert.ok(!body.includes(seo.description), 'The SEO description should not appear as visible game-page copy.');

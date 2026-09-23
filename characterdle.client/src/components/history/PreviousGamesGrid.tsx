@@ -34,7 +34,7 @@ export function PreviousGamesGrid({
   universeTitle,
   universeId,
 }: PreviousGamesGridProps) {
-  const modeLabel = gameMode === 'quote' ? 'quote' : 'character';
+  const modeLabel = gameMode === 'episode_ladder' ? 'Episode Ladder' : gameMode === 'quote' ? 'quote' : 'character';
 
   return (
     <section className="archive-grid-shell glass-card" aria-label={`${universeTitle} ${modeLabel} games`}>
@@ -51,7 +51,9 @@ export function PreviousGamesGrid({
             : outcome === 'won-with-hints'
               ? 'archive-tile is-hinted-win'
             : 'archive-tile is-pending';
-        const outcomeLabel = outcome === 'won-with-hints'
+        const outcomeLabel = gameMode === 'episode_ladder'
+          ? outcome === 'won' ? 'Won.' : outcome === 'lost' ? 'Finished without solving.' : 'Not completed.'
+          : outcome === 'won-with-hints'
           ? 'Solved with hints. Replay available 30 days after completion.'
           : outcome === 'lost'
             ? 'Gave up. Replay available 30 days after completion.'

@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { useGameComments } from '../../hooks/useGameComments';
 import type { GameCommentsScope } from '../../services/gameCommentsApi';
 import { UserAvatar } from '../ui/UserAvatar';
+import './GameComments.css';
 
 interface GameCommentsProps extends GameCommentsScope {
   accessToken: string;

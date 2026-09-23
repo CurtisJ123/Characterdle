@@ -71,6 +71,24 @@ export interface UniverseLeaderboardState {
   isLoading: boolean;
 }
 
+export interface EpisodeLadderLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  showSupporterBadge: boolean;
+  totalPoints: number;
+  daysPlayed: number;
+  pointsPerDay: number;
+  isCurrentUser: boolean;
+}
+
+export interface EpisodeLadderLeaderboardData {
+  overview: { playerCount: number; totalPoints: number; daysPlayed: number; pointsPerDay: number };
+  rows: EpisodeLadderLeaderboardEntry[];
+  currentUser: EpisodeLadderLeaderboardEntry | null;
+}
+
 export interface SubmitUniverseGameResultPayload {
   attemptNumber?: number;
   gameId: number;

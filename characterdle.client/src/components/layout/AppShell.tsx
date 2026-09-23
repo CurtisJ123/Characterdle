@@ -1,11 +1,14 @@
-import { lazy, useEffect, useState } from 'react';
+import { lazy, useEffect, useEffectEvent, useState } from 'react';
+import { ArchiveRouteGuard } from './ArchiveRouteGuard';
+import { buildRoutePath } from '../../lib/routePaths';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { useAuth } from '../../hooks/useAuth';
 import type { useAnnouncements } from '../../hooks/useAnnouncements';
 import { AnnouncementPopup } from '../updates/AnnouncementPopup';
 import { DeferredContent } from '../ui/DeferredContent';
-import { initialPageComponents, pageModules } from '../../lib/pageModules';
+import { getWarmedEpisodeLadderPage, initialPageComponents, pageModules } from '../../lib/pageModules';
+import type { EpisodeLadderPageProps } from '../../pages/EpisodeLadderPage';
 import { usePremium } from '../../hooks/usePremium';
 import { useProfile } from '../../hooks/useProfile';
 import { useUniverse } from '../../hooks/useUniverse';
@@ -24,11 +27,13 @@ import type { GameMode } from '../../types/game';
 import type { UniverseStreak } from '../../types/leaderboard';
 import type { PremiumAccess } from '../../types/premium';
 import type { UniverseProfile } from '../../types/profile';
-import type { AuthMode, NavigateToPage, Page } from '../../types/routes';
+import type { AppRoute, AuthMode, NavigateToPage, Page } from '../../types/routes';
 
 const DeferredAuthPage = lazy(pageModules.auth);
 const DeferredAboutPage = lazy(pageModules.about);
 const DeferredCharacterGamePage = lazy(pageModules.game);
+const DeferredEpisodeLadderPage = lazy(pageModules.episodeLadder);
+const DeferredRandomEpisodeLadderPage = lazy(pageModules.randomEpisodeLadder);
 const DeferredHowToPlayPage = lazy(pageModules.howToPlay);
 const DeferredLauncherPage = lazy(pageModules.launcher);
 const DeferredLeaderboardPage = lazy(pageModules.leaderboard);
@@ -41,14 +46,22 @@ const DeferredSupportPage = lazy(pageModules.support);
 const DeferredUpdatesPage = lazy(pageModules.updates);
 const DeferredAdminPage = lazy(pageModules.admin);
 
+function PreparedEpisodeLadderPage(props: EpisodeLadderPageProps) {
+  // Fix the component choice for this mount, avoiding both Suspense delay and later remounts.
+  const [Page] = useState(() => getWarmedEpisodeLadderPage() ?? DeferredEpisodeLadderPage);
+  return <Page {...props} />;
+}
+
 interface LiveStreakState {
   scope: string;
   streak: UniverseStreak;
+  profileAtUpdate: UniverseProfile | null;
 }
 
 type BillingRedirectStatus = 'success' | 'cancelled' | null;
 
 interface AppShellProps {
+  route: AppRoute;
   announcements: ReturnType<typeof useAnnouncements>;
   currentPostSlug?: string;
   authMode: AuthMode;
@@ -63,6 +76,7 @@ interface AppShellProps {
 }
 
 export function AppShell({
+  route,
   announcements,
   currentPostSlug,
   authMode,
@@ -78,6 +92,8 @@ export function AppShell({
   const AuthPage = initialPageComponents.auth ?? DeferredAuthPage;
   const AboutPage = initialPageComponents.about ?? DeferredAboutPage;
   const CharacterGamePage = initialPageComponents.game ?? DeferredCharacterGamePage;
+  const EpisodeLadderPage = initialPageComponents.episodeLadder ?? PreparedEpisodeLadderPage;
+  const RandomEpisodeLadderPage = initialPageComponents.randomEpisodeLadder ?? DeferredRandomEpisodeLadderPage;
   const HowToPlayPage = initialPageComponents.howToPlay ?? DeferredHowToPlayPage;
   const LauncherPage = initialPageComponents.launcher ?? DeferredLauncherPage;
   const LeaderboardPage = initialPageComponents.leaderboard ?? DeferredLeaderboardPage;
@@ -106,15 +122,16 @@ export function AppShell({
     error: profileError,
     isLoading: isProfileLoading,
     reload: reloadProfile,
-  } = useProfile(session?.access_token ?? null, selectedUniverse.id);
+  } = useProfile(session?.access_token ?? null, selectedUniverse.id, user?.id ?? null);
   const {
     data: premiumData,
     isLoading: isPremiumLoading,
     reload: reloadPremium,
-  } = usePremium(session?.access_token ?? null);
+  } = usePremium(session?.access_token ?? null, user?.id ?? null);
+  const applySyncedStreak = useEffectEvent((streak: UniverseStreak, completed: boolean) => handleStreakUpdated(streak, completed));
   const [liveStreak, setLiveStreak] = useState<LiveStreakState | null>(null);
   const streakScope = `${user?.id ?? 'guest'}:${selectedUniverse.id}`;
-  const liveStreakForScope = liveStreak?.scope === streakScope
+  const liveStreakForScope = liveStreak?.scope === streakScope && liveStreak.profileAtUpdate === profile
     ? liveStreak.streak
     : null;
   const billingRedirectStatus = (() => {
@@ -139,8 +156,27 @@ export function AppShell({
     : null;
   const currentStreak = liveStreakForScope?.currentStreak ?? resolvedProfile?.currentStreak ?? 0;
   const premiumAccess: PremiumAccess | null = premiumData?.access ?? null;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('ladder-session-changed', { detail: isLoading || isPremiumLoading ? 'loading'
+      : `${user?.id ? `user:${user.id}` : 'guest'}:${premiumAccess?.fullArchiveAccess ? 'full' : 'limited'}` }));
+  }, [user?.id, isLoading, isPremiumLoading, premiumAccess?.fullArchiveAccess]);
   const isPremiumActive = premiumAccess?.isPremium === true;
   const showSupporterBadge = premiumAccess?.supporterBadge === true;
+  const refreshImportedProfile = useEffectEvent(() => { void reloadProfile(); });
+  useEffect(() => {
+    function onImported(event: Event) {
+      if ((event as CustomEvent<{ userId: string }>).detail.userId === user?.id) refreshImportedProfile();
+    }
+    window.addEventListener('ladder-guest-imported', onImported);
+    return () => window.removeEventListener('ladder-guest-imported', onImported);
+  }, [user?.id]);
+  const refreshBilling = useEffectEvent(() => { void reloadPremium(); });
+  useEffect(() => {
+    if (billingRedirectStatus !== 'success' || !user?.id || isPremiumActive) return;
+    // Checkout can return before Stripe's webhook. Retry briefly without blanking the current UI.
+    const timers = [2000, 5000, 10_000, 20_000].map(delay => window.setTimeout(refreshBilling, delay));
+    return () => timers.forEach(timer => window.clearTimeout(timer));
+  }, [billingRedirectStatus, user?.id, isPremiumActive]);
   const shouldWarmSignedInResults = isAuthenticated
     && (currentPage === 'launcher' || currentPage === 'leaderboard' || currentPage === 'profile');
 
@@ -193,6 +229,9 @@ export function AppShell({
 
     async function flushPendingResults() {
       try {
+        void import('../../lib/episodeLadderProgress')
+          .then(({ migrateGuestLadderVictories }) => migrateGuestLadderVictories(userId, accessToken))
+          .catch(error => console.error('Episode Ladder results will be retried.', error));
         const outcomes = await flushUniverseGameResultOutbox(userId, accessToken);
 
         if (isDisposed) {
@@ -201,14 +240,9 @@ export function AppShell({
 
         hasLoggedFailure = false;
 
-        for (const outcome of outcomes) {
-          if (outcome.universeId === universeId) {
-            setLiveStreak({
-              scope: `${userId}:${universeId}`,
-              streak: outcome.streak,
-            });
-          }
-        }
+        const matching = outcomes.filter(outcome => outcome.universeId === universeId);
+        const latest = matching.at(-1);
+        if (latest) applySyncedStreak(latest.streak, matching.some(outcome => outcome.completed));
       } catch (error) {
         if (!isDisposed && !hasLoggedFailure) {
           console.error('Game results are queued and will be retried.', error);
@@ -242,11 +276,13 @@ export function AppShell({
     };
   }, [selectedUniverse.id, session?.access_token, user?.id]);
 
-  function handleStreakUpdated(streak: UniverseStreak) {
+  function handleStreakUpdated(streak: UniverseStreak, completed = true) {
     setLiveStreak({
       scope: streakScope,
       streak,
+      profileAtUpdate: profile,
     });
+    if (completed) void reloadProfile().then(reloadPremium);
   }
 
   async function handleSignOut() {
@@ -334,7 +370,8 @@ export function AppShell({
         userAvatarUrl={user?.avatarUrl}
         userDisplayName={user?.displayName}
       />
-      <DeferredContent resetKey={`${currentPage}:${currentPostSlug ?? ''}`}>
+      <DeferredContent resetKey={`${currentPage}:${currentGameMode}:${currentPostSlug ?? ''}`}>
+      <ArchiveRouteGuard key={buildRoutePath(route)} route={route}>
       {currentPage === 'landing' && (
         <LandingPage isAuthenticated={isAuthenticated} onAuthNavigate={onAuthNavigate} onNavigate={onNavigate} />
       )}
@@ -350,16 +387,33 @@ export function AppShell({
           accessToken={session?.access_token ?? null}
           authError={authError}
           isPremiumUser={showSupporterBadge}
+          isPremiumLoading={isPremiumLoading}
+          fullArchiveAccess={premiumAccess?.fullArchiveAccess}
           isUserLoading={isLoading}
           onNavigate={onNavigate}
           onOpenGame={onOpenGame}
           user={user}
         />
       )}
-      {currentPage === 'game' && (
+      {currentPage === 'game' && currentGameMode === 'episode_ladder' && (
+        <EpisodeLadderPage
+          key={`ladder:${user?.id ?? 'guest'}:${currentGameId ?? 'current'}`}
+          onStreakUpdated={handleStreakUpdated}
+          onOpenRandomGame={onOpenRandomGame}
+          premiumAccess={premiumAccess}
+          isPremiumLoading={isPremiumLoading}
+          selectedGameId={currentGameId}
+          onNavigate={onNavigate}
+          onOpenGame={onOpenGame}
+          onOpenHistory={onOpenHistory}
+          onStartCheckout={handleStartCheckout}
+        />
+      )}
+      {currentPage === 'game' && currentGameMode !== 'episode_ladder' && (
         <CharacterGamePage
           key={user?.id ?? 'guest'}
           premiumAccess={premiumAccess}
+          isPremiumLoading={isPremiumLoading}
           onNavigate={onNavigate}
           onOpenGame={onOpenGame}
           onOpenHistory={onOpenHistory}
@@ -370,7 +424,12 @@ export function AppShell({
           selectedGameMode={currentGameMode}
         />
       )}
-      {currentPage === 'random' && (
+      {currentPage === 'random' && currentGameMode === 'episode_ladder' && (
+        <RandomEpisodeLadderPage key={`random-ladder:${user?.id ?? 'guest'}`} onNavigate={onNavigate}
+          onOpenGame={onOpenGame} onOpenHistory={onOpenHistory} onOpenRandomGame={onOpenRandomGame}
+          onStartCheckout={handleStartCheckout} premiumAccess={premiumAccess} />
+      )}
+      {currentPage === 'random' && currentGameMode !== 'episode_ladder' && (
         <RandomGamePage
           accessToken={session?.access_token ?? null}
           currentStreak={currentStreak}
@@ -391,6 +450,7 @@ export function AppShell({
           onOpenGame={onOpenGame}
           onOpenHistory={onOpenHistory}
           premiumAccess={premiumAccess}
+          isPremiumLoading={isPremiumLoading || isLoading}
           selectedGameMode={currentGameMode}
         />
       )}
@@ -426,6 +486,7 @@ export function AppShell({
       {currentPage === 'howToPlay' && <HowToPlayPage onNavigate={onNavigate} />}
       {currentPage === 'privacyPolicy' && <LegalDocumentPage onNavigate={onNavigate} page="privacyPolicy" />}
       {currentPage === 'termsOfService' && <LegalDocumentPage onNavigate={onNavigate} page="termsOfService" />}
+      </ArchiveRouteGuard>
       </DeferredContent>
       <SiteFooter onNavigate={onNavigate} />
       {announcements.post && !billingRedirectStatus && (currentPage !== 'landing' || (!window.location.hash && !window.location.search)) && !['game', 'random', 'auth', 'admin', 'updates', 'premium'].includes(currentPage) && (

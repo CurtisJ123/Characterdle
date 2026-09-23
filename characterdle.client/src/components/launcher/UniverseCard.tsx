@@ -1,16 +1,19 @@
 import type { MouseEvent } from 'react';
 import type { CSSProperties } from 'react';
 import type { Universe } from '../../types/game';
+import { RouteLink } from '../ui/RouteLink';
 
 interface UniverseCardProps {
   playHref: string;
   quoteHref?: string;
+  episodeLadderHref?: string;
   universe: Universe;
   onPlay: () => void;
   onPlayQuote?: () => void;
+  onPlayEpisodeLadder?: () => void;
 }
 
-export function UniverseCard({ playHref, quoteHref, universe, onPlay, onPlayQuote }: UniverseCardProps) {
+export function UniverseCard({ playHref, quoteHref, episodeLadderHref, universe, onPlay, onPlayQuote, onPlayEpisodeLadder }: UniverseCardProps) {
   const accentStyle = { '--accent': universe.accent } as CSSProperties;
   const cardClassName = [
     'universe-card',
@@ -61,6 +64,11 @@ export function UniverseCard({ playHref, quoteHref, universe, onPlay, onPlayQuot
               >
                 Quote
               </a>
+            )}
+            {universe.isPlayable && onPlayEpisodeLadder && episodeLadderHref && (
+              <RouteLink className="universe-secondary-button" href={episodeLadderHref} onNavigate={onPlayEpisodeLadder}>
+                Episode Ladder
+              </RouteLink>
             )}
           </div>
         </div>
