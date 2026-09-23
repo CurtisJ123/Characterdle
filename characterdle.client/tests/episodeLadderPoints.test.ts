@@ -3,7 +3,7 @@ import test from 'node:test';
 import { LADDER_BASE_POINTS, LADDER_DAY_MAX_POINTS, ladderPoints } from '../src/lib/episodeLadder.ts';
 
 test('display scores match the server leaderboard for every difficulty and attempt count', () => {
-  const expected = [[10, 8, 6, 4], [15, 12, 9, 6], [20, 16, 12, 8], [25, 20, 15, 10], [30, 24, 18, 12]];
+  const expected = [[10, 6, 4, 3], [15, 9, 6, 4], [20, 12, 8, 6], [25, 15, 10, 7], [30, 18, 12, 9]];
   assert.deepEqual(LADDER_BASE_POINTS, [10, 15, 20, 25, 30]);
   assert.equal(LADDER_DAY_MAX_POINTS, 100);
   expected.forEach((scores, index) => scores.forEach((points, attempt) => {

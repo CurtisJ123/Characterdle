@@ -10,8 +10,15 @@ internal static class EpisodeLadderScoring
         _ => throw new ArgumentOutOfRangeException(nameof(difficulty)),
     };
 
-    internal static int AfterFailedGuesses(int basePoints, int failedGuesses) =>
-        (int)Math.Floor(Math.Max(0m, basePoints * (1m - 0.2m * failedGuesses)));
+    internal static int AfterFailedGuesses(int basePoints, int failedGuesses)
+    {
+        var percentRemaining = failedGuesses switch
+        {
+            0 => 100, 1 => 60, 2 => 40, 3 => 30, 4 => 20,
+            _ => 0,
+        };
+        return (int)Math.Floor(Math.Max(0m, basePoints * (decimal)percentRemaining / 100));
+    }
 
     public static int Points(int difficulty, string status, int attempts) =>
         status == "won" && difficulty is >= 1 and <= 5 && attempts is >= 1 and <= EpisodeLadderRules.MaxAttempts

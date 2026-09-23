@@ -3,12 +3,13 @@ import type { EpisodeLadderGame } from '../types/episodeLadder';
 export const LADDER_DIFFICULTIES = ['Easy', 'Medium', 'Hard', 'Expert', 'Impossible'];
 export const LADDER_BASE_POINTS = [10, 15, 20, 25, 30];
 export const LADDER_DAY_MAX_POINTS = LADDER_BASE_POINTS.reduce((total, points) => total + points, 0);
+const LADDER_SCORE_PERCENTAGES = [100, 60, 40, 30, 20];
 
 // Display-only for guest progress; account scores always come from the server's leaderboard rules.
 export function ladderPoints(difficulty: number, status: string, attempts: number): number {
   if (status !== 'won' || !Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5
     || !Number.isInteger(attempts) || attempts < 1 || attempts > 4) return 0;
-  return Math.floor(LADDER_BASE_POINTS[difficulty - 1] * (5 - (attempts - 1)) / 5);
+  return Math.floor(LADDER_BASE_POINTS[difficulty - 1] * LADDER_SCORE_PERCENTAGES[attempts - 1] / 100);
 }
 
 export function moveLadderEvent(order: number[], from: number, to: number, locked: readonly number[],

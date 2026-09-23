@@ -189,11 +189,11 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
     public async Task GameResponseIncludesSavedDayPointsWithoutAnotherRequest(string route)
     {
         SignIn();
-        _store.DifficultyPoints = [8, 12, 0, 10, 0];
+        _store.DifficultyPoints = [6, 9, 0, 7, 0];
         var response = await _client.GetAsync($"{Root}/{route}?difficulty=4");
         var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
         Assert.Equal(_store.DifficultyPoints, game.DifficultyPoints);
-        Assert.Equal(30, game.DifficultyPoints!.Sum());
+        Assert.Equal(22, game.DifficultyPoints!.Sum());
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.Equal(1, _store.Calls);
         Assert.Equal(1, _store.AttemptReads);
@@ -203,7 +203,7 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
     public async Task CompletedDifficultyReturnsServerPointsAndIgnoresClientSuppliedScores()
     {
         SignIn();
-        _store.DifficultyPoints = [8, 12, 0, 0, 0];
+        _store.DifficultyPoints = [6, 9, 0, 0, 0];
         var response = await _client.PostAsJsonAsync($"{Root}/50/attempts", new
         {
             difficulty = 4, attempts = new long[][] { [5, 4, 3, 2, 1], [1, 2, 3, 4, 5] },
@@ -211,8 +211,8 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         });
         var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
         Assert.Equal("won", game.Status);
-        Assert.Equal(new[] { 8, 12, 0, 20, 0 }, game.DifficultyPoints);
-        Assert.Equal(40, game.DifficultyPoints!.Sum());
+        Assert.Equal(new[] { 6, 9, 0, 15, 0 }, game.DifficultyPoints);
+        Assert.Equal(30, game.DifficultyPoints!.Sum());
     }
 
     [Theory]

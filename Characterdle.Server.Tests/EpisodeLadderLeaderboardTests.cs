@@ -15,12 +15,12 @@ namespace Characterdle.Server.Tests;
 public sealed class EpisodeLadderScoringTests
 {
     [Theory]
-    [InlineData(1, 10, 8, 6, 4)]
-    [InlineData(2, 15, 12, 9, 6)]
-    [InlineData(3, 20, 16, 12, 8)]
-    [InlineData(4, 25, 20, 15, 10)]
-    [InlineData(5, 30, 24, 18, 12)]
-    public void EachFailedGuessDeductsTwentyPercentOfBase(int difficulty, params int[] expected)
+    [InlineData(1, 10, 6, 4, 3)]
+    [InlineData(2, 15, 9, 6, 4)]
+    [InlineData(3, 20, 12, 8, 6)]
+    [InlineData(4, 25, 15, 10, 7)]
+    [InlineData(5, 30, 18, 12, 9)]
+    public void FailedGuessesApplyFrontLoadedPenalties(int difficulty, params int[] expected)
     {
         for (var attempt = 1; attempt <= 4; attempt++)
         {
@@ -42,12 +42,24 @@ public sealed class EpisodeLadderScoringTests
     }
 
     [Theory]
-    [InlineData(11, 1, 8)]
-    [InlineData(13, 2, 7)]
-    [InlineData(11, 3, 4)]
+    [InlineData(11, 1, 6)]
+    [InlineData(13, 2, 5)]
+    [InlineData(11, 3, 3)]
+    [InlineData(11, 4, 2)]
     [InlineData(11, 8, 0)]
+    [InlineData(11, -1, 0)]
+    [InlineData(-10, 1, 0)]
     public void FractionalScoresRoundDownAndCannotBecomeNegative(int basePoints, int failures, int expected) =>
         Assert.Equal(expected, EpisodeLadderScoring.AfterFailedGuesses(basePoints, failures));
+
+    [Theory]
+    [InlineData(0, 10)]
+    [InlineData(1, 6)]
+    [InlineData(2, 4)]
+    [InlineData(3, 3)]
+    [InlineData(4, 2)]
+    public void PenaltyScheduleIncludesEightyPercentDeduction(int failures, int expected) =>
+        Assert.Equal(expected, EpisodeLadderScoring.AfterFailedGuesses(10, failures));
 
     [Theory]
     [InlineData(0, 1)]
