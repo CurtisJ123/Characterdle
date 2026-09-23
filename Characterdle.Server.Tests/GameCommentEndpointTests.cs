@@ -43,13 +43,17 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("invalid-token")]
-    public async Task AnonymousOrInvalidTokenCannotReadOrPost(string? token)
+    [InlineData("character", null)]
+    [InlineData("character", "invalid-token")]
+    [InlineData("quote", null)]
+    [InlineData("quote", "invalid-token")]
+    [InlineData("episode_ladder", null)]
+    [InlineData("episode_ladder", "invalid-token")]
+    public async Task AnonymousOrInvalidTokenCannotReadOrPost(string mode, string? token)
     {
         SignIn(token);
-        var read = await _client.GetAsync(Url());
-        var post = await _client.PostAsJsonAsync(Url(), new { body = "Hello" });
+        var read = await _client.GetAsync(Url(mode: mode));
+        var post = await _client.PostAsJsonAsync(Url(mode: mode), new { body = "Hello" });
         Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, post.StatusCode);
         Assert.Equal(0, _store.CallCount);
@@ -80,6 +84,9 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
     {
         SignIn("player");
         _store.Completed.Add((PlayerId, 10, mode));
+        if (mode == "episode_ladder")
+            for (var difficulty = 1; difficulty <= 5; difficulty++)
+                _store.LadderProgress[(PlayerId, 10, difficulty)] = "won";
         var response = await _client.PostAsJsonAsync(Url(mode: mode), new
         {
             body = "  Hello\r\nworld  ", userId = Guid.NewGuid(), displayName = "Impersonated", isCompleted = true,
@@ -94,6 +101,53 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.True(response.Headers.CacheControl.Private);
         Assert.Contains("Authorization", response.Headers.Vary);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task LadderRequiresAllFiveSavedDifficultiesForBothReadAndPost(int completed)
+    {
+        SignIn("player");
+        _store.Completed.Add((PlayerId, 10, "episode_ladder"));
+        var otherUser = Guid.NewGuid();
+        for (var difficulty = 1; difficulty <= 5; difficulty++)
+        {
+            _store.LadderProgress[(PlayerId, 10, difficulty)] = difficulty <= completed ? "won" : "playing";
+            _store.LadderProgress[(PlayerId, 11, difficulty)] = "won";
+            _store.LadderProgress[(otherUser, 10, difficulty)] = "won";
+        }
+        var url = Url(mode: "episode_ladder");
+        Assert.Equal(HttpStatusCode.Forbidden, (await _client.GetAsync(url)).StatusCode);
+        var response = await _client.PostAsJsonAsync(url, new
+        {
+            body = "Spoiler", isCompleted = true, difficulties = new[] { "won", "won", "won", "won", "won" },
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Empty(_store.Comments);
+    }
+
+    [Theory]
+    [InlineData("won")]
+    [InlineData("lost")]
+    public async Task LadderHasOneThreadPerDayAcrossDifficultiesAfterWinsOrLosses(string status)
+    {
+        SignIn("player");
+        for (var difficulty = 1; difficulty <= 5; difficulty++)
+        {
+            _store.LadderProgress[(PlayerId, 10, difficulty)] = difficulty % 2 == 0 ? "lost" : status;
+            _store.LadderProgress[(PlayerId, 11, difficulty)] = status;
+        }
+        var url = Url(mode: "episode_ladder");
+        // A client-supplied difficulty never changes the thread key or the authorization requirement.
+        Assert.Equal(HttpStatusCode.Created, (await _client.PostAsJsonAsync(url + "?difficulty=1", new { body = "Daily discussion" })).StatusCode);
+        var page = await _client.GetFromJsonAsync<GameCommentsPageResponse>(url + "?difficulty=5");
+        Assert.Equal("Daily discussion", Assert.Single(page!.Comments).Body);
+        var otherDay = await _client.GetFromJsonAsync<GameCommentsPageResponse>(Url(11, "episode_ladder"));
+        Assert.Empty(otherDay!.Comments);
     }
 
     [Theory]
@@ -192,7 +246,9 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
     private sealed class CommentStore : IGameCommentRepository
     {
         public HashSet<(Guid UserId, long GameId, string Mode)> Completed { get; } = [];
+        public Dictionary<(Guid UserId, long GameId, int Difficulty), string> LadderProgress { get; } = [];
         public List<GameCommentResponse> Comments { get; } = [];
+        private readonly Dictionary<Guid, (string UniverseId, long GameId, string Mode)> _commentScopes = [];
         public Guid LastUserId { get; private set; }
         public string? LastUniverseId { get; private set; }
         public int CallCount { get; private set; }
@@ -201,8 +257,9 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
             string mode, int page, CancellationToken cancellationToken)
         {
             CallCount++;
-            return Task.FromResult(Completed.Contains((userId, gameId, mode))
-                ? new GameCommentsPageResponse(Comments.Skip((page - 1) * 5).Take(5).ToArray(), page, Comments.Count > page * 5)
+            var thread = Comments.Where(comment => _commentScopes[comment.Id] == (universe.Id, gameId, mode)).ToArray();
+            return Task.FromResult(CanComment(userId, gameId, mode)
+                ? new GameCommentsPageResponse(thread.Skip((page - 1) * 5).Take(5).ToArray(), page, thread.Length > page * 5)
                 : null);
         }
 
@@ -212,13 +269,18 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
             CallCount++;
             LastUserId = userId;
             LastUniverseId = universe.Id;
-            if (!Completed.Contains((userId, gameId, mode)))
+            if (!CanComment(userId, gameId, mode))
             {
                 return Task.FromResult<GameCommentResponse?>(null);
             }
             var comment = new GameCommentResponse(Guid.NewGuid(), "Player", null, true, body, DateTimeOffset.UtcNow);
             Comments.Add(comment);
+            _commentScopes[comment.Id] = (universe.Id, gameId, mode);
             return Task.FromResult<GameCommentResponse?>(comment);
         }
+
+        private bool CanComment(Guid userId, long gameId, string mode) => mode == "episode_ladder"
+            ? Enumerable.Range(1, 5).All(difficulty => LadderProgress.GetValueOrDefault((userId, gameId, difficulty)) is "won" or "lost")
+            : Completed.Contains((userId, gameId, mode));
     }
 }

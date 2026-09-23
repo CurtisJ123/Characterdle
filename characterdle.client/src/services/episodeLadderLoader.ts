@@ -1,6 +1,6 @@
 import { EpisodeLadderCache } from '../lib/episodeLadderCache';
 import { getCharacterPortraitUrl } from '../lib/characterPortraits';
-import { readLadderDifficultyStates, readLadderProgress, readLegacyLadderProgress } from '../lib/episodeLadderProgress';
+import { readLadderProgress, readLegacyLadderProgress, withGuestLadderDayProgress } from '../lib/episodeLadderProgress';
 import { EpisodeLadderApiError, requestEpisodeLadder } from './episodeLadderApi';
 import type { EpisodeLadderGame } from '../types/episodeLadder';
 
@@ -34,7 +34,7 @@ export async function loadLadderGame(scope: string, id: number | null, level: nu
         if (saved?.attempts.length) {
           game = await requestEpisodeLadder(game.gameId, null, signal, { attempts: saved.attempts, restoreGuest: true }, level, background);
         }
-        game = { ...game, difficulties: readLadderDifficultyStates('guest', game.gameId) };
+        game = withGuestLadderDayProgress(game);
       }
       return game;
     }, { background, force });

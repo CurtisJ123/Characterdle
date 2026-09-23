@@ -17,3 +17,4 @@ export { CharacterGamePage } from '../../src/pages/CharacterGamePage';
 export { UniverseContext } from '../../src/contexts/UniverseContext';
 export { LauncherPage } from '../../src/pages/LauncherPage';
 export { PublicPage } from '../../src/seo/PublicPage';
+export { withGuestLadderDayProgress, storeLadderProgress } from '../../src/lib/episodeLadderProgress';

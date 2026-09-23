@@ -42,6 +42,39 @@ test('draft order survives navigation and a refresh with unchanged attempts', as
   assert.equal(cache.peek(scope, 93, 2)?.game.difficulties?.[0], 'won');
 });
 
+test('finishing the fifth difficulty updates comment eligibility on cached boards for only that player and day', () => {
+  const cache = new EpisodeLadderCache();
+  const incomplete = ['won', 'lost', 'won', 'lost', 'playing'];
+  for (let difficulty = 1; difficulty <= 5; difficulty++) {
+    cache.set(scope, { ...game(93, difficulty), status: difficulty === 5 ? 'playing' : difficulty % 2 ? 'won' : 'lost', difficulties: incomplete });
+  }
+  cache.set(scope, { ...game(94), status: 'won', difficulties: ['won', 'pending', 'pending', 'pending', 'pending'] });
+  const otherPlayer = ladderScope('two');
+  cache.set(otherPlayer, { ...game(93), status: 'won', difficulties: incomplete });
+  const completed = ['won', 'lost', 'won', 'lost', 'lost'];
+  cache.set(scope, { ...game(93, 5), status: 'lost', difficulties: completed });
+  for (let difficulty = 1; difficulty <= 5; difficulty++) {
+    assert.deepEqual(cache.peek(scope, 93, difficulty)?.game.difficulties, completed);
+  }
+  assert.deepEqual(cache.peek(otherPlayer, 93, 1)?.game.difficulties, incomplete);
+  assert.deepEqual(cache.peek(scope, 94, 1)?.game.difficulties, ['won', 'pending', 'pending', 'pending', 'pending']);
+});
+
+test('saved day points update every cached difficulty without borrowing another day or account total', async () => {
+  const cache = new EpisodeLadderCache();
+  const before = [8, 12, 0, 0, 0];
+  await cache.load(scope, null, 1, async () => ({ ...game(), difficultyPoints: before }));
+  cache.set(scope, { ...game(93, 4), difficultyPoints: before });
+  cache.set(scope, { ...game(94), difficultyPoints: [0, 0, 0, 0, 0] });
+  const otherPlayer = ladderScope('two');
+  cache.set(otherPlayer, { ...game(), difficultyPoints: [10, 15, 20, 25, 30] });
+  cache.set(scope, { ...game(93, 4), status: 'won', difficultyPoints: [8, 12, 0, 20, 0] });
+  assert.deepEqual(cache.peek(scope, null, 1)?.game.difficultyPoints, [8, 12, 0, 20, 0]);
+  assert.deepEqual(cache.peek(scope, 93, 1)?.game.difficultyPoints, [8, 12, 0, 20, 0]);
+  assert.deepEqual(cache.peek(scope, 94, 1)?.game.difficultyPoints, [0, 0, 0, 0, 0]);
+  assert.deepEqual(cache.peek(otherPlayer, 93, 1)?.game.difficultyPoints, [10, 15, 20, 25, 30]);
+});
+
 test('TTL refresh retains a usable snapshot while loading, but a new Eastern day does not', async () => {
   let now = Date.parse('2026-09-22T15:00:00Z');
   const cache = new EpisodeLadderCache(() => now);

@@ -3,6 +3,7 @@ import { GameComments } from '../components/game/GameComments';
 import { EpisodeLadderPortrait } from '../components/game/EpisodeLadderPortrait';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
 import { DiceIcon } from '../components/ui/DiceIcon';
+import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { RouteLink } from '../components/ui/RouteLink';
 import { buildRoutePath } from '../lib/routePaths';
 import { useAuth } from '../hooks/useAuth';
@@ -12,7 +13,7 @@ import { useLadderDrag } from '../hooks/useLadderDrag';
 import calendarDaysIcon from '../assets/calendar-days-heroicons.svg';
 import questionMarkCircleIcon from '../assets/question-mark-circle-heroicons.svg';
 import lockClosedIcon from '../assets/lock-closed-heroicons.svg';
-import { LADDER_DIFFICULTIES, moveLadderEvent } from '../lib/episodeLadder';
+import { LADDER_BASE_POINTS, LADDER_DAY_MAX_POINTS, LADDER_DIFFICULTIES, moveLadderEvent } from '../lib/episodeLadder';
 import { getLadderPreviewOffsets, LADDER_DRAG_SCALE } from '../lib/ladderDropTarget';
 import type { BillingCheckoutPlan } from '../types/billing';
 import type { GameMode } from '../types/game';
@@ -62,6 +63,7 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
   const gameHref = (mode: GameMode) => buildRoutePath({ page: isRandom ? 'random' : 'game',
     universeId: 'got', gameMode: mode, gameId: isRandom ? null : selectedGameId, authMode: 'login' });
   const { game, order, setOrder, loading, submitting, error } = ladder;
+  const isGameLoading = loading && !game && !error && !ladder.locked;
   const gameNumber = game?.gameId ?? selectedGameId;
   const [helpOpen, setHelpOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -69,6 +71,11 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
   const completionRef = useRef<HTMLDivElement>(null);
   const revealTimer = useRef<number | undefined>(undefined);
   const isComplete = game?.status === 'won' || game?.status === 'lost';
+  const isDayComplete = LADDER_DIFFICULTIES.every((_, index) =>
+    ladder.difficulties[index] === 'won' || ladder.difficulties[index] === 'lost');
+  const difficultyPoints = game?.difficultyPoints;
+  const dayPoints = difficultyPoints?.length === LADDER_DIFFICULTIES.length
+    ? difficultyPoints.reduce((total, points) => total + points, 0) : null;
   const lastAttempt = game?.attempts.at(-1);
   const freeSlots = order.map((_, index) => index).filter(index => !game?.lockedPositions.includes(index));
   const inputDisabled = submitting || revealing || isComplete;
@@ -132,6 +139,8 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
 
   return (
     <main className="page game-page episode-ladder-page">
+      {isGameLoading && <LoadingOverlay title="Please wait"
+        message={isRandom ? 'Loading random Episode Ladder game...' : 'Loading game...'} />}
       <nav className="game-top-actions" aria-label="Game modes">
         <RouteLink className="game-action-button history-button" href="/got/archive/episode_ladder" aria-label="View previous Episode Ladder games" title="View previous games" onNavigate={() => onOpenHistory('episode_ladder', 'got')}><img src={calendarDaysIcon} alt="" /></RouteLink>
         <button className="game-action-button help-button" type="button" aria-label="How to play Episode Ladder" title="How to play" onClick={() => setHelpOpen(true)}><img src={questionMarkCircleIcon} alt="" /></button>
@@ -180,18 +189,23 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
           <li>Green events are correct and locked. Yellow means one position away. Grey means farther away.</li>
           <li>Flashbacks follow episode and on-screen order, not story chronology.</li>
           <li>Start with Easy and work up to Impossible. Impossible uses five consecutive episodes; easier difficulties spread events farther apart. Completed difficulties turn grey.</li>
-          <li>Daily and archive difficulties cannot be replayed after a win or loss. Random games are separate practice rounds.</li></ul>
+          <li>Daily and archive difficulties cannot be replayed after a win or loss. Random games are separate practice rounds.</li>
+          <li>Signed-in players can read and post comments after completing all five difficulties for that day, win or lose.</li></ul>
       </dialog>}
       {ladder.locked && <PremiumArchiveGateOverlay gameLabel="Episode Ladder" onGoHome={() => onNavigate('launcher')}
         {...(isRandom ? { featureLabel: 'Premium random game', headline: 'Subscribe to premium to play random games.',
           message: 'Play unlimited Episode Ladder practice rounds without changing your daily progress.' } : {})}
         onStartCheckout={user ? onStartCheckout : undefined} />}
-      {loading && <p className="ladder-message" role="status">{isRandom ? 'Loading a random timeline...' : "Loading today's timeline..."}</p>}
       {error && !ladder.locked && <div className="ladder-message" role="alert">
         <p>{error}</p>{(!game || isRandom) && <button className="secondary-button" onClick={ladder.retry}>{isRandom ? 'New Random Game' : 'Try again'}</button>}
       </div>}
       {game && !loading && <>
         <section className="ladder-board" aria-label="Event timeline">
+          {!isRandom && dayPoints !== null && <dl className="ladder-points" aria-label="Episode Ladder points" aria-live="polite" aria-atomic="true">
+            <div><dt>Day total</dt><dd>{dayPoints}<span> / {LADDER_DAY_MAX_POINTS} pts</span></dd></div>
+            <div><dt>{LADDER_DIFFICULTIES[game.difficulty - 1]}</dt>
+              <dd>{difficultyPoints![game.difficulty - 1]}<span> / {LADDER_BASE_POINTS[game.difficulty - 1]} pts</span></dd></div>
+          </dl>}
           <div className="ladder-board-heading"><span>Earliest</span><span>{game.attempts.length} / {game.maxAttempts} attempts</span></div>
           <div className="ladder-events-wrap">
           <ol className={`ladder-events${revealing ? ' is-revealing' : ''}`}>
@@ -247,7 +261,8 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
             {selectedDifficulty < 5 && <button className="primary-button" type="button" disabled={revealing} onClick={() => onSelectDifficulty(selectedDifficulty + 1)}>Play {LADDER_DIFFICULTIES[selectedDifficulty]}</button>}
             {isRandom && <button ref={nextButton} className={`primary-button ladder-next${nextReady ? ' is-ready' : ''}`} type="button" disabled={!nextReady} onClick={onNextRandomGame}>Next Random Game</button>}
         </div>}
-        {!isRandom && isComplete && !revealing && user && session?.access_token && <GameComments accessToken={session.access_token} userId={user.id} universeId="got" gameId={game.gameId} mode="episode_ladder" />}
+        {!isRandom && isComplete && isDayComplete && !revealing && !ladder.locked && user && session?.access_token &&
+          <GameComments key={`${user.id}:${game.gameId}`} accessToken={session.access_token} userId={user.id} universeId="got" gameId={game.gameId} mode="episode_ladder" />}
       </>}
     </main>
   );

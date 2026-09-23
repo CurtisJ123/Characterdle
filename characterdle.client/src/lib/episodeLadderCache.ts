@@ -94,7 +94,8 @@ export class EpisodeLadderCache {
       if (![...this.entries].some(([alias, candidate]) => candidate === value && alias.startsWith(`${scope}|`))) continue;
       const states = [...(game.difficulties ?? value.snapshot.game.difficulties ?? Array(5).fill('pending'))];
       states[game.difficulty - 1] = game.status;
-      value.snapshot = { ...value.snapshot, game: { ...value.snapshot.game, difficulties: states } };
+      value.snapshot = { ...value.snapshot, game: { ...value.snapshot.game, difficulties: states,
+        difficultyPoints: game.difficultyPoints ?? value.snapshot.game.difficultyPoints } };
     }
     this.trim(); this.emit();
     return snapshot;

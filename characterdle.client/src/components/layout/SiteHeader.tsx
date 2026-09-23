@@ -11,6 +11,7 @@ import { DeferredContent } from '../ui/DeferredContent';
 import { BrandButton } from './BrandButton';
 import { PremiumCrownIcon } from '../ui/PremiumCrownIcon';
 import { RouteLink } from '../ui/RouteLink';
+import { LogoutIcon } from '../ui/LogoutIcon';
 
 const AccountSettingsOverlay = lazy(() => import('./AccountSettingsOverlay').then(module => ({ default: module.AccountSettingsOverlay })));
 
@@ -191,6 +192,14 @@ export function SiteHeader({
               {hasUnreadUpdates && <span className="mobile-menu-unread" aria-hidden="true" />}
             </button>
             <div className="mobile-header-menu" id={mobileMenuId} hidden={!isMobileMenuOpen}>
+              {isAuthenticated && (
+                <div className="mobile-profile-summary">
+                  <RouteLink className="mobile-profile-link" href="/profile" onNavigate={() => handleMobileNavigation('profile')}>
+                    <UserAvatar avatarUrl={userAvatarUrl} displayName={profileLabel} isPremium={isPremiumUser} size="leaderboard" />
+                    <span className="mobile-profile-copy"><strong>{profileLabel}</strong><small>View Profile</small></span>
+                  </RouteLink>
+                </div>
+              )}
               <nav aria-label="Mobile navigation">
                 {navItems.map((item) => (
                   <RouteLink key={item.id}
@@ -208,16 +217,14 @@ export function SiteHeader({
               <div className="mobile-account-actions">
                 {isAuthenticated ? (
                   <>
-                    <RouteLink className="mobile-profile-link" href="/profile" onNavigate={() => handleMobileNavigation('profile')}>
-                      <UserAvatar avatarUrl={userAvatarUrl} displayName={profileLabel} isPremium={isPremiumUser} size="header" />
-                      <span><strong>{profileLabel}</strong><small>View profile</small></span>
-                    </RouteLink>
                     <button type="button" onClick={() => { closeMobileMenu(); handleSettingsOpen(); }}>Settings</button>
                     {isAdmin && <RouteLink href="/admin" onNavigate={() => handleMobileNavigation('admin')}>Admin</RouteLink>}
                     {canShowPremiumCta && <RouteLink className="mobile-premium-link" href="/premium" onNavigate={() => handleMobileNavigation('premium')}>
                       <PremiumCrownIcon className="premium-cta-icon" /> Go Premium
                     </RouteLink>}
-                    <button type="button" onClick={() => { closeMobileMenu(); handleSignOut(); }}>Log out</button>
+                    <button className="logout-button" type="button" onClick={() => { closeMobileMenu(); handleSignOut(); }}>
+                      Log out <LogoutIcon />
+                    </button>
                   </>
                 ) : (
                   <>
@@ -311,8 +318,8 @@ export function SiteHeader({
                   <button type="button" role="menuitem" onClick={handleSettingsOpen}>
                     Settings
                   </button>
-                  <button type="button" role="menuitem" onClick={handleSignOut}>
-                    Log Out
+                  <button className="logout-button" type="button" role="menuitem" onClick={handleSignOut}>
+                    Log Out <LogoutIcon />
                   </button>
                 </div>
               )}

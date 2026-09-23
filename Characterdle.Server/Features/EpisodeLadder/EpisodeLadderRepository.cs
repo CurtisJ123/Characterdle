@@ -44,15 +44,18 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
         LadderGameReference? game = null;
         long[][] attempts = [];
         var states = Enumerable.Repeat("pending", 5).ToArray();
+        var points = new int[5];
         while (await reader.ReadAsync(cancellationToken))
         {
             game ??= new LadderGameReference(reader.GetInt64(0), reader.GetFieldValue<DateTimeOffset>(1), reader.GetInt32(2));
             if (reader.IsDBNull(3)) continue;
             var level = reader.GetInt32(3);
             states[level - 1] = reader.GetString(5);
-            if (level == difficulty) attempts = JsonSerializer.Deserialize<long[][]>(reader.GetString(4)) ?? [];
+            var savedAttempts = JsonSerializer.Deserialize<long[][]>(reader.GetString(4)) ?? [];
+            points[level - 1] = EpisodeLadderScoring.Points(level, states[level - 1], savedAttempts.Length);
+            if (level == difficulty) attempts = savedAttempts;
         }
-        return game is null ? null : new LadderGameContext(game, attempts, states);
+        return game is null ? null : new LadderGameContext(game, attempts, states, points);
     }
 
     public async Task<LadderPuzzle?> GetPuzzleAsync(LadderGameReference game, CancellationToken cancellationToken, int difficulty = 1)
@@ -141,18 +144,25 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
         return catalog;
     }
 
-    private async Task<IReadOnlyList<string>> GetDifficultyStatesAsync(Guid userId, long gameId, CancellationToken cancellationToken)
+    private static async Task<(IReadOnlyList<string> States, IReadOnlyList<int> Points)> ReadDifficultyProgressAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid userId, long gameId, CancellationToken cancellationToken)
     {
-        await using var command = dataSource.CreateCommand("""
-            select difficulty::int, status from public."GOTEpisodeLadderProgress"
+        await using var command = new NpgsqlCommand("""
+            select difficulty::int, status, jsonb_array_length(attempts) from public."GOTEpisodeLadderProgress"
             where user_id = @userId and game_id = @gameId;
-            """);
+            """, connection, transaction);
         command.Parameters.AddWithValue("userId", userId);
         command.Parameters.AddWithValue("gameId", gameId);
         var states = Enumerable.Repeat("pending", 5).ToArray();
+        var points = new int[5];
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken)) states[reader.GetInt32(0) - 1] = reader.GetString(1);
-        return states;
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var level = reader.GetInt32(0);
+            states[level - 1] = reader.GetString(1);
+            points[level - 1] = EpisodeLadderScoring.Points(level, states[level - 1], reader.GetInt32(2));
+        }
+        return (states, points);
     }
 
     public async Task<EpisodeLadderResponse> SubmitAsync(LadderPuzzle puzzle, Guid? userId, Guid? guestId,
@@ -174,7 +184,11 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
             var saved = await ReadAttemptsAsync(connection, transaction, userId.Value, puzzle.Game.Id, puzzle.Difficulty, cancellationToken);
             if (!EpisodeLadderRules.IsPrefix(saved, attempts)
                 || (attempts.Length > saved.Length + 1 && !(importGuest && saved.Length == 0)))
-                throw new LadderConflictException(EpisodeLadderRules.Replay(puzzle, saved));
+            {
+                var currentDay = await ReadDifficultyProgressAsync(connection, transaction, userId.Value, puzzle.Game.Id, cancellationToken);
+                throw new LadderConflictException(EpisodeLadderRules.Replay(puzzle, saved) with
+                    { Difficulties = currentDay.States, DifficultyPoints = currentDay.Points });
+            }
 
             await using (var progress = new NpgsqlCommand("""
                 insert into public."GOTEpisodeLadderProgress" (user_id, game_id, difficulty, attempts, status)
@@ -259,8 +273,9 @@ public sealed class EpisodeLadderRepository(NpgsqlDataSource dataSource, Univers
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
-        return result with { Streak = streak, Difficulties = userId.HasValue
-            ? await GetDifficultyStatesAsync(userId.Value, puzzle.Game.Id, cancellationToken) : null };
+        if (!userId.HasValue) return result;
+        var day = await ReadDifficultyProgressAsync(connection, null, userId.Value, puzzle.Game.Id, cancellationToken);
+        return result with { Streak = streak, Difficulties = day.States, DifficultyPoints = day.Points };
     }
 
     private static async Task LockAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,

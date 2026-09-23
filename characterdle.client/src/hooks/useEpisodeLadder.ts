@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { ladderGuestId, migrateGuestLadderVictories, readLadderDifficultyStates, storeLadderProgress } from '../lib/episodeLadderProgress';
+import { ladderGuestId, migrateGuestLadderVictories, storeLadderProgress, withGuestLadderDayProgress } from '../lib/episodeLadderProgress';
 import { ladderScope } from '../lib/episodeLadderCache';
 import { EpisodeLadderApiError, requestEpisodeLadder } from '../services/episodeLadderApi';
 import { beginLadderMutation, ladderCache, loadLadderGame } from '../services/episodeLadderLoader';
@@ -68,7 +68,7 @@ export function useEpisodeLadder(gameId: number | null, userId: string | undefin
 
   function apply(next: EpisodeLadderGame) {
     storeLadderProgress(owner, next);
-    if (!userId) next = { ...next, difficulties: readLadderDifficultyStates(owner, next.gameId) };
+    if (!userId) next = withGuestLadderDayProgress(next);
     ladderCache.set(scope, next);
     setState({ view, error: null, locked: false, submitting: false, streak: next.streak });
   }

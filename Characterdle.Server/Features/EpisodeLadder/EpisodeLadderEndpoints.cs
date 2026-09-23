@@ -131,7 +131,8 @@ public static class EpisodeLadderEndpoints
             if (request is null)
             {
                 return Results.Ok(EpisodeLadderRules.Replay(puzzle, savedContext!.Attempts) with
-                    { Difficulties = user is null ? null : savedContext.Difficulties });
+                    { Difficulties = user is null ? null : savedContext.Difficulties,
+                      DifficultyPoints = user is null ? null : savedContext.DifficultyPoints });
             }
             var replay = EpisodeLadderRules.Replay(puzzle, request.Attempts!);
             // Reconstruct guest feedback without recording a play, result, profile, or streak.

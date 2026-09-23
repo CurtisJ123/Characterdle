@@ -1,5 +1,6 @@
 import { EpisodeLadderApiError, requestEpisodeLadder } from '../services/episodeLadderApi';
 import type { EpisodeLadderGame } from '../types/episodeLadder';
+import { ladderPoints } from './episodeLadder';
 
 const PREFIX = 'episode-ladder:got:';
 interface StoredLadder {
@@ -32,8 +33,14 @@ export function readLegacyLadderProgress(owner: string, game: EpisodeLadderGame)
   } catch { return null; }
 }
 
-export function readLadderDifficultyStates(owner: string, gameId: number): string[] {
-  return [1, 2, 3, 4, 5].map(level => readLadderProgress(owner, gameId, level)?.status ?? 'pending');
+export function withGuestLadderDayProgress(game: EpisodeLadderGame): EpisodeLadderGame {
+  const saved = [1, 2, 3, 4, 5].map(level => readLadderProgress('guest', game.gameId, level));
+  const difficulties = saved.map(progress => progress?.status ?? 'pending');
+  const difficultyPoints = saved.map((progress, index) => ladderPoints(index + 1, progress?.status ?? 'pending', progress?.attempts.length ?? 0));
+  // Use this validated response even if browser storage is unavailable or contains an older attempt.
+  difficulties[game.difficulty - 1] = game.status;
+  difficultyPoints[game.difficulty - 1] = ladderPoints(game.difficulty, game.status, game.attempts.length);
+  return { ...game, difficulties, difficultyPoints };
 }
 
 export function storeLadderProgress(owner: string, game: EpisodeLadderGame): void {

@@ -1,5 +1,6 @@
 import { CharacterGamePage } from './CharacterGamePage';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
+import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { useRandomUniverseGame } from '../hooks/useRandomUniverseGame';
 import { useUniverse } from '../hooks/useUniverse';
 import { UniverseGameApiError } from '../services/universeGameApi';
@@ -69,6 +70,7 @@ export function RandomGamePage({
 
   return (
     <main className="page centered-page game-page random-game-page">
+      {isLoading && !error && <LoadingOverlay title="Please wait" message={`Loading random ${selectedGameMode} game...`} />}
       {isPremiumLocked && (
         <PremiumArchiveGateOverlay
           featureLabel="Premium random game"
@@ -83,11 +85,7 @@ export function RandomGamePage({
       <section className="glass-card random-route-shell">
         <p className="eyebrow">{selectedUniverse.title}</p>
         <h1>Random {modeLabel} Game</h1>
-        {isLoading ? (
-          <p className="muted-copy">
-            Loading a fresh random {modeLabel.toLowerCase()} round now.
-          </p>
-        ) : isPremiumLocked ? (
+        {!isLoading && (isPremiumLocked ? (
           <p className="muted-copy">
             Premium members can spin up unlimited practice rounds pulled straight from the database any time.
           </p>
@@ -107,7 +105,7 @@ export function RandomGamePage({
           <p className="muted-copy">
             Pulling a fresh random {modeLabel.toLowerCase()} round from the source data now.
           </p>
-        )}
+        ))}
       </section>
     </main>
   );

@@ -23,6 +23,8 @@ let CharacterGamePage;
 let UniverseContext;
 let LauncherPage;
 let PublicPage;
+let withGuestLadderDayProgress;
+let storeLadderProgress;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
@@ -39,7 +41,7 @@ before(async () => {
       },
       load(id) {
         if (id === '\0test-supabase') return 'export const supabase = {};';
-        if (id === '\0test-auth') return 'export const useAuth = () => ({ user: null, session: null });';
+        if (id === '\0test-auth') return 'export const useAuth = () => globalThis.navigationTestAuth ?? ({ user: null, session: null });';
       },
     }],
     ssr: { target: 'webworker', noExternal: true, resolve: { conditions: ['workerd', 'module', 'production'] } },
@@ -47,7 +49,7 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, withGuestLadderDayProgress, storeLadderProgress }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
 });
 
@@ -172,6 +174,119 @@ test('random Ladder retains the next practice round and the current-game back ar
   assert.match(html, /href="\/got\/game\/episode_ladder"/);
   assert.match(html, /href="\/got\/random\/quote"/);
   assert.match(html, /<h1>Random Episode Ladder<\/h1>/);
+});
+
+function renderLadderAsPlayer(props, signedIn = true) {
+  globalThis.navigationTestAuth = signedIn ? { user: { id: 'comment-player' }, session: { access_token: 'test-token' } } : null;
+  try { return render(EpisodeLadderView, props); }
+  finally { delete globalThis.navigationTestAuth; }
+}
+
+test('Ladder comments stay hidden until every difficulty is completed, not just the selected one', () => {
+  for (let missing = 0; missing < 5; missing++) {
+    for (const status of ['pending', 'playing', undefined]) {
+      const props = ladderProps('won');
+      props.ladder.difficulties = Array(5).fill('won');
+      props.ladder.difficulties[missing] = status;
+      assert.doesNotMatch(renderLadderAsPlayer(props), /class="game-comments /);
+    }
+  }
+  const props = ladderProps('won');
+  props.ladder.difficulties = [];
+  assert.doesNotMatch(renderLadderAsPlayer(props), /class="game-comments /);
+});
+
+test('all five completed difficulties unlock one daily discussion from every difficulty, including losses', () => {
+  for (const statuses of [Array(5).fill('won'), Array(5).fill('lost'), ['won', 'lost', 'won', 'lost', 'won']]) {
+    for (const selectedGameId of [null, 93]) {
+      for (let difficulty = 1; difficulty <= 5; difficulty++) {
+        const props = ladderProps(statuses[difficulty - 1], difficulty);
+        props.selectedGameId = selectedGameId;
+        props.ladder.difficulties = statuses;
+        const html = renderLadderAsPlayer(props);
+        assert.equal((html.match(/class="game-comments /g) ?? []).length, 1);
+      }
+    }
+  }
+});
+
+test('guests, random practice and locked Ladder pages do not expose the daily discussion', () => {
+  const props = ladderProps('won');
+  props.ladder.difficulties = Array(5).fill('won');
+  assert.doesNotMatch(renderLadderAsPlayer(props, false), /class="game-comments /);
+  props.onNextRandomGame = noop;
+  assert.doesNotMatch(renderLadderAsPlayer(props), /class="game-comments /);
+  props.onNextRandomGame = undefined;
+  props.ladder.locked = true;
+  assert.doesNotMatch(renderLadderAsPlayer(props), /class="game-comments /);
+});
+
+test('Ladder displays current difficulty points before completion and updates them alongside the day total', () => {
+  for (const selectedGameId of [null, 93]) {
+    const props = ladderProps('playing', 4);
+    props.selectedGameId = selectedGameId;
+    props.ladder.game.difficultyPoints = [8, 12, 0, 0, 0];
+    const playing = render(EpisodeLadderView, props);
+    assert.match(playing, /<dt>Day total<\/dt><dd>20<span> \/ 100 pts<\/span>/);
+    assert.match(playing, /<dt>Expert<\/dt><dd>0<span> \/ 25 pts<\/span>/);
+    props.ladder.game.status = 'won';
+    props.ladder.game.difficultyPoints[3] = 20;
+    const won = render(EpisodeLadderView, props);
+    assert.match(won, /<dt>Day total<\/dt><dd>40<span> \/ 100 pts<\/span>/);
+    assert.match(won, /<dt>Expert<\/dt><dd>20<span> \/ 25 pts<\/span>/);
+    props.ladder.game.status = 'lost';
+    props.ladder.game.difficultyPoints[3] = 0;
+    const lost = render(EpisodeLadderView, props);
+    assert.match(lost, /<dt>Expert<\/dt><dd>0<span> \/ 25 pts<\/span>/);
+    assert.match(lost, /<dt>Day total<\/dt><dd>20<span> \/ 100 pts<\/span>/);
+  }
+});
+
+test('every unstarted Ladder difficulty displays zero points and its maximum', () => {
+  const labels = ['Easy', 'Medium', 'Hard', 'Expert', 'Impossible'];
+  const maximums = [10, 15, 20, 25, 30];
+  for (let difficulty = 1; difficulty <= 5; difficulty++) {
+    const props = ladderProps('playing', difficulty);
+    props.ladder.game.attempts = [];
+    props.ladder.game.difficultyPoints = [0, 0, 0, 0, 0];
+    const html = render(EpisodeLadderView, props);
+    assert.match(html, new RegExp(`<dt>${labels[difficulty - 1]}</dt><dd>0<span> / ${maximums[difficulty - 1]} pts</span>`));
+  }
+});
+
+test('random practice and older API responses never display a misleading day total', () => {
+  const props = ladderProps('won', 5, true);
+  props.ladder.game.difficultyPoints = [10, 15, 20, 25, 30];
+  assert.doesNotMatch(render(EpisodeLadderView, props), /class="ladder-points"/);
+  props.onNextRandomGame = undefined;
+  props.ladder.game.difficultyPoints = undefined;
+  assert.doesNotMatch(render(EpisodeLadderView, props), /class="ladder-points"/);
+});
+
+test('guest day points restore from local progress and never mix days or signed-in accounts', () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const storage = new Map();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value),
+  } });
+  try {
+    storeLadderProgress('guest', ladderProps('won', 1).ladder.game);
+    storeLadderProgress('guest', ladderProps('lost', 2).ladder.game);
+    storeLadderProgress('user:someone', ladderProps('won', 3).ladder.game);
+    const next = ladderProps('won', 4).ladder.game;
+    next.attempts = [next.attempts[0], next.attempts[0]];
+    assert.deepEqual(withGuestLadderDayProgress(next).difficultyPoints, [10, 0, 0, 20, 0]);
+    assert.deepEqual(withGuestLadderDayProgress({ ...next, gameId: 94 }).difficultyPoints, [0, 0, 0, 20, 0]);
+    storeLadderProgress('guest', next);
+    const restored = withGuestLadderDayProgress(ladderProps('won', 1).ladder.game);
+    assert.deepEqual(restored.difficultyPoints, [10, 0, 0, 20, 0]);
+    assert.deepEqual(restored.difficulties, ['won', 'lost', 'pending', 'won', 'pending']);
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('Storage blocked'); } });
+    assert.deepEqual(withGuestLadderDayProgress(next).difficultyPoints, [0, 0, 0, 20, 0]);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'localStorage', previous);
+    else delete globalThis.localStorage;
+  }
 });
 
 test('episode titles render as text rather than executable markup', () => {
@@ -380,7 +495,7 @@ test('Ladder random entry uses the shared dice, label, and corner premium badge'
 });
 
 for (const authenticated of [false, true]) {
-  test(`mobile header has a closed accessible menu and ${authenticated ? 'one' : 'no'} streak row`, () => {
+  test(`mobile header has a closed accessible menu and ${authenticated ? 'one' : 'no'} streak control`, () => {
     const html = render(SiteHeader, {
       currentPage: 'game', currentGameMode: 'episode_ladder', universeId: 'got', currentStreak: 12,
       isAuthenticated: authenticated, isPremiumLoading: false, isPremiumActive: false, isPremiumUser: false,
@@ -394,9 +509,16 @@ for (const authenticated of [false, true]) {
     assert.equal((html.match(/class="streak-badge"/g) ?? []).length, authenticated ? 1 : 0);
     if (authenticated) {
       assert.match(html, /mobile-profile-link/);
+      assert.ok(html.indexOf('mobile-profile-link') < html.indexOf('aria-label="Mobile navigation"'));
+      assert.equal((html.match(/class="route-link mobile-profile-link"/g) ?? []).length, 1);
+      assert.match(html, /class="mobile-profile-copy"><strong>Test Player<\/strong><small>View Profile<\/small>/);
+      assert.match(html, /aria-label="12 day current streak\. View streak progress\."/);
       assert.match(html, /href="\/admin"/);
       assert.match(html, />Settings<\/button>/);
+      assert.match(html, /class="logout-button"[^>]*>Log out <svg class="logout-icon"[^>]*width="16" height="16"[^>]*stroke="#9c2c2c"[^>]*aria-hidden="true"[^>]*focusable="false"/);
     } else {
+      assert.doesNotMatch(html, /mobile-profile-link/);
+      assert.doesNotMatch(html, /logout-icon/);
       assert.match(html, />Log in<\/button>/);
       assert.match(html, />Sign up<\/button>/);
     }

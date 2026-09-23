@@ -71,6 +71,7 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         var round = (await response.Content.ReadFromJsonAsync<RandomLadderResponse>())!;
         Assert.Equal(0, round.Game.GameId);
         Assert.Null(round.Game.Solution);
+        Assert.Null(round.Game.DifficultyPoints);
         Assert.Equal(1, _store.CatalogCalls);
         for (var attempt = 0; attempt < 4; attempt++)
         {
@@ -117,6 +118,7 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
         Assert.Null(game.Solution);
+        Assert.Null(game.DifficultyPoints);
         Assert.All(game.Events, entry => Assert.Null(entry.Episode));
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.Contains("Authorization", response.Headers.Vary);
@@ -179,6 +181,38 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         Assert.Equal(difficulty, random!.Game.Difficulty);
         var posted = await _client.PostAsJsonAsync($"{Root}/50/attempts", new { difficulty, attempts = new long[][] { [1, 2, 3, 4, 5] } });
         Assert.Equal(difficulty, (await posted.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!.Difficulty);
+    }
+
+    [Theory]
+    [InlineData("current")]
+    [InlineData("50")]
+    public async Task GameResponseIncludesSavedDayPointsWithoutAnotherRequest(string route)
+    {
+        SignIn();
+        _store.DifficultyPoints = [8, 12, 0, 10, 0];
+        var response = await _client.GetAsync($"{Root}/{route}?difficulty=4");
+        var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
+        Assert.Equal(_store.DifficultyPoints, game.DifficultyPoints);
+        Assert.Equal(30, game.DifficultyPoints!.Sum());
+        Assert.True(response.Headers.CacheControl!.NoStore);
+        Assert.Equal(1, _store.Calls);
+        Assert.Equal(1, _store.AttemptReads);
+    }
+
+    [Fact]
+    public async Task CompletedDifficultyReturnsServerPointsAndIgnoresClientSuppliedScores()
+    {
+        SignIn();
+        _store.DifficultyPoints = [8, 12, 0, 0, 0];
+        var response = await _client.PostAsJsonAsync($"{Root}/50/attempts", new
+        {
+            difficulty = 4, attempts = new long[][] { [5, 4, 3, 2, 1], [1, 2, 3, 4, 5] },
+            difficultyPoints = new[] { 999, 999, 999, 999, 999 },
+        });
+        var game = (await response.Content.ReadFromJsonAsync<EpisodeLadderResponse>())!;
+        Assert.Equal("won", game.Status);
+        Assert.Equal(new[] { 8, 12, 0, 20, 0 }, game.DifficultyPoints);
+        Assert.Equal(40, game.DifficultyPoints!.Sum());
     }
 
     [Theory]
@@ -309,13 +343,14 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         public Guid? LastUser;
         public bool LastImport, Conflict;
         public long[][] Saved = [];
+        public int[] DifficultyPoints = [0, 0, 0, 0, 0];
         public Task<LadderGameReference?> GetGameReferenceAsync(long? gameId, CancellationToken ct) { Calls++; return Task.FromResult<LadderGameReference?>(EpisodeLadderRulesTests.Puzzle(gameId ?? 50, ArchiveIndex).Game); }
         public Task<LadderGameContext?> GetGameContextAsync(long? gameId, Guid? userId, int difficulty, CancellationToken ct)
         {
             Calls++;
             if (userId.HasValue) AttemptReads++;
             return Task.FromResult<LadderGameContext?>(new(EpisodeLadderRulesTests.Puzzle(gameId ?? 50, ArchiveIndex).Game,
-                userId.HasValue ? Saved : [], ["playing", "pending", "pending", "pending", "pending"]));
+                userId.HasValue ? Saved : [], ["playing", "pending", "pending", "pending", "pending"], DifficultyPoints));
         }
         public Task<LadderPuzzle?> GetPuzzleAsync(LadderGameReference game, CancellationToken ct, int difficulty = 1) { PuzzleCalls++; return Task.FromResult<LadderPuzzle?>(EpisodeLadderRulesTests.Puzzle(game.Id, game.ArchiveIndex) with { Difficulty = difficulty }); }
         public Task<IReadOnlyList<LadderEvent>> GetEventCatalogAsync(CancellationToken ct)
@@ -327,7 +362,14 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         {
             SubmitCalls++; LastUser = userId; LastImport = importGuest;
             if (Conflict) throw new LadderConflictException(EpisodeLadderRules.Replay(puzzle, Saved));
-            return Task.FromResult(EpisodeLadderRules.Replay(puzzle, attempts));
+            var result = EpisodeLadderRules.Replay(puzzle, attempts);
+            if (userId.HasValue)
+            {
+                var points = DifficultyPoints.ToArray();
+                points[puzzle.Difficulty - 1] = EpisodeLadderScoring.Points(puzzle.Difficulty, result.Status, attempts.Length);
+                result = result with { DifficultyPoints = points };
+            }
+            return Task.FromResult(result);
         }
     }
 

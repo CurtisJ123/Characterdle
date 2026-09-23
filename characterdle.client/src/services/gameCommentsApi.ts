@@ -21,13 +21,15 @@ function commentsUrl(scope: GameCommentsScope): string {
   return buildApiUrl(`/api/universes/${encodeURIComponent(scope.universeId)}/games/${scope.gameId}/${scope.mode}/comments/`);
 }
 
-async function requireSuccess(response: Response): Promise<void> {
+async function requireSuccess(response: Response, mode: GameMode): Promise<void> {
   if (response.ok) {
     return;
   }
 
   const message = response.status === 403
-    ? 'Comments unlock once your completed game is saved. Please try again.'
+    ? mode === 'episode_ladder'
+      ? 'Comments unlock after all five difficulties for this day are completed and saved.'
+      : 'Comments unlock once your completed game is saved. Please try again.'
     : response.status === 401
       ? 'Please sign in again to view comments.'
       : response.status === 400
@@ -44,7 +46,7 @@ export async function getGameComments(
     cache: 'no-store',
     signal,
   });
-  await requireSuccess(response);
+  await requireSuccess(response, scope.mode);
   return await response.json() as GameCommentsPage;
 }
 
@@ -62,6 +64,6 @@ export async function postGameComment(
     body: JSON.stringify({ body }),
     signal,
   });
-  await requireSuccess(response);
+  await requireSuccess(response, scope.mode);
   return await response.json() as GameComment;
 }

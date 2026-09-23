@@ -13,6 +13,11 @@
 .episode-ladder-page .ladder-hero { width: 100%; max-width: 900px; text-align: center; margin: 12px auto 26px; }
 .ladder-hero > p { margin: 10px 0; }
 .ladder-board { min-width: 0; width: min(100%, 900px); }
+.ladder-points { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; margin: 0 0 12px; padding: 0 2px 14px; border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, transparent); }
+.ladder-points > div { display: flex; align-items: baseline; gap: 10px; }
+.ladder-points dt { font-size: .8rem; color: var(--on-surface-variant); }
+.ladder-points dd { margin: 0; color: var(--primary); font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ladder-points dd span { font-size: .75rem; font-weight: 400; color: var(--on-surface-variant); }
 .ladder-board-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--primary); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; padding: 8px 2px; }
 .ladder-events-wrap { position: relative; margin: 8px 0; }
 .ladder-events { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
@@ -42,7 +47,7 @@
 .ladder-grip { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; color: var(--primary); touch-action: none; cursor: grab; }
 .ladder-grip svg { width: 24px; height: 28px; stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
 .ladder-lock { width: 44px; text-align: center; color: #a7d9b4; flex-shrink: 0; }
-.ladder-submit { display: block; width: min(100%, 380px); min-height: 50px; margin: 20px auto; }
+.ladder-board .ladder-submit { display: flex; width: min(100%, 380px); min-height: 50px; margin: 20px auto; }
 .ladder-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px; font-size: .8rem; }
 .ladder-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .ladder-legend i { width: 12px; height: 12px; border-radius: 3px; }

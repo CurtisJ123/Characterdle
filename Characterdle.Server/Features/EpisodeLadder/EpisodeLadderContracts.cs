@@ -7,7 +7,8 @@ public sealed record LadderEvent(long Id, string Description, string? PortraitUr
     int EpisodeNumber, int EpisodeIndex, int Minute, int Second, string? Storyline,
     int CorrectPosition = 0, int InitialPosition = 0, string? CharacterName = null, string? EpisodeTitle = null);
 public sealed record LadderPuzzle(LadderGameReference Game, int Difficulty, IReadOnlyList<LadderEvent> Events);
-public sealed record LadderGameContext(LadderGameReference Game, long[][] Attempts, IReadOnlyList<string> Difficulties);
+public sealed record LadderGameContext(LadderGameReference Game, long[][] Attempts, IReadOnlyList<string> Difficulties,
+    IReadOnlyList<int> DifficultyPoints);
 public sealed record LadderEpisodeResponse(int SeasonNumber, int EpisodeNumber, string? Title);
 public sealed record LadderEventResponse(long Id, string Description, string? PortraitUrl, string? CharacterName,
     LadderEpisodeResponse? Episode = null);
@@ -17,7 +18,7 @@ public sealed record EpisodeLadderResponse(long GameId, DateTimeOffset DateTime,
     IReadOnlyList<LadderEventResponse> Events, IReadOnlyList<long> InitialOrder,
     IReadOnlyList<LadderAttemptResponse> Attempts, IReadOnlyList<int> LockedPositions, string Status,
     IReadOnlyList<LadderSolutionResponse>? Solution, IReadOnlyList<string>? Difficulties = null,
-    UniverseStreakResponse? Streak = null);
+    UniverseStreakResponse? Streak = null, IReadOnlyList<int>? DifficultyPoints = null);
 public sealed record SubmitLadderRequest(long[][]? Attempts, Guid? GuestId = null, int Difficulty = 1);
 public sealed record RandomLadderResponse(EpisodeLadderResponse Game, string RoundToken);
 public sealed record SubmitRandomLadderRequest(string? RoundToken, long[]? Order);

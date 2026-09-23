@@ -24,6 +24,7 @@ export interface EpisodeLadderGame {
   lockedPositions: number[];
   status: 'playing' | 'won' | 'lost';
   difficulties?: string[] | null;
+  difficultyPoints?: number[] | null;
   streak?: UniverseStreak | null;
   solution: { id: number; seasonNumber: number; episodeNumber: number; minute: number; second: number }[] | null;
 }

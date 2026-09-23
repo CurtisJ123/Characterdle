@@ -84,7 +84,6 @@ export function CharacterGamePage({
   selectedGameMode,
 }: CharacterGamePageProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const [showDelayedGuestSignupPrompt, setShowDelayedGuestSignupPrompt] = useState(false);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
@@ -135,21 +134,6 @@ export function CharacterGamePage({
   useEpisodeLadderPreload({ ready: !isAuthLoading && !isPremiumLoading && !isLoading && !!data && !isTemporaryGame && selectedUniverse.id === 'got',
     userId: user?.id, token: session?.access_token ?? null, fullArchiveAccess: premiumAccess?.fullArchiveAccess,
     gameId: selectedGameId });
-
-  useEffect(() => {
-    if (!isGameLoading) {
-      setShowLoadingOverlay(false);
-      return;
-    }
-
-    const overlayTimer = window.setTimeout(() => {
-      setShowLoadingOverlay(true);
-    }, 250);
-
-    return () => {
-      window.clearTimeout(overlayTimer);
-    };
-  }, [isGameLoading]);
 
   useEffect(() => {
     setQuery('');
@@ -787,7 +771,7 @@ export function CharacterGamePage({
   const isRandomAdvanceReady = isTemporaryGame
     && isComplete
     && !isHelpOpen
-    && !showLoadingOverlay
+    && !isGameLoading
     && !!randomAdvanceAction;
   const hintTooltipMessage = isTemporaryGame
     ? 'Random games are practice-only and never saved.'
@@ -799,7 +783,7 @@ export function CharacterGamePage({
       || !isComplete
       || !randomAdvanceAction
       || isHelpOpen
-      || showLoadingOverlay
+      || isGameLoading
     ) {
       return;
     }
@@ -833,7 +817,7 @@ export function CharacterGamePage({
     return () => {
       window.removeEventListener('keydown', handleRandomAdvance);
     };
-  }, [isComplete, isHelpOpen, isTemporaryGame, randomAdvanceAction, showLoadingOverlay]);
+  }, [isComplete, isGameLoading, isHelpOpen, isTemporaryGame, randomAdvanceAction]);
 
   const searchForm = (
     <form className="search-box" aria-label="Submit a guess" onSubmit={handleSubmit}>
@@ -903,7 +887,7 @@ export function CharacterGamePage({
 
   return (
     <main className="page centered-page game-page">
-      {showLoadingOverlay && (
+      {isGameLoading && (
         <LoadingOverlay
           title="Please wait"
           message={isTemporaryGame ? `Loading random ${selectedGameMode} game...` : 'Loading game...'}
