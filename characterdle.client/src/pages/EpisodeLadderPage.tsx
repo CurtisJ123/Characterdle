@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { GameComments } from '../components/game/GameComments';
-import { CharacterPortrait } from '../components/game/CharacterPortrait';
+import { EpisodeLadderPortrait } from '../components/game/EpisodeLadderPortrait';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
 import { GameShareButton } from '../components/ui/GameShareButton';
 import { DiceIcon } from '../components/ui/DiceIcon';
@@ -192,9 +192,7 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
                   if (event.key === 'ArrowUp' && previous !== undefined) { event.preventDefault(); move(position, previous); }
                 }}>
                 <span className="ladder-position" aria-label={`Position ${position + 1}`}>{position + 1}</span>
-                {event.characterName && <span className="ladder-portrait">
-                  <CharacterPortrait character={{ displayName: event.characterName, portraitUrl: event.portraitUrl }} variant="history" />
-                </span>}
+                <EpisodeLadderPortrait event={event} />
                 <div className="ladder-event-copy"><p>{event.description}</p><span className="ladder-feedback">{tone === 'ungraded' ? '' : feedback}</span></div>
                 {locked ? <span className="ladder-lock" aria-label="Correct event locked in place"><LockIcon /></span> : !isComplete &&
                   <span className="ladder-grip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5h0m6 0h0M9 12h0m6 0h0M9 19h0m6 0h0" /></svg></span>}
@@ -221,7 +219,7 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
           <h2>{game.status === 'won' ? `Solved in ${game.attempts.length} ${game.attempts.length === 1 ? 'attempt' : 'attempts'}` : 'A little out of time'}</h2>
           {game.solution && <ol className="ladder-solution">{game.solution.map(event => <li key={event.id}>
             <span>{game.events.find(item => item.id === event.id)?.description}</span>
-            <small>S{event.seasonNumber} E{event.episodeNumber} <span aria-hidden="true"> / </span>{event.minute}:{String(event.second).padStart(2, '0')}</small>
+            <small>S{event.seasonNumber} E{event.episodeNumber}</small>
           </li>)}</ol>}
           <div className="ladder-result-actions">
             {selectedDifficulty < 5 && <button className="primary-button" type="button" disabled={revealing} onClick={() => onSelectDifficulty(selectedDifficulty + 1)}>Play {LADDER_DIFFICULTIES[selectedDifficulty]}</button>}

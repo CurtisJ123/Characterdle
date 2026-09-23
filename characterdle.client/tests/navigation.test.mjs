@@ -14,6 +14,7 @@ let QuoteGameBoard;
 let SiteHeader;
 let DeferredContent;
 let HistoryEduIcon;
+let EpisodeLadderPortrait;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
@@ -32,8 +33,23 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
+});
+
+test('Ladder events without a character reserve a portrait slot with a decorative question mark', () => {
+  const html = render(EpisodeLadderPortrait, { event: { characterName: null, portraitUrl: null } });
+  assert.match(html, /<span class="ladder-portrait"><svg class="history-avatar ladder-portrait-placeholder"/);
+  assert.match(html, /viewBox="0 0 52 68" aria-hidden="true" focusable="false"/);
+  assert.match(html, /<path[^>]+stroke="#c5a158"/);
+  assert.doesNotMatch(html, /<img|undefined|src=/);
+});
+
+test('Ladder events with characters retain their existing portrait rendering', () => {
+  const html = render(EpisodeLadderPortrait, { event: { characterName: 'Jon Snow', portraitUrl: '/images/GOTCharacterImages/jon-snow.webp' } });
+  assert.match(html, /<span class="ladder-portrait"><img class="history-avatar"/);
+  assert.match(html, /src="\/images\/GOTCharacterImages\/jon-snow.webp"/);
+  assert.doesNotMatch(html, /ladder-portrait-placeholder/);
 });
 
 test('the empty-game icon is decorative inline SVG without an icon font dependency', () => {

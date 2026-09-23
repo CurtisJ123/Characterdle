@@ -9,3 +9,4 @@ export { QuoteGameBoard } from '../../src/components/game/QuoteGameBoard';
 export { SiteHeader } from '../../src/components/layout/SiteHeader';
 export { DeferredContent } from '../../src/components/ui/DeferredContent';
 export { HistoryEduIcon } from '../../src/components/ui/HistoryEduIcon';
+export { EpisodeLadderPortrait } from '../../src/components/game/EpisodeLadderPortrait';
