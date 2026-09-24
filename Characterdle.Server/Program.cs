@@ -103,6 +103,7 @@ builder.Services.AddHttpClient<IAnnouncementImageStorage, SupabaseAnnouncementIm
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
 builder.Services.AddScoped<IAdminCommentsRepository, AdminCommentsRepository>();
+builder.Services.AddScoped<IAdminPlayersRepository, AdminPlayersRepository>();
 builder.Services.AddScoped<IAdminCatalogRepository, AdminCatalogRepository>();
 builder.Services.AddScoped<IAdminCatalogCreator, AdminCatalogCreator>();
 builder.Services.AddHttpClient<IAdminPortraitStorage, SupabaseAdminPortraitStorage>(client =>

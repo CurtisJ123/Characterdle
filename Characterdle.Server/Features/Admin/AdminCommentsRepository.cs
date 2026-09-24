@@ -14,10 +14,8 @@ public interface IAdminCommentsRepository
 
 public sealed class AdminCommentsRepository(NpgsqlDataSource dataSource) : IAdminCommentsRepository
 {
-    public async Task<AnnouncementPage<AdminComment>> GetAsync(string source, Guid? postId, int page, CancellationToken ct)
-    {
-        // Combine before sorting/paging, so the newest comments across both sources share one timeline.
-        const string sql = """
+    // Combine before sorting/paging, so every game mode shares the same newest-first timeline.
+    internal const string Query = """
             with comments as (
               select c.id, 'update'::text as source, p.title as context_title, p.slug,
                 null::text as universe_id, null::bigint as game_id, null::text as mode,
@@ -29,7 +27,7 @@ public sealed class AdminCommentsRepository(NpgsqlDataSource dataSource) : IAdmi
               select c.id, 'game', null, null, c.universe_id, c.game_id, c.mode,
                 c.user_id, c.body, c.created_at, false
               from public."UniverseGameComments" c
-              where @source in ('all', 'games') and @post is null and c.mode in ('character', 'quote')
+              where @source in ('all', 'games') and @post is null and c.mode in ('character', 'quote', 'episode_ladder')
             )
             select c.id, c.source, c.context_title, c.slug, c.universe_id, c.game_id, c.mode,
               coalesce(p.display_name, 'Deleted player'), p.avatar_url, c.body, c.created_at, c.is_hidden
@@ -38,7 +36,16 @@ public sealed class AdminCommentsRepository(NpgsqlDataSource dataSource) : IAdmi
             order by c.created_at desc, c.source asc, c.id desc
             offset @offset limit 6
             """;
-        await using var cmd = dataSource.CreateCommand(sql);
+    internal static string GameModeLabel(string mode) => mode switch
+    {
+        "quote" => "Quote",
+        "episode_ladder" => "Episode Ladder",
+        _ => "Character",
+    };
+
+    public async Task<AnnouncementPage<AdminComment>> GetAsync(string source, Guid? postId, int page, CancellationToken ct)
+    {
+        await using var cmd = dataSource.CreateCommand(Query);
         cmd.Parameters.AddWithValue("source", source);
         cmd.Parameters.AddWithValue("post", NpgsqlDbType.Uuid, (object?)postId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("offset", ((long)page - 1) * 5);
@@ -48,7 +55,7 @@ public sealed class AdminCommentsRepository(NpgsqlDataSource dataSource) : IAdmi
         {
             var isUpdate = reader.GetString(1) == "update";
             var title = isUpdate ? reader.GetString(2)
-                : $"{reader.GetString(4).ToUpperInvariant()} / {(reader.GetString(6) == "quote" ? "Quote" : "Character")} #{reader.GetInt64(5)}";
+                : $"{reader.GetString(4).ToUpperInvariant()} / {GameModeLabel(reader.GetString(6))} #{reader.GetInt64(5)}";
             var url = isUpdate ? $"/updates/{Uri.EscapeDataString(reader.GetString(3))}"
                 : $"/{Uri.EscapeDataString(reader.GetString(4))}/game/{Uri.EscapeDataString(reader.GetString(6))}/{reader.GetInt64(5)}";
             var avatar = reader.IsDBNull(8) ? null : reader.GetString(8);

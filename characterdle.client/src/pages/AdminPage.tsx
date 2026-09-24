@@ -7,6 +7,7 @@ import type { Announcement, AnnouncementPage } from '../types/announcements';
 import { PostBody } from '../components/updates/PostBody';
 import { AdminComments } from '../components/admin/AdminComments';
 import { AdminDashboard } from '../components/admin/AdminDashboard';
+import { AdminPlayers } from '../components/admin/AdminPlayers';
 import { AdminCharacters, AdminQuotes } from '../components/admin/AdminCatalog';
 import { PostDate, UpdatesError, UpdatesPagination } from '../components/updates/UpdatesCommon';
 import './UpdatesPage.css';
@@ -163,7 +164,7 @@ function PostEditor({ initial, token, onSaved, onClose }: {
 }
 
 function AdminWorkspace({ token }: { token: string }) {
-  type Section = 'home' | 'posts' | 'comments' | 'characters' | 'quotes';
+  type Section = 'home' | 'posts' | 'comments' | 'characters' | 'quotes' | 'players';
   const [section, setSection] = useState<Section>('home');
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Announcement | null | undefined>(undefined);
@@ -175,12 +176,14 @@ function AdminWorkspace({ token }: { token: string }) {
   return <div className="admin-layout">
     <nav className="glass-card admin-sidebar" aria-label="Administration">
       <button aria-current={section === 'home' ? 'page' : undefined} onClick={() => navigate('home')}>Home</button>
+      <button aria-current={section === 'players' ? 'page' : undefined} onClick={() => navigate('players')}>Players</button>
       <button aria-current={section === 'posts' ? 'page' : undefined} onClick={() => navigate('posts')}>Posts</button>
       <button aria-current={section === 'comments' ? 'page' : undefined} onClick={() => navigate('comments')}>Comments</button>
       <button aria-current={section === 'characters' ? 'page' : undefined} onClick={() => navigate('characters')}>Characters</button>
       <button aria-current={section === 'quotes' ? 'page' : undefined} onClick={() => navigate('quotes')}>Quotes</button>
     </nav>
     <div className="admin-content">{section === 'home' ? <AdminDashboard token={token} />
+      : section === 'players' ? <AdminPlayers token={token} />
       : section === 'comments' ? <AdminComments token={token} />
       : section === 'characters' ? <AdminCharacters token={token} />
       : section === 'quotes' ? <AdminQuotes token={token} />

@@ -3,6 +3,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AdminPage } from '../../src/pages/AdminPage';
 import type { AdminCharacter, AdminQuote } from '../../src/types/adminCatalog';
+import type { AdminPlayerProfile } from '../../src/types/admin';
 import '../../src/index.css';
 import '../../src/App.css';
 
@@ -20,6 +21,17 @@ let quotes: AdminQuote[] = [
 ];
 const episodes = [{ id: 1, seasonNumber: 1, episodeNumber: 1, title: 'Winter Is Coming' },
   { id: 2, seasonNumber: 1, episodeNumber: 2, title: 'The Kingsroad' }];
+const players: AdminPlayerProfile[] = Array.from({ length: 45 }, (_, i) => ({
+  id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
+  displayName: i === 0 ? '<script>alert("not executed")</script>' : `Player ${i + 1}`,
+  email: `player${i + 1}@example.invalid`, avatarUrl: null,
+  createdAt: new Date(Date.UTC(2026, 8, 1, 0, i)).toISOString(),
+  membership: i % 3 === 0 ? 'Premium' : i % 3 === 1 ? 'Trial' : 'Free',
+  lastPlayedAt: i === 44 ? null : '2026-09-24T12:00:00Z', currentStreak: i, longestStreak: i + 5,
+  characterAttempts: i * 3, characterWins: i, characterWinRate: i ? 33.33 : 0, characterAverageGuesses: i ? 2.5 : null,
+  quoteAttempts: i * 2, quoteWins: i, quoteWinRate: i ? 50 : 0, quoteAverageGuesses: i ? 3 : null,
+  ladderPoints: i * 19, ladderDaysPlayed: i, ladderPointsPerDay: i ? 19 : 0,
+}));
 let saves = 0;
 let lastBody = '';
 const creations = new Map<string, AdminCharacter | AdminQuote>();
@@ -29,6 +41,11 @@ window.fetch = async (input, options) => {
   const method = options?.method ?? 'GET';
   const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
   if (path === '/api/admin/access') return json({ isAdmin: true });
+  if (path === '/api/admin/players') return json(players);
+  if (path === '/api/admin/comments') return json({ page: 1, hasNextPage: false, items: [
+    { id: 'ladder-comment', source: 'game', contextTitle: 'GOT / Episode Ladder #94', contextUrl: '/got/game/episode_ladder/94',
+      displayName: 'Player 1', avatarUrl: null, body: 'Loved the new mode.', createdAt: '2026-09-24T12:00:00Z', isHidden: false, canModerate: false },
+  ] });
   if (path === '/api/admin/dashboard') return json({ generatedAt: '2026-09-18T12:00:00Z', activitySince: '2026-09-11T12:00:00Z',
     profiles: 135, newProfiles: 5, accountsWithCompletedGames: 113, premium: { users: 9, trialUsers: 6, activeSubscriptions: 2, pastDueSubscriptions: 1 },
     players: { uniquePlayers: 228, activePlayers: 120, startedGames: 500, completedGames: 410 } });

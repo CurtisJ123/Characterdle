@@ -88,6 +88,8 @@ public static partial class AnnouncementEndpoints
         admin.MapPost("/updates/images", UploadImageAsync);
         admin.MapGet("/dashboard", async (IAdminDashboardRepository repo, CancellationToken ct) =>
             Results.Ok(await repo.GetAsync(ct)));
+        admin.MapGet("/players", async (IAdminPlayersRepository repo, CancellationToken ct) =>
+            Results.Ok(await repo.GetAsync(ct)));
         admin.MapGet("/updates", async (int? page, IAnnouncementRepository repo, CancellationToken ct) =>
             ValidPage(page) ? Results.Ok(await repo.ListAsync(true, page ?? 1, ct)) : Invalid("page", "Invalid page."));
         admin.MapGet("/updates/{id:guid}", async (Guid id, IAnnouncementRepository repo, CancellationToken ct) =>
