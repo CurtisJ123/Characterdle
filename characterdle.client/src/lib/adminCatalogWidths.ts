@@ -12,6 +12,7 @@ export function clampCatalogColumnWidth(key: string, width: number) {
 export function catalogWidthCookieName(path: string): string | null {
   if (path === '/api/admin/got/characters') return 'characterdle_admin_characters_columns_v1';
   if (path === '/api/admin/got/quotes') return 'characterdle_admin_quotes_columns_v1';
+  if (path === '/api/admin/players') return 'characterdle_admin_players_columns_v1';
   return null;
 }
 

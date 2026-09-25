@@ -1,0 +1,8 @@
+.admin-player-name { display: flex; align-items: center; gap: 10px; }
+.admin-player-name strong { min-width: 0; overflow-wrap: anywhere; }
+.admin-player-name .user-avatar { flex-shrink: 0; }
+.admin-players td { font-variant-numeric: tabular-nums; }
+.admin-membership { display: inline-block; padding: 3px 9px; border-radius: 4px; background: #edf1f5; color: #475769; font-size: .73rem; font-weight: 600; }
+.admin-membership--premium { background: #e8f2eb; color: #286143; }
+.admin-membership--trial { background: #e7f0fa; color: #255b8c; }
+.admin-page .admin-player-definitions { margin: 18px 0 0; color: var(--admin-muted); font-size: .75rem; line-height: 1.65; max-width: 90ch; }

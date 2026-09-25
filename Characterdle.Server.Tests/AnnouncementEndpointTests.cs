@@ -21,6 +21,7 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
     private readonly Store store = new();
     private readonly DashboardStore dashboard = new();
     private readonly CommentsStore adminComments = new();
+    private readonly PlayersStore players = new();
     private readonly ImageStorage images = new();
     private readonly CatalogStore catalog = new();
     private readonly CatalogCreator creator = new();
@@ -37,6 +38,7 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
         builder.Services.AddSingleton<IAnnouncementRepository>(store);
         builder.Services.AddSingleton<IAdminCommentsRepository>(adminComments);
         builder.Services.AddSingleton<IAdminDashboardRepository>(dashboard);
+        builder.Services.AddSingleton<IAdminPlayersRepository>(players);
         builder.Services.AddSingleton<IAdminCatalogRepository>(catalog);
         builder.Services.AddSingleton<IAdminCatalogCreator>(creator);
         builder.Services.AddSingleton<AnnouncementCommentLimiter>();
@@ -57,6 +59,7 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
         SignIn(token);
         Assert.Equal(status, (await client.GetAsync("/api/admin/access")).StatusCode);
         Assert.Equal(status, (await client.GetAsync($"/api/admin/dashboard?userId={AdminId}&isAdmin=true")).StatusCode);
+        Assert.Equal(status, (await client.GetAsync($"/api/admin/players?userId={AdminId}&isAdmin=true")).StatusCode);
         Assert.Equal(status, (await client.GetAsync("/api/admin/updates")).StatusCode);
         Assert.Equal(status, (await client.GetAsync($"/api/admin/updates/{store.Hidden.Id}")).StatusCode);
         Assert.Equal(status, (await client.PostAsJsonAsync("/api/admin/updates", Draft())).StatusCode);
@@ -68,6 +71,7 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
         Assert.Equal(0, store.Writes);
         Assert.Equal(0, dashboard.Reads);
         Assert.Equal(0, adminComments.Reads);
+        Assert.Equal(0, players.Reads);
     }
 
     [Fact]

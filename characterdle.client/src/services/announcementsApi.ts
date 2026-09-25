@@ -14,11 +14,13 @@ export async function updatesRequest<T>(path: string, token: string | null = nul
   });
   if (!response.ok) {
     const catalog = path.startsWith('/api/admin/got/');
+    const players = path.startsWith('/api/admin/players');
     let message = response.status === 401 ? 'Please sign in to continue.'
       : response.status === 403 ? 'This area is restricted to administrators.'
         : response.status === 404 ? catalog ? 'This game content is no longer available.' : 'This post or comment is no longer available.'
           : response.status === 413 ? 'Images must be 5 MB or smaller.'
-          : catalog ? 'Game content is temporarily unavailable. Please try again.' : 'Updates are temporarily unavailable. Please try again.';
+          : players ? 'Player profiles are temporarily unavailable. Please try again.'
+            : catalog ? 'Game content is temporarily unavailable. Please try again.' : 'Updates are temporarily unavailable. Please try again.';
     const problem = await response.json().catch(() => null) as { detail?: string; errors?: Record<string, string[]> } | null;
     if ([400, 409, 413, 429].includes(response.status))
       message = problem?.detail ?? Object.values(problem?.errors ?? {}).flat()[0] ?? message;

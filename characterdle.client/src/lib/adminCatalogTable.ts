@@ -14,19 +14,20 @@ export interface CatalogColumn<Row> {
   change?: (draft: CatalogDraft, value: string) => CatalogDraft;
 }
 
-export function selectCatalogRows<Row extends { id: number }>(rows: readonly Row[], columns: readonly CatalogColumn<Row>[],
+export function selectCatalogRows<Row extends { id: number | string }>(rows: readonly Row[], columns: readonly CatalogColumn<Row>[],
   query: string, filters: Record<string, string>, sortKey: string, direction: 'asc' | 'desc'): Row[] {
   const text = (row: Row, column: CatalogColumn<Row>) => (column.search?.(row) ?? String(column.value(row) ?? '')).toLocaleLowerCase();
   const search = query.trim().toLocaleLowerCase();
   const filtered = rows.filter(row => (!search || columns.some(column => text(row, column).includes(search)))
     && columns.every(column => !filters[column.key]?.trim() || text(row, column).includes(filters[column.key].trim().toLocaleLowerCase())));
   const sort = columns.find(column => column.key === sortKey) ?? columns[0];
+  const compareId = (a: Row, b: Row) => typeof a.id === 'number' && typeof b.id === 'number' ? a.id - b.id : String(a.id).localeCompare(String(b.id));
   return filtered.sort((a, b) => {
     const av = sort.value(a), bv = sort.value(b);
-    if (av === null || bv === null) return av === bv ? a.id - b.id : av === null ? 1 : -1;
+    if (av === null || bv === null) return av === bv ? compareId(a, b) : av === null ? 1 : -1;
     const compared = typeof av === 'number' && typeof bv === 'number' ? av - bv
       : String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
-    return (direction === 'asc' ? compared : -compared) || a.id - b.id;
+    return (direction === 'asc' ? compared : -compared) || compareId(a, b);
   });
 }
 
