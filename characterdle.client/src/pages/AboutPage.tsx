@@ -14,14 +14,14 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
           <p className="eyebrow">About</p>
           <h1>What Characterdle is built to be.</h1>
           <p className="muted-copy">
-            Characterdle is a daily browser game built around Game of Thrones memory, deduction,
-            and replayability. Each day players can solve a character board and a quote board,
-            compare results with friends, and track progress through archives, profiles, and leaderboards.
+            Characterdle is a Wordle-inspired Game of Thrones guessing game. Play the{' '}
+            <RouteLink href="/got">daily character game</RouteLink>, identify a quote&apos;s speaker,
+            or put events in order in Episode Ladder. Today&apos;s games are free to play without an account.
           </p>
         </div>
 
         <div className="informational-hero-actions">
-          <RouteLink className="primary-button informational-action-button" href="/home" onNavigate={() => onNavigate('launcher')}>
+          <RouteLink className="primary-button informational-action-button" href="/got">
             Play today&apos;s game
           </RouteLink>
           <RouteLink className="secondary-button informational-action-button" href="/how-to-play" onNavigate={() => onNavigate('howToPlay')}>
@@ -33,21 +33,23 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       <section className="informational-grid" aria-label="About Characterdle">
         <article className="glass-card informational-card">
           <p className="card-kicker">Daily Format</p>
-          <h2>Two Game Modes</h2>
+          <h2>Three daily games</h2>
           <p>
-            The main daily experience is split between a character guessing board and a quote guessing board.
-            The character mode rewards deduction across attributes like house, role, seasons, and status.
-            The quote mode rewards memory of iconic dialogue, speakers, and episode context.
+            Character mode asks you to identify a hidden character from clues. Quote mode asks you to
+            remember who said a line from the show.{' '}
+            <RouteLink href="/got/game/episode_ladder">Episode Ladder</RouteLink> gives you five events to
+            arrange by episode, with four attempts on each of five difficulties from Easy to Impossible.
           </p>
         </article>
 
         <article className="glass-card informational-card">
-          <p className="card-kicker">Why Game Of Thrones</p>
-          <h2>A universe with depth</h2>
+          <p className="card-kicker">The Wordle Connection</p>
+          <h2>Characters, not letters</h2>
           <p>
-            Game of Thrones works well for a daily guessing format because characters can be compared through
-            relationships, factions, roles, and story timing, while quotes add a second mode with a very
-            different kind of challenge.
+            Wordle tells you whether letters belong in a hidden word and whether they are in the right
+            positions. Characterdle compares whole characters instead: their gender, species, houses,
+            roles, seasons, and status. Each guess helps narrow down who you are looking for, rather
+            than how to spell their name.
           </p>
         </article>
 
@@ -65,9 +67,8 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
           <p className="card-kicker">Archive And Practice</p>
           <h2>More than one board</h2>
           <p>
-            Characterdle includes archives for previous daily rounds and separate premium practice games that pull
-            random content from the live database without changing daily stats. That keeps the site useful even
-            after a player has finished today&apos;s official boards.
+            All three modes have archives for earlier daily games. Premium unlocks the full archive and
+            unlimited random practice, separate from daily progress and leaderboard scores.
           </p>
         </article>
       </section>

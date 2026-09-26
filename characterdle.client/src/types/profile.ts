@@ -18,6 +18,20 @@ export interface ProfileRecentResult {
   guessCount: number;
   hintCount: number;
   completedAt: string;
+  difficulty?: number | null;
+  points?: number | null;
+}
+
+export interface ProfileEpisodeLadderStats {
+  wins: number;
+  plays: number;
+  losses: number;
+  averageAttempts: number | null;
+  completionRate: number;
+  totalPoints: number;
+  daysPlayed: number;
+  pointsPerDay: number;
+  rank: number | null;
 }
 
 export interface PersistedGameResult {
@@ -57,6 +71,7 @@ export interface UniverseProfile {
   longestStreak: number;
   character: ProfileModeStats;
   quote: ProfileModeStats;
+  episodeLadder: ProfileEpisodeLadderStats | null;
   recentResults: ProfileRecentResult[];
 }
 

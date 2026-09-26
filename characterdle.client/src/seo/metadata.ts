@@ -58,8 +58,8 @@ function resolveStructuredData(route: AppRoute, title: string, description: stri
             description,
             url: canonicalUrl,
             step: [
-              { '@type': 'HowToStep', name: 'Guess a character or quote', text: 'Open the daily character or quote board and submit your first guess.' },
-              { '@type': 'HowToStep', name: 'Read the clues', text: 'Use attribute matches, season arrows, and quote hints to narrow the answer.' },
+              { '@type': 'HowToStep', name: 'Choose a daily game', text: 'Guess a character, identify a quote speaker, or arrange five events in Episode Ladder.' },
+              { '@type': 'HowToStep', name: 'Use the feedback', text: 'Use character attributes and season arrows, quote hints, or Episode Ladder position feedback to refine your next attempt.' },
               { '@type': 'HowToStep', name: 'Finish the board', text: 'Solve the round, then check your results, streak, archive progress, and leaderboard standing.' },
             ],
           },
@@ -79,7 +79,7 @@ function resolveStructuredData(route: AppRoute, title: string, description: stri
                 name: 'What happens when I use hints?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'Hints help complete the board, but hinted rounds are treated differently from clean ranked solves.',
+                  text: 'Character and Quote hints help you finish the board, but hinted rounds do not count toward ranked wins. Episode Ladder has no hint button; it gives position feedback after each attempt.',
                 },
               },
             ],
@@ -153,12 +153,12 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       const modeLabel = route.gameMode === 'episode_ladder' ? 'Episode Ladder' : route.gameMode === 'quote' ? 'Quote' : 'Character';
       const archivePrefix = route.gameId ? 'Archive ' : 'Daily ';
       const title = isGotDailyCharacter
-        ? 'Game Of Thrones Characterdle'
+        ? 'Game of Thrones Wordle-Style Game | Characterdle'
         : route.gameId
           ? `${universeTitle} ${modeLabel} Game #${route.gameId} | Characterdle`
           : `${archivePrefix}${universeTitle} ${modeLabel} Game | Characterdle`;
       const description = isGotDailyCharacter
-        ? 'Play Characterdle, a free daily Game of Thrones character guessing game. Use house, role, season, and status clues. No account required.'
+        ? 'Play Characterdle, a free Game of Thrones Wordle-style guessing game. Find today\'s character using house, role and season clues. No signup needed.'
         : route.gameMode === 'episode_ladder'
           ? `Play the ${route.gameId ? 'archived' : 'daily'} ${universeTitle} Episode Ladder. Arrange five events in episode order across five difficulties, with four attempts per difficulty.`
         : route.gameMode === 'quote'
@@ -218,8 +218,8 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'about': {
-      const title = 'About Characterdle | Daily Game of Thrones Guessing Game';
-      const description = 'Learn what Characterdle is, why it focuses on Game of Thrones, how daily boards work, and what makes the archive and leaderboard useful over time.';
+      const title = 'About Characterdle | Daily Game of Thrones Games';
+      const description = 'Characterdle is a Wordle-inspired Game of Thrones guessing game with daily character clues, quote challenges, and Episode Ladder timelines.';
       return {
         canonicalUrl,
         description,
@@ -229,8 +229,8 @@ export function resolveSeo(route: AppRoute): SeoDefinition {
       };
     }
     case 'howToPlay': {
-      const title = 'How to Play Characterdle | Rules for Character and Quote Games';
-      const description = 'Read the Characterdle rules for daily character boards, quote boards, hints, archives, leaderboard progress, and common player questions.';
+      const title = 'How to Play Characterdle | Character, Quote & Episode Ladder';
+      const description = 'Learn how character clues differ from Wordle letter clues, guess quote speakers, and order Episode Ladder events. Rules for hints, points, and streaks.';
       return {
         canonicalUrl,
         description,

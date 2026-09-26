@@ -229,8 +229,8 @@ test('every public route can be rendered noindex for staging', () => {
 test('daily character metadata stays descriptive while the initial game header stays minimal', async () => {
   const html = await readFile(new URL('got.html', dist), 'utf8');
   const seo = resolveSeo(routeForPath('/got'));
-  assert.equal(seo.title, 'Game Of Thrones Characterdle');
-  assert.match(seo.description, /free daily Game of Thrones character guessing game/);
+  assert.equal(seo.title, 'Game of Thrones Wordle-Style Game | Characterdle');
+  assert.equal(seo.description, "Play Characterdle, a free Game of Thrones Wordle-style guessing game. Find today's character using house, role and season clues. No signup needed.");
   assert.equal(seo.canonicalUrl, 'https://characterdle.com/got');
   assert.match(html, /<section class="game-hero"><p class="eyebrow">Game of Thrones<\/p><h1>Daily Character Game<\/h1><\/section>/);
   assert.doesNotMatch(html, /game-introduction|inspired by Wordle/);
@@ -239,9 +239,37 @@ test('daily character metadata stays descriptive while the initial game header s
   assert.equal((html.match(/<h1[ >]/g) ?? []).length, 1);
   for (const pathname of publicPaths) {
     const pageHtml = await readFile(new URL(file(pathname), dist), 'utf8');
-    assert.doesNotMatch(resolveSeo(routeForPath(pathname)).title, /\bWordle\b/i);
-    assert.doesNotMatch(pageHtml, /(?:property="og:title"|name="twitter:title") content="[^"]*Wordle/i);
+    if (pathname === '/got') {
+      assert.ok(pageHtml.includes(`property="og:title" content="${escape(seo.title)}"`));
+      assert.ok(pageHtml.includes(`name="twitter:title" content="${escape(seo.title)}"`));
+      assert.ok(pageHtml.includes(`property="og:description" content="${escape(seo.description)}"`));
+      assert.ok(pageHtml.includes(`name="twitter:description" content="${escape(seo.description)}"`));
+    } else {
+      assert.doesNotMatch(resolveSeo(routeForPath(pathname)).title, /\bWordle\b/i);
+      assert.doesNotMatch(pageHtml, /(?:property="og:title"|name="twitter:title") content="[^"]*Wordle/i);
+    }
   }
+});
+
+test('About and How to Play explain the Wordle connection and all three modes in initial HTML', async () => {
+  for (const pathname of ['/about', '/how-to-play']) {
+    const html = await readFile(new URL(file(pathname), dist), 'utf8');
+    const body = html.slice(html.indexOf('<body'));
+    assert.match(body, /Wordle-inspired Game of Thrones guessing game/);
+    assert.match(body, /Wordle.*letters/s);
+    assert.match(body, /Episode Ladder/);
+    assert.match(body, /href="\/got">(?:daily character game|character guessing game)<\/a>/);
+    assert.match(body, /href="\/got\/game\/episode_ladder"/);
+    assert.match(body, /class="route-link primary-button informational-action-button" href="\/got"/);
+    assert.doesNotMatch(body, /Two Game Modes|two daily Game of Thrones guessing games|href="\/home">(?:Start playing|Play today)/);
+    assert.match(resolveSeo(routeForPath(pathname)).description, /Episode Ladder/);
+  }
+  const guide = await readFile(new URL('how-to-play.html', dist), 'utf8');
+  assert.match(guide, /four attempts per difficulty/);
+  assert.match(guide, /60%, 40%, or 30%/);
+  assert.match(guide, /any Episode Ladder difficulty to keep your streak/);
+  const structured = resolveSeo(routeForPath('/how-to-play')).structuredData;
+  assert.match(JSON.stringify(structured), /Episode Ladder/);
 });
 
 test('landing copy explains the game without a redundant play text link', async () => {

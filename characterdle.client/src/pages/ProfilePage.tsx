@@ -39,6 +39,12 @@ function formatDays(value: number) {
   return `${value} ${value === 1 ? 'day' : 'days'}`;
 }
 
+const ladderDifficulties = ['Easy', 'Medium', 'Hard', 'Expert', 'Impossible'];
+
+function formatCount(value: number, singular: string) {
+  return `${value} ${singular}${value === 1 ? '' : 's'}`;
+}
+
 export function ProfilePage({
   billingRedirectStatus = null,
   isPremiumUser,
@@ -51,6 +57,8 @@ export function ProfilePage({
 }: ProfilePageProps) {
   const { isAuthenticated, session, user } = useAuth();
   const data = profile;
+  const ladder = data?.episodeLadder;
+  const showLadder = !data || data.universeId === 'got';
   const error = profileError;
   const isLoading = isProfileLoading && Boolean(session?.access_token);
   const hasProfileData = Boolean(data);
@@ -121,7 +129,7 @@ export function ProfilePage({
             <div className="profile-meta-row">
               {showSupporterBadge && <SupporterBadge animatedFrame />}
               <span className="pill">Member since {memberSince}</span>
-              <span className="pill">Overall rank {formatRank(data?.overallRank ?? null)}</span>
+              <span className="pill">Character + Quote rank {formatRank(data?.overallRank ?? null)}</span>
             </div>
           </div>
         </div>
@@ -145,19 +153,19 @@ export function ProfilePage({
 
         <div className="profile-stat-grid">
           <article className="glass-card profile-stat-card">
-            <span>Total Wins</span>
+            <span title="Wins without hints across all modes.">Total Wins</span>
             <strong>{data?.totalWins ?? 0}</strong>
           </article>
           <article className="glass-card profile-stat-card">
-            <span>Total Plays</span>
+            <span title="Completed games across all modes. Each Episode Ladder difficulty counts as one game.">Total Plays</span>
             <strong>{data?.totalPlays ?? 0}</strong>
           </article>
           <article className="glass-card profile-stat-card">
-            <span>Total Completion</span>
+            <span title="Unique games won without hints out of all available games, including each Episode Ladder difficulty.">Total Completion</span>
             <strong>{data ? `${data.totalCompletionRate.toFixed(1)}%` : '0.0%'}</strong>
           </article>
           <article className="glass-card profile-stat-card">
-            <span>Avg Guess</span>
+            <span title="Average guesses or order checks on wins without hints across all modes.">Avg Attempts</span>
             <strong>{data ? formatAverage(data.averageGuesses) : '0.0'}</strong>
           </article>
         </div>
@@ -167,7 +175,7 @@ export function ProfilePage({
 
       <section className="profile-layout">
         <div className="profile-column">
-          <section className={`glass-card profile-panel${isInitialLoad ? ' is-loading' : ''}`}>
+          <section className={`profile-panel${isInitialLoad ? ' is-loading' : ''}`}>
             <div className="profile-panel-header">
               <div>
                 <p className="card-kicker">Stats</p>
@@ -175,8 +183,8 @@ export function ProfilePage({
               </div>
             </div>
 
-            <div className="profile-mode-grid">
-              <article className="glass-card profile-mode-card">
+            <div className={`profile-mode-grid${showLadder ? ' has-ladder' : ''}`}>
+              <article className="profile-mode-card">
                 <div className="profile-mode-header">
                   <h3>Character</h3>
                   <span className="pill">{formatRank(data?.character.rank ?? null)}</span>
@@ -191,7 +199,7 @@ export function ProfilePage({
                 </dl>
               </article>
 
-              <article className="glass-card profile-mode-card">
+              <article className="profile-mode-card">
                 <div className="profile-mode-header">
                   <h3>Quote</h3>
                   <span className="pill">{formatRank(data?.quote.rank ?? null)}</span>
@@ -205,6 +213,25 @@ export function ProfilePage({
                   <div><dt>Avg Hints</dt><dd>{data ? formatAverage(data.quote.averageHints) : '0.0'}</dd></div>
                 </dl>
               </article>
+
+              {showLadder && (
+                <article className="profile-mode-card profile-ladder-card" aria-label="Episode Ladder statistics">
+                  <div className="profile-mode-header">
+                    <h3>Episode Ladder</h3>
+                    <span className="pill" title="Rank on the Episode Ladder points leaderboard">{formatRank(ladder?.rank ?? null)}</span>
+                  </div>
+                  <dl className="profile-mode-stats">
+                    <div><dt>Total Points</dt><dd>{ladder?.totalPoints.toLocaleString() ?? 0}</dd></div>
+                    <div><dt>Points / Day</dt><dd>{ladder?.pointsPerDay.toFixed(2) ?? '0.00'}</dd></div>
+                    <div><dt>Wins</dt><dd>{ladder?.wins ?? 0}</dd></div>
+                    <div><dt>Plays</dt><dd>{ladder?.plays ?? 0}</dd></div>
+                    <div><dt>Losses</dt><dd>{ladder?.losses ?? 0}</dd></div>
+                    <div><dt>Completion</dt><dd>{ladder?.completionRate.toFixed(1) ?? '0.0'}%</dd></div>
+                    <div><dt>Avg Attempts</dt><dd>{formatAverage(ladder?.averageAttempts ?? null)}</dd></div>
+                    <div><dt>Days Played</dt><dd>{ladder?.daysPlayed ?? 0}</dd></div>
+                  </dl>
+                </article>
+              )}
             </div>
           </section>
 
@@ -219,9 +246,13 @@ export function ProfilePage({
             {data && data.recentResults.length > 0 ? (
               <div className="profile-results-list">
                 {data.recentResults.map((result) => (
-                  <article key={`${result.mode}-${result.gameId}-${result.completedAt}`} className="profile-result-row">
+                  <article key={`${result.mode}-${result.gameId}-${result.difficulty ?? ''}-${result.completedAt}`} className="profile-result-row">
                     <div>
-                      <strong>{formatMode(result.mode)} #{result.gameId}</strong>
+                      <strong>
+                        {formatMode(result.mode)} #{result.gameId}
+                        {result.mode === 'episode_ladder' && result.difficulty != null
+                          ? ` - ${ladderDifficulties[result.difficulty - 1] ?? 'Unknown difficulty'}` : ''}
+                      </strong>
                       <span>
                         {new Intl.DateTimeFormat(undefined, {
                           dateStyle: 'medium',
@@ -231,8 +262,17 @@ export function ProfilePage({
                     </div>
                     <div className="profile-result-meta">
                       <span className={`profile-status-chip is-${result.status}`}>{formatStatus(result.status)}</span>
-                      <span>{result.guessCount} guesses</span>
-                      <span>{result.hintCount} hints</span>
+                      {result.mode === 'episode_ladder' ? (
+                        <>
+                          <span>{formatCount(result.guessCount, 'attempt')}</span>
+                          {result.points != null && <span>{formatCount(result.points, 'point')}</span>}
+                        </>
+                      ) : (
+                        <>
+                          <span>{result.guessCount === 1 ? '1 guess' : `${result.guessCount} guesses`}</span>
+                          <span>{formatCount(result.hintCount, 'hint')}</span>
+                        </>
+                      )}
                     </div>
                   </article>
                 ))}

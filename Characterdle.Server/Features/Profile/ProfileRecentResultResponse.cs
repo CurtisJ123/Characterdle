@@ -6,4 +6,6 @@ public sealed record ProfileRecentResultResponse(
     string Status,
     int GuessCount,
     int HintCount,
-    DateTimeOffset CompletedAt);
+    DateTimeOffset CompletedAt,
+    int? Difficulty = null,
+    int? Points = null);

@@ -13,15 +13,15 @@ const faqItems = [
   },
   {
     question: 'What happens when I use hints?',
-    answer: 'Hints help you finish the board, but hinted rounds do not count toward ranked stats in the same way as a clean solve.',
+    answer: 'Character and Quote hints help you finish the board, but hinted rounds do not count toward ranked wins. Episode Ladder has no hint button; it gives position feedback after each attempt.',
   },
   {
     question: 'When do new daily games start?',
-    answer: 'The daily character and quote boards roll over once per day. Archive boards stay available so older rounds can still be replayed later.',
+    answer: 'Character, Quote, and all five Episode Ladder difficulties refresh daily. Earlier games remain in the archive, with Premium required for the full archive. A completed Episode Ladder difficulty cannot be replayed.',
   },
   {
     question: 'Which games count toward my streak?',
-    answer: 'Complete today\'s Character or Quote game while signed in to keep your streak. Hints and giving up still count as completion. Completing both counts as one day, not two. Random rounds and past archive games do not count.',
+    answer: 'While signed in, complete today\'s Character game, Quote game, or any Episode Ladder difficulty to keep your streak. Wins and losses count, including Character and Quote games finished with hints or by giving up. Multiple completions on the same day still count as one day. Random rounds and past archive games do not count.',
   },
   {
     question: 'What is the difference between daily and random games?',
@@ -37,13 +37,14 @@ export function HowToPlayPage({ onNavigate }: HowToPlayPageProps) {
           <p className="eyebrow">How To Play</p>
           <h1>Learn the daily Characterdle loop.</h1>
           <p className="muted-copy">
-            Characterdle has two daily Game of Thrones guessing games: one for characters and one for quotes.
-            Both are built to be quick to start, readable on repeat visits, and deep enough to reward knowledge of the show.
+            Characterdle is a Wordle-inspired Game of Thrones guessing game with three daily modes.
+            Start with the <RouteLink href="/got">character guessing game</RouteLink>, identify a quote&apos;s
+            speaker, or arrange five events in Episode Ladder.
           </p>
         </div>
 
         <div className="informational-hero-actions">
-          <RouteLink className="primary-button informational-action-button" href="/home" onNavigate={() => onNavigate('launcher')}>
+          <RouteLink className="primary-button informational-action-button" href="/got">
             Start playing
           </RouteLink>
           <RouteLink className="secondary-button informational-action-button" href="/support" onNavigate={() => onNavigate('support')}>
@@ -53,6 +54,17 @@ export function HowToPlayPage({ onNavigate }: HowToPlayPageProps) {
       </section>
 
       <section className="informational-grid" aria-label="How to play Characterdle">
+        <article className="glass-card informational-card">
+          <p className="card-kicker">Wordle And Characterdle</p>
+          <h2>Read character clues, not letters</h2>
+          <p>
+            In Wordle, feedback tells you which letters are in the answer and where they belong.
+            In Characterdle, you guess a whole character and compare their attributes with the hidden
+            character. A matching house or role helps narrow the answer, while season arrows tell you
+            whether to look earlier or later in the show. You are not solving a five-letter word.
+          </p>
+        </article>
+
         <article className="glass-card informational-card">
           <p className="card-kicker">Character Game</p>
           <h2>Deduce the hidden character</h2>
@@ -75,10 +87,27 @@ export function HowToPlayPage({ onNavigate }: HowToPlayPageProps) {
         </article>
 
         <article className="glass-card informational-card">
+          <p className="card-kicker">Episode Ladder</p>
+          <h2>Put the events in order</h2>
+          <ol className="informational-list">
+            <li>Open <RouteLink href="/got/game/episode_ladder">Episode Ladder</RouteLink> and choose Easy, Medium, Hard, Expert, or Impossible. Each has its own daily puzzle.</li>
+            <li>Arrange five events from earliest to latest, then select Check order. Each event comes from a different episode; flashbacks count by when they appear on screen.</li>
+            <li>Drop onto the middle of a card to swap, or between cards to insert. On mobile, use the drag handle.</li>
+            <li>Green events are correct and lock in place. Yellow means one position away; grey means farther away. You have four attempts per difficulty.</li>
+            <li>Easier puzzles spread events farther apart. Impossible uses five consecutive episodes.</li>
+          </ol>
+          <p>
+            First-attempt wins earn 10, 15, 20, 25, or 30 points by difficulty, up to 100 per day.
+            Wins after one, two, or three wrong guesses keep 60%, 40%, or 30% of those points,
+            rounded down. Losses earn zero points.
+          </p>
+        </article>
+
+        <article className="glass-card informational-card">
           <p className="card-kicker">Hints And Results</p>
           <h2>Know what counts</h2>
           <ul className="informational-list">
-            <li>Hints are available in both game modes when you need help.</li>
+            <li>Hints are available in Character and Quote games when you need help.</li>
             <li>Hinted rounds are still playable and still useful, but they are treated differently from clean ranked solves.</li>
             <li>After a win, Characterdle shows your guess count along with board-specific performance stats.</li>
           </ul>
@@ -88,8 +117,8 @@ export function HowToPlayPage({ onNavigate }: HowToPlayPageProps) {
           <p className="card-kicker">Archive And Leaderboard</p>
           <h2>Keep playing after today</h2>
           <ul className="informational-list">
-            <li>The archive lets you revisit older daily character and quote boards.</li>
-            <li>The leaderboard highlights players with strong win totals, efficient solves, and long daily streaks.</li>
+            <li>The archive includes earlier Character, Quote, and Episode Ladder games. Premium unlocks the full archive.</li>
+            <li>Character and Quote leaderboards track ranked wins. Episode Ladder has a points leaderboard, and daily completions contribute to your shared Game of Thrones streak.</li>
             <li>Profile pages collect your wins, average guesses, completion, and recent game history in one place.</li>
           </ul>
         </article>

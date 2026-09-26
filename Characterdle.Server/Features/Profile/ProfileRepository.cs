@@ -1,9 +1,14 @@
+using Characterdle.Server.Features.EpisodeLadder;
+using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Features.UniverseGames;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Characterdle.Server.Features.Profile;
 
-public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRepository
+public sealed class ProfileRepository(
+    NpgsqlDataSource dataSource,
+    IEpisodeLadderLeaderboardRepository ladderLeaderboard) : IProfileRepository
 {
     public async Task<UserUniverseProfileResponse?> GetProfileAsync(
         UniverseDefinition universe,
@@ -21,6 +26,9 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         var ranks = await LoadRanksAsync(universe.Id, userId, cancellationToken);
         var streak = await LoadStreakAsync(universe, userId, cancellationToken);
         var recentResults = await LoadRecentResultsAsync(universe.Id, userId, cancellationToken);
+        var ladderRank = universe.Id == "got" && stats.LadderPlays > 0
+            ? (await ladderLeaderboard.GetAsync(userId, 1, cancellationToken)).CurrentUser?.Rank
+            : null;
 
         return new UserUniverseProfileResponse(
             universe.Id,
@@ -56,7 +64,11 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
                 stats.QuoteAverageHints,
                 stats.QuoteCompletionRate,
                 ranks.QuoteRank),
-            recentResults);
+            recentResults,
+            universe.Id == "got" ? new ProfileEpisodeLadderStatsResponse(
+                stats.LadderWins, stats.LadderPlays, stats.LadderLosses, stats.LadderAverageAttempts,
+                stats.LadderCompletionRate, stats.LadderPoints, stats.LadderDaysPlayed,
+                stats.LadderPointsPerDay, ladderRank) : null);
     }
 
     private async Task<StreakRecord> LoadStreakAsync(
@@ -283,69 +295,89 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             reader.GetFieldValue<DateTimeOffset>(4));
     }
 
+    internal static string BuildStatsQuery(UniverseDefinition universe)
+    {
+        var quoteAvailabilityProjection = string.IsNullOrWhiteSpace(universe.QuoteTableName)
+            ? "0::int as quote_total_available"
+            : "count(*) filter (where games.quote_id is not null)::int as quote_total_available";
+        var ladderAvailability = universe.Id == "got"
+            ? """
+                (select count(*)::int from public."GOTEpisodeLadderGames" ladder
+                 join public."GOTGames" games on games.id = ladder.game_id
+                 where games.datetime <= now() and ladder.difficulty between 1 and 5)
+                """
+            : "0";
+        return
+            $"""
+            with completed_results as (
+              {ProfileResultQueries.CompletedResults(universe.Id)}
+            ), available_games as (
+              select
+                count(*)::int as character_total_available,
+                {quoteAvailabilityProjection},
+                {ladderAvailability} as ladder_total_available
+              from {universe.GameTableName} as games
+              where games.datetime <= now()
+            )
+            select
+              count(*) filter (where results.status = 'won' and results.hint_count = 0)::int as total_wins,
+              count(*)::int as total_plays,
+              count(*) filter (where results.status = 'lost')::int as total_losses,
+              round(
+                case
+                  when (select character_total_available + quote_total_available + ladder_total_available from available_games) = 0 then 0
+                  else (count(distinct (results.mode, results.game_id, results.difficulty)) filter (where results.status = 'won' and results.hint_count = 0)::numeric / (select character_total_available + quote_total_available + ladder_total_available from available_games)::numeric) * 100
+                end,
+                1
+              ) as total_completion_rate,
+              round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0)::numeric, 2) as average_guesses,
+              count(*) filter (where results.mode = 'character' and results.status = 'won' and results.hint_count = 0)::int as character_wins,
+              count(*) filter (where results.mode = 'character')::int as character_plays,
+              count(*) filter (where results.mode = 'character' and results.status = 'lost')::int as character_losses,
+              round(avg(results.guess_count) filter (where results.mode = 'character' and results.status = 'won' and results.hint_count = 0)::numeric, 2) as character_average_guesses,
+              round(avg(results.hint_count) filter (where results.mode = 'character')::numeric, 2) as character_average_hints,
+              round(
+                case
+                  when (select character_total_available from available_games) = 0 then 0
+                  else (count(distinct results.game_id) filter (where results.mode = 'character' and results.status = 'won' and results.hint_count = 0)::numeric / (select character_total_available from available_games)::numeric) * 100
+                end,
+                1
+              ) as character_completion_rate,
+              count(*) filter (where results.mode = 'quote' and results.status = 'won' and results.hint_count = 0)::int as quote_wins,
+              count(*) filter (where results.mode = 'quote')::int as quote_plays,
+              count(*) filter (where results.mode = 'quote' and results.status = 'lost')::int as quote_losses,
+              round(avg(results.guess_count) filter (where results.mode = 'quote' and results.status = 'won' and results.hint_count = 0)::numeric, 2) as quote_average_guesses,
+              round(avg(results.hint_count) filter (where results.mode = 'quote')::numeric, 2) as quote_average_hints,
+              round(
+                case
+                  when (select quote_total_available from available_games) = 0 then 0
+                  else (count(distinct results.game_id) filter (where results.mode = 'quote' and results.status = 'won' and results.hint_count = 0)::numeric / (select quote_total_available from available_games)::numeric) * 100
+                end,
+                1
+              ) as quote_completion_rate,
+              count(*) filter (where results.mode = 'episode_ladder' and results.status = 'won')::int as ladder_wins,
+              count(*) filter (where results.mode = 'episode_ladder')::int as ladder_plays,
+              count(*) filter (where results.mode = 'episode_ladder' and results.status = 'lost')::int as ladder_losses,
+              round(avg(results.guess_count) filter (where results.mode = 'episode_ladder' and results.status = 'won')::numeric, 2) as ladder_average_attempts,
+              coalesce(round(100 * count(*) filter (where results.mode = 'episode_ladder' and results.status = 'won')::numeric
+                / nullif((select ladder_total_available from available_games), 0), 1), 0) as ladder_completion_rate,
+              coalesce(sum(results.points), 0)::bigint as ladder_points,
+              count(distinct results.game_id) filter (where results.mode = 'episode_ladder')::int as ladder_days_played,
+              coalesce(round(sum(results.points)::numeric / nullif(count(distinct results.game_id)
+                filter (where results.mode = 'episode_ladder'), 0), 2), 0) as ladder_points_per_day
+            from completed_results as results;
+            """;
+    }
+
     private async Task<StatsRecord> LoadStatsAsync(
         UniverseDefinition universe,
         Guid userId,
         CancellationToken cancellationToken)
     {
-        var quoteAvailabilityProjection = string.IsNullOrWhiteSpace(universe.QuoteTableName)
-            ? "0::int as quote_total_available"
-            : "count(*) filter (where games.quote_id is not null)::int as quote_total_available";
-        var sql =
-            $"""
-            with available_games as (
-              select
-                count(*)::int as character_total_available,
-                {quoteAvailabilityProjection}
-              from {universe.GameTableName} as games
-              where games.datetime <= now()
-            )
-            select
-              count(*) filter (where results.status = 'won')::int as total_wins,
-              count(*)::int as total_plays,
-              count(*) filter (where results.status = 'lost')::int as total_losses,
-              round(
-                case
-                  when ((select character_total_available from available_games) + (select quote_total_available from available_games)) = 0 then 0
-                  else (count(*) filter (where results.status = 'won')::numeric / ((select character_total_available from available_games) + (select quote_total_available from available_games))::numeric) * 100
-                end,
-                1
-              ) as total_completion_rate,
-              round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
-              count(*) filter (where results.mode = 'character' and results.status = 'won')::int as character_wins,
-              count(*) filter (where results.mode = 'character')::int as character_plays,
-              count(*) filter (where results.mode = 'character' and results.status = 'lost')::int as character_losses,
-              round(avg(results.guess_count) filter (where results.mode = 'character' and results.status = 'won')::numeric, 2) as character_average_guesses,
-              round(avg(results.hint_count) filter (where results.mode = 'character')::numeric, 2) as character_average_hints,
-              round(
-                case
-                  when (select character_total_available from available_games) = 0 then 0
-                  else (count(*) filter (where results.mode = 'character' and results.status = 'won')::numeric / (select character_total_available from available_games)::numeric) * 100
-                end,
-                1
-              ) as character_completion_rate,
-              count(*) filter (where results.mode = 'quote' and results.status = 'won')::int as quote_wins,
-              count(*) filter (where results.mode = 'quote')::int as quote_plays,
-              count(*) filter (where results.mode = 'quote' and results.status = 'lost')::int as quote_losses,
-              round(avg(results.guess_count) filter (where results.mode = 'quote' and results.status = 'won')::numeric, 2) as quote_average_guesses,
-              round(avg(results.hint_count) filter (where results.mode = 'quote')::numeric, 2) as quote_average_hints,
-              round(
-                case
-                  when (select quote_total_available from available_games) = 0 then 0
-                  else (count(*) filter (where results.mode = 'quote' and results.status = 'won')::numeric / (select quote_total_available from available_games)::numeric) * 100
-                end,
-                1
-              ) as quote_completion_rate
-            from public."UniverseGameResults" as results
-            where results.universe_id = @universeId
-              and results.user_id = @userId
-              and results.mode in ('character', 'quote')
-              and results.status in ('won', 'lost');
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = dataSource.CreateCommand(BuildStatsQuery(universe));
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("userId", userId);
+        AddLadderParameters(command, universe.Id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
 
@@ -366,37 +398,41 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             GetInt32(reader, 13),
             GetNullableDouble(reader, 14),
             GetNullableDouble(reader, 15),
-            GetRequiredDouble(reader, 16));
+            GetRequiredDouble(reader, 16),
+            GetInt32(reader, 17),
+            GetInt32(reader, 18),
+            GetInt32(reader, 19),
+            GetNullableDouble(reader, 20),
+            GetRequiredDouble(reader, 21),
+            reader.GetInt64(22),
+            GetInt32(reader, 23),
+            GetRequiredDouble(reader, 24));
     }
 
-    private async Task<RankRecord> LoadRanksAsync(
-        string universeId,
-        Guid userId,
-        CancellationToken cancellationToken)
+    internal static string BuildRanksQuery()
     {
-        const string sql =
+        return
             """
             with aggregated as (
               select
                 profiles.user_id,
                 profiles.display_name,
-                count(*) filter (where results.status = 'won')::int as total_wins,
-                count(*) filter (where results.status = 'won' and results.mode = 'character')::int as character_wins,
-                count(*) filter (where results.status = 'won' and results.mode = 'quote')::int as quote_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0)::int as total_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::int as character_wins,
+                count(*) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::int as quote_wins,
                 count(*)::int as total_plays,
                 count(*) filter (where results.mode = 'character')::int as character_plays,
                 count(*) filter (where results.mode = 'quote')::int as quote_plays,
-                round(avg(results.guess_count) filter (where results.status = 'won')::numeric, 2) as average_guesses,
-                round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'character')::numeric, 2) as character_average_guesses,
-                round(avg(results.guess_count) filter (where results.status = 'won' and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0)::numeric, 2) as average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'character')::numeric, 2) as character_average_guesses,
+                round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses,
                 max(results.completed_at) as last_completed_at
               from public."PlayerProfiles" as profiles
-              join public."UniverseGameResults" as results
+              join public."UniverseCompletedGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
                 and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
-                and results.hint_count = 0
               group by profiles.user_id, profiles.display_name
             ),
             ranked as (
@@ -439,8 +475,14 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
             from ranked
             where ranked.user_id = @userId;
             """;
+    }
 
-        await using var command = dataSource.CreateCommand(sql);
+    private async Task<RankRecord> LoadRanksAsync(
+        string universeId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = dataSource.CreateCommand(BuildRanksQuery());
         command.Parameters.AddWithValue("universeId", universeId);
         command.Parameters.AddWithValue("userId", userId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -469,20 +511,21 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         CancellationToken cancellationToken)
     {
         var sql =
-            """
+            $"""
+            with completed_results as (
+              {ProfileResultQueries.CompletedResults(universeId)}
+            )
             select
               game_id,
               mode,
               status,
               guess_count,
               hint_count,
-              completed_at
-            from public."UniverseGameResults"
-            where universe_id = @universeId
-              and user_id = @userId
-              and status in ('won', 'lost')
-              and mode in ('character', 'quote', 'episode_ladder')
-            order by completed_at desc
+              completed_at,
+              difficulty,
+              points
+            from completed_results
+            order by completed_at desc, game_id desc, mode, difficulty
             """;
 
         if (limit.HasValue)
@@ -497,6 +540,7 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         await using var command = dataSource.CreateCommand(sql);
         command.Parameters.AddWithValue("universeId", universeId);
         command.Parameters.AddWithValue("userId", userId);
+        AddLadderParameters(command, universeId);
 
         if (limit.HasValue)
         {
@@ -515,10 +559,19 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
                 reader.GetString(2),
                 reader.GetInt32(3),
                 reader.GetInt32(4),
-                reader.GetFieldValue<DateTimeOffset>(5)));
+                reader.GetFieldValue<DateTimeOffset>(5),
+                reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                reader.IsDBNull(7) ? null : reader.GetInt32(7)));
         }
 
         return results;
+    }
+
+    private static void AddLadderParameters(NpgsqlCommand command, string universeId)
+    {
+        if (universeId != "got") return;
+        command.Parameters.AddWithValue("points", NpgsqlDbType.Array | NpgsqlDbType.Integer, EpisodeLadderScoring.ScoreTable());
+        command.Parameters.AddWithValue("maxAttempts", EpisodeLadderRules.MaxAttempts);
     }
 
     private static int GetInt32(NpgsqlDataReader reader, int ordinal) =>
@@ -569,7 +622,15 @@ public sealed class ProfileRepository(NpgsqlDataSource dataSource) : IProfileRep
         int QuoteLosses,
         double? QuoteAverageGuesses,
         double? QuoteAverageHints,
-        double QuoteCompletionRate);
+        double QuoteCompletionRate,
+        int LadderWins,
+        int LadderPlays,
+        int LadderLosses,
+        double? LadderAverageAttempts,
+        double LadderCompletionRate,
+        long LadderPoints,
+        int LadderDaysPlayed,
+        double LadderPointsPerDay);
 
     private sealed record RankRecord(
         int? OverallRank,
