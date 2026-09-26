@@ -5,21 +5,24 @@ import { createRoot } from 'react-dom/client';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import type { UniverseProfile } from '../../src/types/profile';
 import type { PremiumAccess } from '../../src/types/premium';
+import { createProfileFixture } from './profile-data';
 import '../../src/index.css';
 
 if (!import.meta.env.DEV) throw new Error('This fixture is local-only.');
 const scenario = new URLSearchParams(location.search).get('auth') ?? 'member';
+const showProfile = new URLSearchParams(location.search).has('profile');
+if (showProfile) window.history.replaceState({}, '', '/got/profile');
 window.__CHARACTERDLE_PUBLIC_CONFIG__ = {
   supabaseUrl: 'https://landing-fixture.invalid', supabasePublishableKey: 'fixture', apiBaseUrl: '',
 };
 const userId = '00000000-0000-4000-8000-000000000001';
 const modeStats = { wins: 14, plays: 15, losses: 1, averageGuesses: 3, averageHints: 0, completionRate: 93, rank: 1 };
-const profile: UniverseProfile = {
+const profile: UniverseProfile = showProfile ? createProfileFixture() : {
   universeId: 'got', universeName: 'Game of Thrones', userId, displayName: 'Fixture Player',
   email: 'fixture@example.test', avatarUrl: '/android-chrome-512x512.png', memberSince: '2026-09-01T00:00:00Z',
   totalWins: 28, totalPlays: 30, totalLosses: 2, totalCompletionRate: 93, averageGuesses: 3, overallRank: 1,
   currentStreak: 14, longestStreak: 14, character: { mode: 'character', ...modeStats },
-  quote: { mode: 'quote', ...modeStats }, recentResults: [],
+  quote: { mode: 'quote', ...modeStats }, episodeLadder: null, recentResults: [],
 };
 const access: PremiumAccess = {
   isPremium: true, planCode: 'monthly', subscriptionStatus: 'active', billedPriceCents: 399, currencyCode: 'usd',

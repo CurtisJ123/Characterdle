@@ -23,6 +23,8 @@ let CharacterGamePage;
 let UniverseContext;
 let LauncherPage;
 let PublicPage;
+let ProfilePage;
+let createProfileFixture;
 let withGuestLadderDayProgress;
 let storeLadderProgress;
 const noop = () => {};
@@ -38,10 +40,12 @@ before(async () => {
       resolveId(source) {
         if (/(^|\/)supabase(?:\.ts)?$/.test(source)) return '\0test-supabase';
         if (source.endsWith('/hooks/useAuth')) return '\0test-auth';
+        if (source.endsWith('/hooks/useUniverseGameResults')) return '\0test-game-results';
       },
       load(id) {
         if (id === '\0test-supabase') return 'export const supabase = {};';
         if (id === '\0test-auth') return 'export const useAuth = () => globalThis.navigationTestAuth ?? ({ user: null, session: null });';
+        if (id === '\0test-game-results') return 'export const useUniverseGameResults = () => ({ data: globalThis.navigationTestResults ?? [] });';
       },
     }],
     ssr: { target: 'webworker', noExternal: true, resolve: { conditions: ['workerd', 'module', 'production'] } },
@@ -49,13 +53,89 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, withGuestLadderDayProgress, storeLadderProgress }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, ProfilePage, createProfileFixture, withGuestLadderDayProgress, storeLadderProgress }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
 });
 
 const ladderRow = (overrides = {}) => ({
   userId: 'player', rank: 1, displayName: 'A Player', avatarUrl: null, showSupporterBadge: true,
   totalPoints: 100, daysPlayed: 2, pointsPerDay: 50, isCurrentUser: false, ...overrides,
+});
+
+function renderProfile(profile, overrides = {}) {
+  globalThis.navigationTestAuth = { isAuthenticated: true, session: { access_token: 'fixture' }, user: null };
+  try {
+    return render(ProfilePage, { profile, isProfileLoading: false, profileError: null,
+      isPremiumUser: false, showSupporterBadge: false, onAuthNavigate: noop, onNavigate: noop, ...overrides });
+  } finally {
+    delete globalThis.navigationTestAuth;
+  }
+}
+
+test('profile shows all-mode totals and separate Episode Ladder points and rank', () => {
+  const html = renderProfile(createProfileFixture());
+  assert.match(html, /Total Wins<\/span><strong>7<\/strong>/);
+  assert.match(html, /Total Plays<\/span><strong>10<\/strong>/);
+  assert.match(html, /Avg Attempts<\/span><strong>2\.4<\/strong>/);
+  assert.match(html, /Character \+ Quote rank #3/);
+  const ladder = html.slice(html.indexOf('aria-label="Episode Ladder statistics"'), html.indexOf('Recent results'));
+  assert.match(ladder, /points leaderboard">#2<\/span>/);
+  for (const [label, value] of Object.entries({ 'Total Points': '56', 'Points / Day': '28.00',
+    Wins: '4', Plays: '5', Losses: '1', Completion: '8.0%', 'Avg Attempts': '2.0', 'Days Played': '2' })) {
+    assert.ok(ladder.includes(`<dt>${label}</dt><dd>${value}</dd>`));
+  }
+  assert.doesNotMatch(ladder, /Avg Hints/);
+});
+
+test('profile recent results identify all Ladder difficulties and show zero points for losses without hints', () => {
+  const html = renderProfile(createProfileFixture());
+  const rows = html.match(/<article class="profile-result-row">.*?<\/article>/g);
+  assert.equal(rows.length, 8);
+  for (const [index, difficulty] of ['Impossible', 'Expert', 'Hard', 'Medium', 'Easy'].entries()) {
+    assert.ok(rows[index].includes(`- ${difficulty}`));
+    assert.doesNotMatch(rows[index], /hints|guesses/);
+  }
+  assert.match(rows[0], /1 attempt<\/span><span>30 points/);
+  assert.match(rows[2], /is-lost">Lost<\/span><span>4 attempts<\/span><span>0 points/);
+  assert.match(rows[5], /Quote #9/);
+  assert.match(rows[5], /2 guesses<\/span><span>0 hints/);
+  assert.match(rows[6], /6 guesses<\/span><span>1 hint/);
+  assert.match(rows[7], /12 guesses<\/span><span>2 hints/);
+});
+
+test('profile displays clean-win totals without excluding hinted completions from plays and history', () => {
+  const html = renderProfile(createProfileFixture());
+  const character = html.slice(html.indexOf('<h3>Character</h3>'), html.indexOf('<h3>Quote</h3>'));
+  assert.match(character, /Wins<\/dt><dd>2<\/dd>/);
+  assert.match(character, /Plays<\/dt><dd>4<\/dd>/);
+  assert.match(character, /Losses<\/dt><dd>1<\/dd>/);
+  assert.match(character, /Avg Guess<\/dt><dd>4\.0<\/dd>/);
+  assert.match(html, /title="Wins without hints across all modes\."/);
+  assert.match(html, /title="Average guesses or order checks on wins without hints across all modes\."/);
+  assert.match(html, /12 guesses<\/span><span>2 hints/);
+});
+
+test('profile handles empty Ladder history and older API responses without invented results', () => {
+  const profile = createProfileFixture();
+  profile.episodeLadder = null;
+  profile.recentResults = [];
+  const html = renderProfile(profile);
+  assert.match(html, /Episode Ladder statistics/);
+  assert.match(html, /Total Points<\/dt><dd>0<\/dd>/);
+  assert.match(html, /points leaderboard">Unranked/);
+  assert.match(html, /No games yet/);
+  delete profile.episodeLadder;
+  assert.equal(renderProfile(profile), html);
+  assert.doesNotMatch(renderProfile({ ...profile, universeId: 'other' }), /Episode Ladder statistics/);
+});
+
+test('profile loading and error states remain visible with Ladder stats', () => {
+  const loading = renderProfile(null, { isProfileLoading: true });
+  assert.match(loading, /profile-results-placeholder/);
+  assert.doesNotMatch(loading, /No games yet/);
+  const error = renderProfile(createProfileFixture(), { profileError: new Error('offline') });
+  assert.match(error, /Unable to load profile/);
+  assert.match(error, /Total Points<\/dt><dd>56<\/dd>/);
 });
 
 test('Streaks is the first leaderboard tab and the default visible leaderboard', () => {
@@ -275,14 +355,14 @@ test('guest day points restore from local progress and never mix days or signed-
     storeLadderProgress('user:someone', ladderProps('won', 3).ladder.game);
     const next = ladderProps('won', 4).ladder.game;
     next.attempts = [next.attempts[0], next.attempts[0]];
-    assert.deepEqual(withGuestLadderDayProgress(next).difficultyPoints, [10, 0, 0, 20, 0]);
-    assert.deepEqual(withGuestLadderDayProgress({ ...next, gameId: 94 }).difficultyPoints, [0, 0, 0, 20, 0]);
+    assert.deepEqual(withGuestLadderDayProgress(next).difficultyPoints, [10, 0, 0, 15, 0]);
+    assert.deepEqual(withGuestLadderDayProgress({ ...next, gameId: 94 }).difficultyPoints, [0, 0, 0, 15, 0]);
     storeLadderProgress('guest', next);
     const restored = withGuestLadderDayProgress(ladderProps('won', 1).ladder.game);
-    assert.deepEqual(restored.difficultyPoints, [10, 0, 0, 20, 0]);
+    assert.deepEqual(restored.difficultyPoints, [10, 0, 0, 15, 0]);
     assert.deepEqual(restored.difficulties, ['won', 'lost', 'pending', 'won', 'pending']);
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('Storage blocked'); } });
-    assert.deepEqual(withGuestLadderDayProgress(next).difficultyPoints, [0, 0, 0, 20, 0]);
+    assert.deepEqual(withGuestLadderDayProgress(next).difficultyPoints, [0, 0, 0, 15, 0]);
   } finally {
     if (previous) Object.defineProperty(globalThis, 'localStorage', previous);
     else delete globalThis.localStorage;
@@ -459,16 +539,45 @@ for (const status of ['won', 'lost']) {
   });
 }
 
-test('quote results link back to the matching character game', () => {
+test('quote results use the shared result styling for an Episode Ladder link', () => {
   const html = render(QuoteGameBoard, {
     status: 'won', answerName: 'Preview', completedGameStats: { averageGuesses: 2, playCount: 1 },
     currentStreak: 0, gameId: 50, guessCount: 2, hintCount: 0, rows: [], quoteText: 'Preview',
     universeId: 'got', universeName: 'Game of Thrones', showShareButton: false,
-    primaryActionLabel: 'Play Character Game', primaryActionHref: '/got/game/character/50', onPrimaryAction: noop,
+    primaryActionLabel: 'Play Episode Ladder', primaryActionHref: '/got/game/episode_ladder/50', onPrimaryAction: noop,
     onViewLeaderboard: noop,
   });
-  assert.match(html, /<a[^>]+href="\/got\/game\/character\/50"/);
+  assert.match(html, /<a[^>]+class="[^"]*primary-button[^"]*"[^>]+href="\/got\/game\/episode_ladder\/50"[^>]*>Play Episode Ladder<\/a>/);
 });
+
+for (const status of ['won', 'lost']) {
+  for (const gameId of [null, 50]) {
+    test(`${status} ${gameId === null ? 'daily' : 'archive'} Quote completion offers the matching Episode Ladder and leaderboard`, () => {
+      const answer = { id: 1, displayName: 'Preview', aliases: [], attributes: {}, portraitUrl: null };
+      const game = { id: 50, universeId: 'got', universeName: 'Game of Thrones',
+        dateTime: new Date().toISOString(), answerCharacter: answer, characters: [answer], attributeDefinitions: [],
+        characterStats: { averageGuesses: 1, averageGuessSampleSize: 1, playCount: 1 }, quoteStats: null,
+        quotePrompt: { id: 'quote', characterId: 1, text: 'Preview', seasonNumber: 1, episodeNumber: 1 } };
+      globalThis.navigationTestResults = [{ gameId: 50, universeId: 'got', mode: 'quote', status,
+        guessCount: 2, hintCount: status === 'lost' ? 1 : 0, completedAt: new Date().toISOString() }];
+      try {
+        const html = renderToStaticMarkup(createElement(UniverseContext.Provider,
+          { value: { selectedUniverse: { id: 'got', title: 'Game of Thrones' } } },
+          createElement(CharacterGamePage, { selectedGameMode: 'quote', selectedGameId: gameId,
+            currentStreak: 0, premiumAccess: { practiceMode: true },
+            gameStateOverride: { data: game, error: null, isLoading: false },
+            onNavigate: noop, onOpenGame: noop, onOpenHistory: noop, onOpenRandomGame: noop, onStreakUpdated: noop })));
+        const result = html.slice(html.indexOf('data-result-panel="true"'));
+        const destination = `/got/game/episode_ladder${gameId === null ? '' : `/${gameId}`}`;
+        assert.match(result, new RegExp(`<a[^>]+class="[^"]*primary-button[^"]*"[^>]+href="${destination}"[^>]*>Play Episode Ladder</a>`));
+        assert.match(result, /href="\/got\/leaderboard"[^>]*>Leaderboard<\/a>/);
+        assert.doesNotMatch(result, /Play Character Game/);
+      } finally {
+        delete globalThis.navigationTestResults;
+      }
+    });
+  }
+}
 
 test('header links preserve archive mode and Updates remains a popup button', () => {
   const html = render(SiteHeader, {

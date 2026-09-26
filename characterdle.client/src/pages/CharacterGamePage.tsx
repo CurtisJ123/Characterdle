@@ -735,6 +735,12 @@ export function CharacterGamePage({
   const characterHref = buildRoutePath({ ...gameRoute, page: 'game', gameMode: 'character' });
   const quoteHref = buildRoutePath({ ...gameRoute, page: 'game', gameMode: 'quote' });
   const leaderboardHref = buildRoutePath({ ...gameRoute, page: 'leaderboard', gameId: null });
+  const quoteFollowUpMode = selectedUniverse.id === 'got'
+    ? 'episode_ladder'
+    : shouldOfferCharacterFollowUp ? 'character' : null;
+  const quotePrimaryActionHref = isTemporaryGame ? undefined : quoteFollowUpMode
+    ? buildRoutePath({ ...gameRoute, page: 'game', gameMode: quoteFollowUpMode })
+    : leaderboardHref;
   const characterPrimaryActionLabel = resolvedGameVariant === 'random'
     ? 'Another Random Game'
     : shouldOfferQuoteFollowUp ? 'Play Quote' : 'View Leaderboard';
@@ -753,18 +759,20 @@ export function CharacterGamePage({
       : undefined;
   const quotePrimaryActionLabel = resolvedGameVariant === 'random'
     ? 'Another Random Quote'
-    : shouldOfferCharacterFollowUp ? 'Play Character Game' : 'View Leaderboard';
+    : quoteFollowUpMode === 'episode_ladder'
+      ? 'Play Episode Ladder'
+      : quoteFollowUpMode ? 'Play Character Game' : 'View Leaderboard';
   const quotePrimaryAction = resolvedGameVariant === 'random'
     ? (onRefreshRandomGame ?? (() => onOpenRandomGame('quote')))
-    : shouldOfferCharacterFollowUp
-      ? () => onOpenGame('character', selectedGameId)
+    : quoteFollowUpMode
+      ? () => onOpenGame(quoteFollowUpMode, selectedGameId)
       : () => onNavigate('leaderboard');
   const quoteSecondaryActionLabel = resolvedGameVariant === 'random'
     ? 'Random Character'
-    : shouldOfferCharacterFollowUp ? 'Leaderboard' : undefined;
+    : quoteFollowUpMode ? 'Leaderboard' : undefined;
   const quoteSecondaryAction = resolvedGameVariant === 'random'
     ? () => onOpenRandomGame('character')
-    : shouldOfferCharacterFollowUp
+    : quoteFollowUpMode
       ? () => onNavigate('leaderboard')
       : undefined;
   const randomAdvanceAction = isQuoteMode ? quotePrimaryAction : characterPrimaryAction;
@@ -1040,7 +1048,7 @@ export function CharacterGamePage({
               onSecondaryAction={quoteSecondaryAction}
               onViewLeaderboard={() => onNavigate('leaderboard')}
               primaryActionLabel={quotePrimaryActionLabel}
-              primaryActionHref={isTemporaryGame ? undefined : shouldOfferCharacterFollowUp ? characterHref : leaderboardHref}
+              primaryActionHref={quotePrimaryActionHref}
               quoteText={quoteGameData.prompt.text}
               rows={displayedQuoteRows}
               secondaryActionLabel={quoteSecondaryActionLabel}

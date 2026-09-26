@@ -18,4 +18,5 @@ public sealed record UserUniverseProfileResponse(
     int LongestStreak,
     ProfileModeStatsResponse Character,
     ProfileModeStatsResponse Quote,
-    IReadOnlyList<ProfileRecentResultResponse> RecentResults);
+    IReadOnlyList<ProfileRecentResultResponse> RecentResults,
+    ProfileEpisodeLadderStatsResponse? EpisodeLadder = null);
