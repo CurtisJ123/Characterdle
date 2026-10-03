@@ -1,6 +1,10 @@
 .admin-player-name { display: flex; align-items: center; gap: 10px; }
 .admin-player-name strong { min-width: 0; overflow-wrap: anywhere; }
 .admin-player-name .user-avatar { flex-shrink: 0; }
+.admin-player-row { cursor: pointer; }
+.admin-page .admin-player-open { border: 0; background: none; color: #245a87; font: inherit; font-weight: 700; text-align: left; padding: 4px 0; overflow-wrap: anywhere; }
+.admin-page .admin-player-open:hover { text-decoration: underline; }
+.admin-membership.admin-moderation-restricted { color: #852f30; background: #fbe9e8; }
 .admin-players td { font-variant-numeric: tabular-nums; }
 .admin-membership { display: inline-block; padding: 3px 9px; border-radius: 4px; background: #edf1f5; color: #475769; font-size: .73rem; font-weight: 600; }
 .admin-membership--premium { background: #e8f2eb; color: #286143; }

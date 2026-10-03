@@ -122,9 +122,9 @@ public sealed class AnnouncementRepository(NpgsqlDataSource dataSource) : IAnnou
         return await cmd.ExecuteScalarAsync(ct) is Guid;
     }
 
-    public async Task<AnnouncementPage<AnnouncementComment>?> CommentsAsync(Guid? postId, Guid? viewer, bool admin, int page, CancellationToken ct)
+    public async Task<AnnouncementPage<AnnouncementComment>?> CommentsAsync(Guid? postId, Guid? viewer, bool admin, int page, CancellationToken ct, Guid? visibilityUserId = null)
     {
-        await using var cmd = dataSource.CreateCommand("""
+        await using var cmd = dataSource.CreateCommand($"""
             with visible_posts as (
               select id, title, slug from public."Announcements"
               where (@admin or (status = 'published' and published_at <= now()))
@@ -137,12 +137,15 @@ public sealed class AnnouncementRepository(NpgsqlDataSource dataSource) : IAnnou
             join visible_posts p on p.id = c.announcement_id
             join public."PlayerProfiles" profiles on profiles.user_id = c.user_id
             left join public."UserPremiumStatus" premium on premium.user_id = c.user_id
-            where @admin or c.hidden_at is null
+            where @admin or (c.hidden_at is null
+              and {Characterdle.Server.Features.Admin.PlayerModerationVisibility.VisibleAuthorSql("c.user_id", "@visibilityUserId")})
             order by c.created_at asc, c.id asc offset @offset limit 6
             """);
         cmd.Parameters.AddWithValue("admin", admin);
         cmd.Parameters.AddWithValue("post", NpgsqlDbType.Uuid, (object?)postId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("viewer", NpgsqlDbType.Uuid, (object?)viewer ?? DBNull.Value);
+        // Visibility exceptions never confer comment ownership or delete permissions.
+        cmd.Parameters.AddWithValue("visibilityUserId", NpgsqlDbType.Uuid, (object?)(viewer ?? visibilityUserId) ?? DBNull.Value);
         cmd.Parameters.AddWithValue("offset", ((long)page - 1) * 5);
         var items = new List<AnnouncementComment>();
         await using (var reader = await cmd.ExecuteReaderAsync(ct))

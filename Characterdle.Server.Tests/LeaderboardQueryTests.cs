@@ -20,9 +20,10 @@ public sealed class LeaderboardQueryTests
             RegexOptions.Singleline);
 
         Assert.True(scope.Success);
-        Assert.Equal(
-            "and results.mode in ('character', 'quote') and results.status in ('won', 'lost')",
-            Regex.Replace(scope.Groups["filters"].Value, @"\s+", " ").Trim());
+        var filters = Regex.Replace(scope.Groups["filters"].Value, @"\s+", " ").Trim();
+        Assert.Contains("and results.mode in ('character', 'quote') and results.status in ('won', 'lost')", filters);
+        Assert.Contains("any(@restrictedUsers)", filters);
+        Assert.DoesNotContain("hint_count", filters);
         Assert.Contains("count(*)::int as total_plays", sql);
 
         foreach (var mode in new[] { "character", "quote" })

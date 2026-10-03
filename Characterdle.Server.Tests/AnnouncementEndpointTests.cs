@@ -22,6 +22,7 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
     private readonly DashboardStore dashboard = new();
     private readonly CommentsStore adminComments = new();
     private readonly PlayersStore players = new();
+    private readonly ModerationStore moderation = new();
     private readonly ImageStorage images = new();
     private readonly CatalogStore catalog = new();
     private readonly CatalogCreator creator = new();
@@ -35,10 +36,13 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
         builder.WebHost.UseTestServer();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICurrentSupabaseUserAccessor, UserAccessor>();
+        builder.Services.AddSingleton<ILeaderboardViewerResolver, CommentViewerResolver>();
         builder.Services.AddSingleton<IAnnouncementRepository>(store);
         builder.Services.AddSingleton<IAdminCommentsRepository>(adminComments);
         builder.Services.AddSingleton<IAdminDashboardRepository>(dashboard);
         builder.Services.AddSingleton<IAdminPlayersRepository>(players);
+        builder.Services.AddSingleton<IPlayerModerationRepository>(moderation);
+        builder.Services.AddSingleton<IAdminPlayerDetailsRepository, PlayerDetailsStore>();
         builder.Services.AddSingleton<IAdminCatalogRepository>(catalog);
         builder.Services.AddSingleton<IAdminCatalogCreator>(creator);
         builder.Services.AddSingleton<AnnouncementCommentLimiter>();
@@ -359,6 +363,12 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
                 : token == "Bearer player" ? new VerifiedSupabaseUser(PlayerId, "Player", "player@example.test", null) : null);
         }
     }
+    private sealed class CommentViewerResolver : ILeaderboardViewerResolver
+    {
+        internal static readonly Guid LinkedUser = Guid.NewGuid(), LinkedGuest = Guid.NewGuid();
+        public Task<Guid?> ResolveAsync(Guid? userId, string? guest, CancellationToken ct) =>
+            Task.FromResult(userId ?? (guest == LinkedGuest.ToString() ? (Guid?)LinkedUser : null));
+    }
     private sealed class Store : IAnnouncementRepository
     {
         public Announcement Published = new(Guid.NewGuid(), "public-update", "Public", "Summary", "Body", "published", true, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
@@ -370,6 +380,8 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
         public string? LastBody;
         public int Writes;
         public bool Conflict;
+        public Guid? CommentViewer, CommentVisibility;
+        public bool FailComments;
         public Task<bool> IsAdminAsync(Guid id, CancellationToken ct) => Task.FromResult(id == AdminId);
         public Task<AnnouncementPage<Announcement>> ListAsync(bool admin, int page, CancellationToken ct) => Task.FromResult(new AnnouncementPage<Announcement>(admin ? [Published, Hidden] : [Published], page, false));
         public Task<Announcement?> GetAsync(string slug, CancellationToken ct) => Task.FromResult(slug == Published.Slug ? Published : null);
@@ -383,8 +395,12 @@ public sealed partial class AnnouncementEndpointTests : IAsyncLifetime
         public Task<Announcement?> LatestPublishedAsync(CancellationToken ct) => Task.FromResult(Current);
         public Task<bool> HasSeenAsync(Guid user, Guid id, CancellationToken ct) => Task.FromResult(Views.Contains((user, id)));
         public Task<bool> MarkSeenAsync(Guid user, Guid id, bool latestOnly, CancellationToken ct) => Task.FromResult(id == Published.Id && Views.Add((user, id)));
-        public Task<AnnouncementPage<AnnouncementComment>?> CommentsAsync(Guid? post, Guid? viewer, bool admin, int page, CancellationToken ct) =>
-            Task.FromResult<AnnouncementPage<AnnouncementComment>?>(!admin && post == Hidden.Id ? null : new([], page, false));
+        public Task<AnnouncementPage<AnnouncementComment>?> CommentsAsync(Guid? post, Guid? viewer, bool admin, int page, CancellationToken ct, Guid? visibilityUserId = null)
+        {
+            if (FailComments) throw new InvalidOperationException("private-moderation-database-details");
+            CommentViewer = viewer; CommentVisibility = visibilityUserId;
+            return Task.FromResult<AnnouncementPage<AnnouncementComment>?>(!admin && post == Hidden.Id ? null : new([], page, false));
+        }
         public Task<bool> AddCommentAsync(Guid post, VerifiedSupabaseUser user, string body, CancellationToken ct)
         {
             if (post != Published.Id) return Task.FromResult(false);

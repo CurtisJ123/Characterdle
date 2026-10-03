@@ -5,26 +5,18 @@ import type {
 } from '../types/leaderboard';
 import { buildApiUrl } from '../lib/runtimeConfig';
 import { clearEpisodeLadderLeaderboardCache } from './episodeLadderLeaderboardApi';
+import { leaderboardHeaders, leaderboardScope } from '../lib/guestIdentity';
+import { LeaderboardResource } from '../lib/leaderboardResource';
 
-const leaderboardRequests = new Map<string, Promise<UniverseLeaderboard>>();
+export const leaderboardResource = new LeaderboardResource<UniverseLeaderboard>();
 const MAX_PERSISTED_GUESSES = 50;
 
-function createLeaderboardCacheKey(universeId: string, requestScope: string): string {
-  return `${universeId}:${requestScope}`;
-}
+export const leaderboardCacheKey = (universeId: string, token: string | null, scope: string) =>
+  JSON.stringify([universeId, leaderboardScope(token, scope)]);
 
 export function clearLeaderboardCache(universeId?: string) {
   clearEpisodeLadderLeaderboardCache(universeId);
-  if (!universeId) {
-    leaderboardRequests.clear();
-    return;
-  }
-
-  for (const cacheKey of [...leaderboardRequests.keys()]) {
-    if (cacheKey.startsWith(`${universeId}:`)) {
-      leaderboardRequests.delete(cacheKey);
-    }
-  }
+  leaderboardResource.clear(key => !universeId || (JSON.parse(key) as string[])[0] === universeId);
 }
 
 export function getLeaderboard(
@@ -32,20 +24,8 @@ export function getLeaderboard(
   accessToken: string | null,
   requestScope: string,
 ): Promise<UniverseLeaderboard> {
-  const cacheKey = createLeaderboardCacheKey(universeId, requestScope);
-  const cachedRequest = leaderboardRequests.get(cacheKey);
-
-  if (cachedRequest) {
-    return cachedRequest;
-  }
-
-  const request = fetchLeaderboard(universeId, accessToken).catch((error: unknown) => {
-    leaderboardRequests.delete(cacheKey);
-    throw error;
-  });
-
-  leaderboardRequests.set(cacheKey, request);
-  return request;
+  return leaderboardResource.load(leaderboardCacheKey(universeId, accessToken, requestScope),
+    signal => fetchLeaderboard(universeId, accessToken, signal));
 }
 
 export async function submitUniverseGameResult(
@@ -88,16 +68,9 @@ export function retainGuessesForPersistence(guessedCharacterIds: readonly number
   return [...guessedCharacterIds.slice(0, MAX_PERSISTED_GUESSES - 1), firstGuess];
 }
 
-async function fetchLeaderboard(universeId: string, accessToken: string | null): Promise<UniverseLeaderboard> {
+async function fetchLeaderboard(universeId: string, accessToken: string | null, signal: AbortSignal): Promise<UniverseLeaderboard> {
   const response = await fetch(buildApiUrl(`/api/universes/${encodeURIComponent(universeId)}/leaderboard/`), {
-    headers: accessToken
-      ? {
-        Accept: 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      }
-      : {
-        Accept: 'application/json',
-      },
+    headers: leaderboardHeaders(accessToken), cache: 'no-store', signal,
   });
 
   if (!response.ok) {

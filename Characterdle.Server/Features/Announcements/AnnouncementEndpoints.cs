@@ -40,11 +40,15 @@ public static partial class AnnouncementEndpoints
             MarkSeenAsync(id, false, repo, auth, ct));
         updates.MapPost("/{id:guid}/claim", (Guid id, IAnnouncementRepository repo, ICurrentSupabaseUserAccessor auth, CancellationToken ct) =>
             MarkSeenAsync(id, true, repo, auth, ct));
-        updates.MapGet("/{id:guid}/comments", async (Guid id, int? page, IAnnouncementRepository repo, ICurrentSupabaseUserAccessor auth, CancellationToken ct) =>
+        updates.MapGet("/{id:guid}/comments", async (Guid id, int? page, HttpContext context, IAnnouncementRepository repo,
+            ICurrentSupabaseUserAccessor auth, ILeaderboardViewerResolver viewers, CancellationToken ct) =>
         {
+            LeaderboardVisibility.Headers(context);
             if (!ValidPage(page)) return Invalid("page", "Page must be between 1 and 10000.");
             var user = await auth.GetCurrentUserAsync(ct);
-            return await repo.CommentsAsync(id, user?.UserId, false, page ?? 1, ct) is { } result ? Results.Ok(result) : Results.NotFound();
+            if (context.Request.Headers.ContainsKey("Authorization") && user is null) return Results.Unauthorized();
+            var visibilityUserId = await viewers.ResolveAsync(user?.UserId, context.Request.Headers[LeaderboardVisibility.GuestHeader], ct);
+            return await repo.CommentsAsync(id, user?.UserId, false, page ?? 1, ct, visibilityUserId) is { } result ? Results.Ok(result) : Results.NotFound();
         });
         updates.MapPost("/{id:guid}/comments", async (Guid id, PostAnnouncementCommentRequest request, IAnnouncementRepository repo,
             ICurrentSupabaseUserAccessor auth, AnnouncementCommentLimiter limiter, CancellationToken ct) =>
@@ -85,6 +89,7 @@ public static partial class AnnouncementEndpoints
             });
         admin.MapGet("/access", () => Results.Ok(new { isAdmin = true }));
         admin.MapAdminCatalogEndpoints();
+        admin.MapAdminPlayerEndpoints();
         admin.MapPost("/updates/images", UploadImageAsync);
         admin.MapGet("/dashboard", async (IAdminDashboardRepository repo, CancellationToken ct) =>
             Results.Ok(await repo.GetAsync(ct)));

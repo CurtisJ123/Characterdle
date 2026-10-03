@@ -1,4 +1,7 @@
 import { buildApiUrl } from '../lib/runtimeConfig';
+import { leaderboardHeaders } from '../lib/guestIdentity';
+
+export const isPublicCommentsPath = (path: string | null) => !!path && /^\/api\/updates\/[^/?]+\/comments(?:\?|$)/.test(path);
 
 export class UpdatesApiError extends Error {
   readonly status: number;
@@ -10,7 +13,8 @@ export async function updatesRequest<T>(path: string, token: string | null = nul
     ...options,
     cache: 'no-store',
     headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(isPublicCommentsPath(path) && (!options.method || options.method === 'GET') ? leaderboardHeaders(token) : {}), ...options.headers },
   });
   if (!response.ok) {
     const catalog = path.startsWith('/api/admin/got/');

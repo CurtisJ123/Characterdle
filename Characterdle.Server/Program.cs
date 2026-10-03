@@ -104,6 +104,9 @@ builder.Services.AddHttpClient<IAnnouncementImageStorage, SupabaseAnnouncementIm
 builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
 builder.Services.AddScoped<IAdminCommentsRepository, AdminCommentsRepository>();
 builder.Services.AddScoped<IAdminPlayersRepository, AdminPlayersRepository>();
+builder.Services.AddScoped<IAdminPlayerDetailsRepository, AdminPlayerDetailsRepository>();
+builder.Services.AddScoped<IPlayerModerationRepository, PlayerModerationRepository>();
+builder.Services.AddScoped<ILeaderboardViewerResolver, LeaderboardViewerResolver>();
 builder.Services.AddScoped<IAdminCatalogRepository, AdminCatalogRepository>();
 builder.Services.AddScoped<IAdminCatalogCreator, AdminCatalogCreator>();
 builder.Services.AddHttpClient<IAdminPortraitStorage, SupabaseAdminPortraitStorage>(client =>

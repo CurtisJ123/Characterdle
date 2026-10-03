@@ -17,16 +17,17 @@ public static class EpisodeLadderLeaderboardEndpoints
 
     private static async Task<IResult> GetAsync(string universeId, HttpContext context,
         ICurrentSupabaseUserAccessor userAccessor, IEpisodeLadderLeaderboardRepository repository,
+        ILeaderboardViewerResolver viewerResolver,
         ILoggerFactory loggerFactory, CancellationToken cancellationToken)
     {
-        context.Response.Headers.CacheControl = "private, no-store";
-        context.Response.Headers.Vary = "Authorization";
+        LeaderboardVisibility.Headers(context);
         if (universeId != "got") return Results.NotFound();
         try
         {
             var user = await userAccessor.GetCurrentUserAsync(cancellationToken);
             if (user is null && context.Request.Headers.ContainsKey("Authorization")) return Results.Unauthorized();
-            return Results.Ok(await repository.GetAsync(user?.UserId, 50, cancellationToken));
+            var viewer = await viewerResolver.ResolveAsync(user?.UserId, context.Request.Headers[LeaderboardVisibility.GuestHeader], cancellationToken);
+            return Results.Ok(await repository.GetAsync(user?.UserId, 50, cancellationToken, viewer));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

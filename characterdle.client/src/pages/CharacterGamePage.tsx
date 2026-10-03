@@ -25,7 +25,7 @@ import { useUniverse } from '../hooks/useUniverse';
 import { getAnonymousParticipantKey } from '../lib/anonymousParticipant';
 import { getCharacterBoardAttributeColumnCount } from '../lib/characterBoardLayout';
 import { getGameProgressOwnerKey, getRemoteGameOutcome } from '../lib/characterGameProgress';
-import { getOrderedCharacterPrefixMatches } from '../lib/characterSearch';
+import { getOrderedCharacterPrefixMatches, getSuggestedCharacterGuess } from '../lib/characterSearch';
 import { enqueueUniverseGameResult, flushUniverseGameResultOutbox } from '../lib/gameResultOutbox';
 import { buildQuoteGameData } from '../lib/quoteGameData';
 import { formatQuoteEpisodeLabel } from '../lib/quotePrompt';
@@ -654,7 +654,8 @@ export function CharacterGamePage({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    handleGuessSubmission(query);
+    // Use the dropdown's ordering, but resolve the current input rather than a deferred render.
+    handleGuessSubmission(getSuggestedCharacterGuess(query, guessableCharacters));
   }
 
   function clearTrackingKeys(set: Set<string>, prefix: string) {

@@ -188,8 +188,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .attribute-chip.is-revealing {
+  .attribute-chip.is-revealing,
+  .attribute-chip.is-revealing.is-new-correct {
+    opacity: 1;
     animation: none;
+    transform: none;
+    will-change: auto;
   }
 }
 

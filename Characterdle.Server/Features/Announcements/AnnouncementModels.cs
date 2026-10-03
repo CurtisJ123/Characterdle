@@ -25,7 +25,7 @@ public interface IAnnouncementRepository
     Task<Announcement?> LatestPublishedAsync(CancellationToken ct);
     Task<bool> HasSeenAsync(Guid userId, Guid id, CancellationToken ct);
     Task<bool> MarkSeenAsync(Guid userId, Guid id, bool latestOnly, CancellationToken ct);
-    Task<AnnouncementPage<AnnouncementComment>?> CommentsAsync(Guid? postId, Guid? viewer, bool admin, int page, CancellationToken ct);
+    Task<AnnouncementPage<AnnouncementComment>?> CommentsAsync(Guid? postId, Guid? viewer, bool admin, int page, CancellationToken ct, Guid? visibilityUserId = null);
     Task<bool> AddCommentAsync(Guid postId, VerifiedSupabaseUser user, string body, CancellationToken ct);
     Task<bool> DeleteCommentAsync(Guid commentId, Guid userId, CancellationToken ct);
     Task<bool> ModerateAsync(Guid commentId, Guid adminId, bool hidden, CancellationToken ct);

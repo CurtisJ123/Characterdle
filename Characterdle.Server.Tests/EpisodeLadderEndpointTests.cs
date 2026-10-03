@@ -393,7 +393,7 @@ public sealed class EpisodeLadderEndpointTests : IAsyncLifetime
         public Guid LastUser;
         public Task EnsurePlayerProfileAsync(VerifiedSupabaseUser user, CancellationToken ct) { CallCount++; LastUser = user.UserId; return Task.CompletedTask; }
         public Task<bool> GameExistsAsync(UniverseDefinition universe, long gameId, CancellationToken ct) => throw new NotSupportedException();
-        public Task<UniverseLeaderboardResponse> GetLeaderboardAsync(UniverseDefinition universe, Guid? userId, int limit, CancellationToken ct) => throw new NotSupportedException();
+        public Task<UniverseLeaderboardResponse> GetLeaderboardAsync(UniverseDefinition universe, Guid? userId, int limit, CancellationToken ct, Guid? visibilityUserId = null) => throw new NotSupportedException();
         public Task<UniverseStreakResponse> UpsertUniverseGameResultAsync(Guid userId, UniverseDefinition universe, long gameId, int guesses, int hints,
             string mode, string status, IReadOnlyList<long> ids, IReadOnlyList<string> keys, int attemptNumber, CancellationToken ct) => throw new NotSupportedException("Ladder must never use the Character/Quote result writer.");
     }

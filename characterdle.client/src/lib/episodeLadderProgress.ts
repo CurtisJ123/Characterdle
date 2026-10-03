@@ -52,16 +52,7 @@ export function storeLadderProgress(owner: string, game: EpisodeLadderGame): voi
   } catch { /* The server still saves signed-in progress when storage is unavailable. */ }
 }
 
-let fallbackGuestId: string | undefined;
-export function ladderGuestId(): string {
-  try {
-    const existing = localStorage.getItem('episode-ladder-guest-id');
-    if (existing && /^[0-9a-f-]{36}$/i.test(existing)) return existing;
-    const id = fallbackGuestId ??= crypto.randomUUID();
-    localStorage.setItem('episode-ladder-guest-id', id);
-    return id;
-  } catch { return fallbackGuestId ??= crypto.randomUUID(); }
-}
+export { ladderGuestId } from './guestIdentity';
 
 const migrations = new Map<string, Promise<void>>();
 export function migrateGuestLadderVictories(userId: string, token: string): Promise<void> {

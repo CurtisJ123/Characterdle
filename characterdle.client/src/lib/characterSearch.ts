@@ -146,3 +146,7 @@ export function resolveCharacterSearch(
     reason: lastNamePrefixMatches.length > 1 ? 'ambiguous' : 'not_found',
   };
 }
+
+export function getSuggestedCharacterGuess(query: string, availableCharacters: UniverseCharacter[]): string {
+  return getOrderedCharacterPrefixMatches(availableCharacters, query)[0]?.displayName ?? query;
+}

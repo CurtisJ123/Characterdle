@@ -52,6 +52,7 @@ public sealed class GameCommentEndpointTests : IAsyncLifetime
     public async Task AnonymousOrInvalidTokenCannotReadOrPost(string mode, string? token)
     {
         SignIn(token);
+        _client.DefaultRequestHeaders.Add("X-Leaderboard-Guest-Id", Guid.NewGuid().ToString());
         var read = await _client.GetAsync(Url(mode: mode));
         var post = await _client.PostAsJsonAsync(Url(mode: mode), new { body = "Hello" });
         Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);

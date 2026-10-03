@@ -5,6 +5,7 @@ export const playerColumns: CatalogColumn<AdminPlayerProfile>[] = [
   { key: 'displayName', label: 'Username', kind: 'readonly', wide: true, value: r => r.displayName },
   { key: 'email', label: 'Email', kind: 'readonly', wide: true, value: r => r.email },
   { key: 'membership', label: 'Membership', kind: 'readonly', value: r => r.membership },
+  { key: 'moderationStatus', label: 'Moderation', kind: 'readonly', value: r => r.moderationStatus ?? 'Normal' },
   { key: 'createdAt', label: 'Joined', kind: 'readonly', value: r => Date.parse(r.createdAt), search: r => playerDate(r.createdAt) },
   { key: 'lastPlayedAt', label: 'Last played', kind: 'readonly', value: r => r.lastPlayedAt ? Date.parse(r.lastPlayedAt) : null, search: r => playerDate(r.lastPlayedAt) },
   { key: 'currentStreak', label: 'Current streak', kind: 'readonly', value: r => r.currentStreak },

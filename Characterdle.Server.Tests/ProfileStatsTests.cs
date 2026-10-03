@@ -58,8 +58,11 @@ public sealed class ProfileStatsTests
         Assert.Contains("join public.\"UniverseCompletedGameResults\" as results", sql);
         var scope = Regex.Match(sql, @"where results\.universe_id = @universeId(?<filters>.*?)group by", RegexOptions.Singleline);
         Assert.True(scope.Success);
-        Assert.Equal("and results.mode in ('character', 'quote') and results.status in ('won', 'lost')",
-            Regex.Replace(scope.Groups["filters"].Value, @"\s+", " ").Trim());
+        var filters = Regex.Replace(scope.Groups["filters"].Value, @"\s+", " ").Trim();
+        Assert.Contains("and results.mode in ('character', 'quote') and results.status in ('won', 'lost')", filters);
+        Assert.Contains("public.\"PlayerModeration\"", filters);
+        Assert.Contains("profiles.user_id = @userId", filters);
+        Assert.DoesNotContain("hint_count", filters);
         var projections = Regex.Matches(sql, @"(?:count\(\*\)|round\(avg\(results\.guess_count\)).*? as \w+");
         Assert.Equal(9, projections.Count);
         foreach (Match projection in projections)
