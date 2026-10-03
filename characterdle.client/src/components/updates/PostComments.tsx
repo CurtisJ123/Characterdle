@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from 'react';
 import { useUpdatesResource } from '../../hooks/useUpdatesResource';
+import { useCommentRefresh } from '../../hooks/useCommentRefresh';
 import { updateMutation } from '../../services/announcementsApi';
 import type { AnnouncementComment, AnnouncementPage } from '../../types/announcements';
 import { UserAvatar } from '../ui/UserAvatar';
@@ -16,7 +17,8 @@ export function PostComments({ postId, token, onLogin }: {
   const [notice, setNotice] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const path = `/api/updates/${postId}/comments?page=${page}`;
-  const result = useUpdatesResource<AnnouncementPage<AnnouncementComment>>(path, token);
+  const result = useUpdatesResource<AnnouncementPage<AnnouncementComment>>(path, token, undefined, true);
+  useCommentRefresh(result.reload, !busy && !result.loading);
 
   async function mutate(path: string, method: string, value?: unknown) {
     if (!token || busy) return false;
@@ -34,7 +36,7 @@ export function PostComments({ postId, token, onLogin }: {
   return <section className="updates-comments glass-card" aria-label="Post comments">
     <h2>Comments</h2>
     <UpdatesError message={error || result.error} retry={result.reload} />
-    {result.loading && <p role="status">Loading comments...</p>}
+    {result.loading && !result.data && <p role="status">Loading comments...</p>}
     <p className="updates-sr-only" role="status">{notice}</p>
     {result.data && <>
       {!result.data.items.length && <p className="muted-copy">No comments yet.</p>}

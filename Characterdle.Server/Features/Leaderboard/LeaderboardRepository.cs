@@ -246,17 +246,21 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         UniverseDefinition universe,
         Guid? currentUserId,
         int limit,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? visibilityUserId = null)
     {
         var normalizedLimit = Math.Clamp(limit, 1, 100);
-        var leaderboardOverview = await LoadOverviewAsync(universe.Id, cancellationToken);
-        var rows = await LoadRowsAsync(universe, currentUserId, normalizedLimit, cancellationToken);
+        // One eligibility snapshot for all totals/ranks in this response; never cached across requests.
+        var restricted = await LeaderboardVisibility.RestrictedAsync(dataSource, cancellationToken);
+        var viewer = currentUserId ?? visibilityUserId;
+        var leaderboardOverview = await LoadOverviewAsync(universe.Id, restricted, viewer, cancellationToken);
+        var rows = await LoadRowsAsync(universe, currentUserId, normalizedLimit, restricted, viewer, cancellationToken);
         var currentUser = currentUserId.HasValue
-            ? await LoadCurrentUserAsync(universe, currentUserId.Value, cancellationToken)
+            ? await LoadCurrentUserAsync(universe, currentUserId.Value, restricted, cancellationToken)
             : null;
-        var streakRows = await LoadStreakRowsAsync(universe, currentUserId, normalizedLimit, cancellationToken);
+        var streakRows = await LoadStreakRowsAsync(universe, currentUserId, normalizedLimit, restricted, viewer, cancellationToken);
         var currentUserStreak = currentUserId.HasValue
-            ? await LoadCurrentUserStreakAsync(universe, currentUserId.Value, cancellationToken)
+            ? await LoadCurrentUserStreakAsync(universe, currentUserId.Value, restricted, cancellationToken)
             : null;
 
         return new UniverseLeaderboardResponse(
@@ -290,6 +294,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               round(avg(results.guess_count) filter (where results.status = 'won' and results.hint_count = 0 and results.mode = 'quote')::numeric, 2) as quote_average_guesses
             from public."UniverseCompletedGameResults" as results
             where results.universe_id = @universeId
+              and (not (results.user_id = any(@restrictedUsers)) or results.user_id = @visibilityUserId)
               and results.mode in ('character', 'quote')
               and results.status in ('won', 'lost');
             """;
@@ -299,9 +304,12 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
 
     private async Task<(LeaderboardOverviewResponse Overall, LeaderboardModeOverviewResponse Character, LeaderboardModeOverviewResponse Quote)> LoadOverviewAsync(
         string universeId,
+        Guid[] restricted,
+        Guid? viewer,
         CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand(BuildOverviewQuery());
+        LeaderboardVisibility.Parameters(command, restricted, viewer);
         command.Parameters.AddWithValue("universeId", universeId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -359,6 +367,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               left join public."UserPremiumStatus" as premium_status
                 on premium_status.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and (not (profiles.user_id = any(@restrictedUsers)) or profiles.user_id = @visibilityUserId)
                 and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
               group by
@@ -445,9 +454,12 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         UniverseDefinition universe,
         Guid? currentUserId,
         int limit,
+        Guid[] restricted,
+        Guid? viewer,
         CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand(BuildRowsQuery());
+        LeaderboardVisibility.Parameters(command, restricted, viewer);
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("limit", limit);
@@ -489,6 +501,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
               left join public."UserPremiumStatus" as premium_status
                 on premium_status.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and (not (profiles.user_id = any(@restrictedUsers)) or profiles.user_id = @visibilityUserId)
                 and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
               group by
@@ -573,9 +586,11 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
     private async Task<LeaderboardEntryResponse?> LoadCurrentUserAsync(
         UniverseDefinition universe,
         Guid currentUserId,
+        Guid[] restricted,
         CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand(BuildCurrentUserQuery());
+        LeaderboardVisibility.Parameters(command, restricted, currentUserId);
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("currentUserId", currentUserId);
@@ -593,6 +608,8 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         UniverseDefinition universe,
         Guid? currentUserId,
         int limit,
+        Guid[] restricted,
+        Guid? viewer,
         CancellationToken cancellationToken)
     {
         const string sql =
@@ -618,6 +635,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 on premium_status.user_id = profiles.user_id
               where streaks.universe_id = @universeId
                 and streaks.longest_streak > 0
+                and (not (profiles.user_id = any(@restrictedUsers)) or profiles.user_id = @visibilityUserId)
             ),
             ranked as (
               select
@@ -647,6 +665,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("limit", limit);
+        LeaderboardVisibility.Parameters(command, restricted, viewer);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var rows = new List<StreakLeaderboardEntryResponse>();
 
@@ -661,6 +680,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
     private async Task<StreakLeaderboardEntryResponse?> LoadCurrentUserStreakAsync(
         UniverseDefinition universe,
         Guid currentUserId,
+        Guid[] restricted,
         CancellationToken cancellationToken)
     {
         const string sql =
@@ -685,6 +705,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
                 on premium_status.user_id = profiles.user_id
               where streaks.universe_id = @universeId
                 and streaks.longest_streak > 0
+                and (not (profiles.user_id = any(@restrictedUsers)) or profiles.user_id = @visibilityUserId)
             ),
             ranked as (
               select
@@ -710,6 +731,7 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("scheduleTimeZoneId", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("currentUserId", currentUserId);
+        LeaderboardVisibility.Parameters(command, restricted, currentUserId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken)
             ? MapStreakEntry(reader, currentUserId)

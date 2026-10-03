@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useRef, useState, type CSSProperties } from 'react';
 import { useUpdatesResource } from '../../hooks/useUpdatesResource';
 import { selectCatalogRows } from '../../lib/adminCatalogTable';
 import { catalogWidthsCookie, clampCatalogColumnWidth, readCatalogWidths } from '../../lib/adminCatalogWidths';
@@ -12,9 +12,11 @@ import './AdminPlayers.css';
 
 const path = '/api/admin/players';
 const keys = playerColumns.map(c => c.key);
+const AdminPlayerDialog = lazy(() => import('./AdminPlayerDialog').then(module => ({ default: module.AdminPlayerDialog })));
 
 export function AdminPlayers({ token }: { token: string }) {
-  const result = useUpdatesResource<AdminPlayerProfile[]>(path, token);
+  const result = useUpdatesResource<AdminPlayerProfile[]>(path, token, undefined, true);
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sortKey, setSortKey] = useState('createdAt');
@@ -44,7 +46,8 @@ export function AdminPlayers({ token }: { token: string }) {
   const tableStyle = { width: sizes.reduce((sum, width) => sum + width, 0) } as CSSProperties;
   function cell(row: AdminPlayerProfile, key: typeof keys[number]) {
     if (key === 'displayName') return <div className="admin-player-name"><UserAvatar displayName={row.displayName} avatarUrl={row.avatarUrl}
-      isPremium={row.membership !== 'Free'} /><strong>{row.displayName}</strong></div>;
+      isPremium={row.membership !== 'Free'} /><button type="button" className="admin-player-open" onClick={() => setSelectedPlayer(row.id)}>{row.displayName}</button></div>;
+    if (key === 'moderationStatus') return <span className={`admin-membership ${row.moderationStatus === 'Shadow Banned' ? 'admin-moderation-restricted' : ''}`}>{row.moderationStatus ?? 'Normal'}</span>;
     if (key === 'membership') return <span className={`admin-membership admin-membership--${row.membership.toLowerCase()}`}>{row.membership}</span>;
     if (key === 'createdAt' || key === 'lastPlayedAt') return row[key] ? <time dateTime={row[key]}>{playerDate(row[key])}</time> : <span className="admin-catalog-empty">Never</span>;
     if (key === 'characterWinRate' || key === 'quoteWinRate') return `${row[key]}%`;
@@ -52,7 +55,7 @@ export function AdminPlayers({ token }: { token: string }) {
     return value ?? <span className="admin-catalog-empty">None</span>;
   }
   return <section className="glass-card admin-catalog admin-players" aria-label="Player profiles">
-    <div className="admin-catalog-heading"><div><h2>Players</h2><p>All profiles, with Game of Thrones stats. Read-only.</p></div>
+    <div className="admin-catalog-heading"><div><h2>Players</h2><p>All profiles and Game of Thrones stats. Select a player to investigate or manage leaderboard visibility.</p></div>
       <button className="secondary-button" disabled={result.loading} onClick={result.reload}>Refresh</button></div>
     <div className="admin-catalog-tools">
       <label>Search all fields<input type="search" placeholder="Search players..." value={query}
@@ -76,7 +79,11 @@ export function AdminPlayers({ token }: { token: string }) {
               onChange={event => { setFilters(values => ({ ...values, [c.key]: event.target.value })); setPage(1); }} />
             <CatalogColumnResize columnKey={c.key} label={c.label} width={widths[c.key]} onResize={resize} onCommit={persistWidths} />
           </th>)}</tr></thead>
-          <tbody>{visible.map(row => <tr key={row.id}>{playerColumns.map(c => <td key={c.key}>{cell(row, c.key)}</td>)}</tr>)}</tbody>
+          <tbody>{visible.map(row => <tr key={row.id} className="admin-player-row" onClick={event => {
+            if (!(event.target instanceof Element) || event.target.closest('button, a, input, select, textarea') || window.getSelection()?.toString()) return;
+            event.currentTarget.querySelector<HTMLButtonElement>('.admin-player-open')?.focus({ preventScroll: true });
+            setSelectedPlayer(row.id);
+          }}>{playerColumns.map(c => <td key={c.key}>{cell(row, c.key)}</td>)}</tr>)}</tbody>
         </table>
         {!visible.length && <p className="admin-catalog-no-results">No matching players.</p>}
       </div>
@@ -90,5 +97,7 @@ export function AdminPlayers({ token }: { token: string }) {
     </>}
     <p className="admin-player-definitions">Attempts include completed games with hints, give-ups, and preserved replays. Wins and average guesses exclude hints.
       Ladder days count dates with at least one completed difficulty, including losses. Last played is saved gameplay activity, not last sign-in.</p>
+    {selectedPlayer && <Suspense fallback={null}><AdminPlayerDialog key={selectedPlayer} userId={selectedPlayer} token={token}
+      onClose={() => setSelectedPlayer(null)} onChanged={result.reload} /></Suspense>}
   </section>;
 }

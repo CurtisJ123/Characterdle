@@ -13,7 +13,8 @@ public interface ILeaderboardRepository
         UniverseDefinition universe,
         Guid? currentUserId,
         int limit,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        Guid? visibilityUserId = null);
 
     Task EnsurePlayerProfileAsync(
         VerifiedSupabaseUser user,

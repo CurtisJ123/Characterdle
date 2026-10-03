@@ -29,6 +29,8 @@ public static class LeaderboardEndpoints
 
     private static async Task<IResult> GetLeaderboardAsync(
         string universeId,
+        HttpContext context,
+        ILeaderboardViewerResolver viewerResolver,
         IHostEnvironment hostEnvironment,
         UniverseCatalog universeCatalog,
         ICurrentSupabaseUserAccessor currentUserAccessor,
@@ -36,6 +38,7 @@ public static class LeaderboardEndpoints
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
+        LeaderboardVisibility.Headers(context);
         if (!universeCatalog.TryGet(universeId, out var universe))
         {
             return Results.NotFound(new { message = $"No universe named '{universeId}' is registered." });
@@ -44,12 +47,15 @@ public static class LeaderboardEndpoints
         try
         {
             var currentUser = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
+            if (currentUser is null && context.Request.Headers.ContainsKey("Authorization")) return Results.Unauthorized();
+            var viewer = await viewerResolver.ResolveAsync(currentUser?.UserId, context.Request.Headers[LeaderboardVisibility.GuestHeader], cancellationToken);
 
             var leaderboard = await repository.GetLeaderboardAsync(
                 universe,
                 currentUser?.UserId,
                 limit: 50,
-                cancellationToken);
+                cancellationToken,
+                viewer);
 
             return Results.Ok(leaderboard);
         }

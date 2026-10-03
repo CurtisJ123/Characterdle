@@ -16,7 +16,7 @@ public sealed record EpisodeLadderLeaderboardResponse(
 
 public interface IEpisodeLadderLeaderboardRepository
 {
-    Task<EpisodeLadderLeaderboardResponse> GetAsync(Guid? currentUserId, int limit, CancellationToken cancellationToken);
+    Task<EpisodeLadderLeaderboardResponse> GetAsync(Guid? currentUserId, int limit, CancellationToken cancellationToken, Guid? visibilityUserId = null);
 }
 
 public sealed class EpisodeLadderLeaderboardRepository(NpgsqlDataSource dataSource) : IEpisodeLadderLeaderboardRepository
@@ -42,6 +42,7 @@ public sealed class EpisodeLadderLeaderboardRepository(NpgsqlDataSource dataSour
             from aggregated
             join public."PlayerProfiles" profiles using (user_id)
             left join public."UserPremiumStatus" premium using (user_id)
+            where not (profiles.user_id = any(@restrictedUsers)) or profiles.user_id = @visibilityUserId
         ), ranked as (
             select players.*,
                 dense_rank() over (order by total_points desc) as rank,
@@ -62,9 +63,11 @@ public sealed class EpisodeLadderLeaderboardRepository(NpgsqlDataSource dataSour
         order by selected.position;
         """;
 
-    public async Task<EpisodeLadderLeaderboardResponse> GetAsync(Guid? currentUserId, int limit, CancellationToken cancellationToken)
+    public async Task<EpisodeLadderLeaderboardResponse> GetAsync(Guid? currentUserId, int limit, CancellationToken cancellationToken, Guid? visibilityUserId = null)
     {
+        var restricted = await LeaderboardVisibility.RestrictedAsync(dataSource, cancellationToken);
         await using var command = dataSource.CreateCommand(Query);
+        LeaderboardVisibility.Parameters(command, restricted, currentUserId ?? visibilityUserId);
         command.Parameters.AddWithValue("points", NpgsqlDbType.Array | NpgsqlDbType.Integer, EpisodeLadderScoring.ScoreTable());
         command.Parameters.AddWithValue("maxAttempts", EpisodeLadderRules.MaxAttempts);
         command.Parameters.AddWithValue("limit", Math.Clamp(limit, 1, 100));

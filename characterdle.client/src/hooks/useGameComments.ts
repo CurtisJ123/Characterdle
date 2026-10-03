@@ -2,17 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { flushUniverseGameResultOutbox } from '../lib/gameResultOutbox';
 import { GameCommentsApiError, getGameComments, postGameComment, type GameCommentsScope } from '../services/gameCommentsApi';
 import type { GameCommentsPage } from '../types/gameComments';
+import { useCommentRefresh } from './useCommentRefresh';
 
 export function useGameComments(accessToken: string, userId: string, scope: GameCommentsScope) {
   const { universeId, gameId, mode } = scope;
   const [pageNumber, setPageNumber] = useState(1);
   const [reload, setReload] = useState(0);
-  const [data, setData] = useState<GameCommentsPage | null>(null);
+  const requestKey = JSON.stringify([accessToken, userId, universeId, gameId, mode, pageNumber]);
+  const [result, setResult] = useState<{ key: string; data: GameCommentsPage } | null>(null);
+  const data = result?.key === requestKey ? result.data : null;
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const postingRef = useRef(false);
+  useCommentRefresh(() => { if (!postingRef.current) setReload(value => value + 1); }, !isPosting && !isLoading);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -21,7 +25,6 @@ export function useGameComments(accessToken: string, userId: string, scope: Game
     async function load() {
       setIsLoading(true);
       setIsPosting(false);
-      setData(null);
       setError(null);
 
       try {
@@ -38,10 +41,11 @@ export function useGameComments(accessToken: string, userId: string, scope: Game
 
         const result = await getGameComments(accessToken, { universeId, gameId, mode }, pageNumber, controller.signal);
         if (!controller.signal.aborted) {
-          setData(result);
+          setResult({ key: requestKey, data: result });
         }
       } catch (loadError) {
         if (!controller.signal.aborted) {
+          setResult(null);
           setError(loadError instanceof Error ? loadError.message : 'Unable to load comments.');
         }
       } finally {
@@ -56,11 +60,11 @@ export function useGameComments(accessToken: string, userId: string, scope: Game
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [accessToken, userId, universeId, gameId, mode, pageNumber, reload]);
+  }, [accessToken, userId, universeId, gameId, mode, pageNumber, reload, requestKey]);
 
   async function post(body: string): Promise<boolean> {
     const controller = controllerRef.current;
-    if (!data || isLoading || postingRef.current || !controller || controller.signal.aborted) {
+    if (!data || postingRef.current || !controller || controller.signal.aborted) {
       return false;
     }
 
@@ -80,7 +84,7 @@ export function useGameComments(accessToken: string, userId: string, scope: Game
       if (!controller.signal.aborted) {
         setError(postError instanceof Error ? postError.message : 'Unable to post your comment.');
         if (postError instanceof GameCommentsApiError && (postError.status === 401 || postError.status === 403)) {
-          setData(null);
+          setResult(null);
         }
       }
       return false;
@@ -93,15 +97,15 @@ export function useGameComments(accessToken: string, userId: string, scope: Game
   }
 
   return {
-    data, error, isLoading, isPosting, post,
+    data, error, isLoading: isLoading && !data, isPosting, post,
     retry: () => setReload(value => value + 1),
     previous: () => {
-      setData(null);
+      setResult(null);
       setIsLoading(true);
       setPageNumber(value => Math.max(1, value - 1));
     },
     next: () => {
-      setData(null);
+      setResult(null);
       setIsLoading(true);
       setPageNumber(value => value + 1);
     },

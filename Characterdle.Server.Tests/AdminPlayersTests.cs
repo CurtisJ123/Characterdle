@@ -53,6 +53,7 @@ public sealed partial class AnnouncementEndpointTests
     {
         public int Reads;
         public bool Fail;
+        public async Task<AdminPlayerProfile?> GetOneAsync(Guid userId, CancellationToken ct) => (await GetAsync(ct)).SingleOrDefault(p => p.Id == userId);
         public Task<IReadOnlyList<AdminPlayerProfile>> GetAsync(CancellationToken ct)
         {
             Reads++;

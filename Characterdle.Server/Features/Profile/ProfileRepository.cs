@@ -431,6 +431,9 @@ public sealed class ProfileRepository(
               join public."UniverseCompletedGameResults" as results
                 on results.user_id = profiles.user_id
               where results.universe_id = @universeId
+                and (profiles.user_id = @userId or not exists (
+                  select 1 from public."PlayerModeration" m where m.user_id=profiles.user_id
+                    and m.state='shadow_banned' and (m.expires_at is null or m.expires_at>now())))
                 and results.mode in ('character', 'quote')
                 and results.status in ('won', 'lost')
               group by profiles.user_id, profiles.display_name

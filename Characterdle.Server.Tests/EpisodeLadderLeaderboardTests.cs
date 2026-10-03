@@ -114,6 +114,7 @@ public sealed class EpisodeLadderLeaderboardEndpointTests : IAsyncLifetime
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICurrentSupabaseUserAccessor, UserStub>();
         builder.Services.AddSingleton<IEpisodeLadderLeaderboardRepository>(_store);
+        builder.Services.AddSingleton<ILeaderboardViewerResolver, ViewerStub>();
         _app = builder.Build();
         _app.MapEpisodeLadderLeaderboardEndpoints();
         await _app.StartAsync();
@@ -177,13 +178,18 @@ public sealed class EpisodeLadderLeaderboardEndpointTests : IAsyncLifetime
                 ? new VerifiedSupabaseUser(PlayerId, "Player", "not-exposed@example.test", null) : null);
     }
 
+    private sealed class ViewerStub : ILeaderboardViewerResolver
+    {
+        public Task<Guid?> ResolveAsync(Guid? userId, string? guest, CancellationToken ct) => Task.FromResult(userId);
+    }
+
     private sealed class Store : IEpisodeLadderLeaderboardRepository
     {
         public Guid? UserId;
         public int Limit;
         public int Calls;
         public bool Fail;
-        public Task<EpisodeLadderLeaderboardResponse> GetAsync(Guid? currentUserId, int limit, CancellationToken cancellationToken)
+        public Task<EpisodeLadderLeaderboardResponse> GetAsync(Guid? currentUserId, int limit, CancellationToken cancellationToken, Guid? visibilityUserId = null)
         {
             Calls++; UserId = currentUserId; Limit = limit;
             if (Fail) throw new InvalidOperationException("sensitive test details");

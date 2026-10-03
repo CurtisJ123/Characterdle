@@ -1,3 +1,4 @@
+using Characterdle.Server.Features.Admin;
 using Characterdle.Server.Features.UniverseGames;
 using Npgsql;
 
@@ -18,8 +19,9 @@ public sealed class GameCommentRepository(NpgsqlDataSource dataSource) : IGameCo
             from authorized
             left join lateral (
               select id, user_id, body, created_at
-              from public."UniverseGameComments"
+              from public."UniverseGameComments" c
               where universe_id = @universeId and game_id = @gameId and mode = @mode
+                and {PlayerModerationVisibility.VisibleAuthorSql("c.user_id", "@userId")}
               order by created_at asc, id asc
               offset @offset limit @limit
             ) as comments on true

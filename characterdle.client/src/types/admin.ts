@@ -52,4 +52,5 @@ export interface AdminPlayerProfile {
   ladderPoints: number;
   ladderDaysPlayed: number;
   ladderPointsPerDay: number;
+  moderationStatus: 'Normal' | 'Shadow Banned';
 }

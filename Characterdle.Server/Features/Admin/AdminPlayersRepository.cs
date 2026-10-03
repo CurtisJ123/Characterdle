@@ -12,11 +12,12 @@ public sealed record AdminPlayerProfile(
     string Membership, DateTimeOffset? LastPlayedAt, int CurrentStreak, int LongestStreak,
     long CharacterAttempts, long CharacterWins, decimal CharacterWinRate, decimal? CharacterAverageGuesses,
     long QuoteAttempts, long QuoteWins, decimal QuoteWinRate, decimal? QuoteAverageGuesses,
-    long LadderPoints, int LadderDaysPlayed, decimal LadderPointsPerDay);
+    long LadderPoints, int LadderDaysPlayed, decimal LadderPointsPerDay, string ModerationStatus = "Normal");
 
 public interface IAdminPlayersRepository
 {
     Task<IReadOnlyList<AdminPlayerProfile>> GetAsync(CancellationToken ct);
+    Task<AdminPlayerProfile?> GetOneAsync(Guid userId, CancellationToken ct);
 }
 
 public sealed class AdminPlayersRepository(NpgsqlDataSource dataSource, UniverseCatalog universes) : IAdminPlayersRepository
@@ -61,22 +62,29 @@ public sealed class AdminPlayersRepository(NpgsqlDataSource dataSource, Universe
           coalesce(c.quote_attempts,0) as quote_attempts,coalesce(c.quote_wins,0) as quote_wins,c.quote_average,
           coalesce(l.points,0) as ladder_points,coalesce(l.days,0) as ladder_days,
           coalesce(b.is_premium,false) as is_premium,b.status,coalesce(b.cancel_at_period_end,false) as cancel_at_period_end,
-          b.current_period_end,b.cancel_at,b.premium_ended_at,now() as snapshot_at
+          b.current_period_end,b.cancel_at,b.premium_ended_at,now() as snapshot_at,
+          exists(select 1 from public."PlayerModeration" m where m.user_id=p.user_id
+            and m.state='shadow_banned' and (m.expires_at is null or m.expires_at>now())) as restricted
         from public."PlayerProfiles" p
         left join completed c using(user_id)
         left join ladder l using(user_id)
         left join activity a using(user_id)
         left join public."UniverseStreaks" s on s.user_id=p.user_id and s.universe_id=@universeId
         left join public."UserPremiumStatus" b on b.user_id=p.user_id
+        where (@selectedUserId is null or p.user_id=@selectedUserId)
         order by p.created_at desc,p.user_id;
         """;
 
     internal static decimal WinRate(long wins, long attempts) => attempts == 0 ? 0 : Math.Round(wins * 100m / attempts, 2);
 
-    public async Task<IReadOnlyList<AdminPlayerProfile>> GetAsync(CancellationToken ct)
+    public Task<IReadOnlyList<AdminPlayerProfile>> GetAsync(CancellationToken ct) => ReadAsync(null, ct);
+    public async Task<AdminPlayerProfile?> GetOneAsync(Guid userId, CancellationToken ct) => (await ReadAsync(userId, ct)).SingleOrDefault();
+
+    private async Task<IReadOnlyList<AdminPlayerProfile>> ReadAsync(Guid? userId, CancellationToken ct)
     {
         if (!universes.TryGet("got", out var universe)) throw new InvalidOperationException("Game of Thrones is not configured.");
         await using var command = dataSource.CreateCommand(Query);
+        command.Parameters.AddWithValue("selectedUserId", NpgsqlDbType.Uuid, (object?)userId ?? DBNull.Value);
         command.Parameters.AddWithValue("universeId", universe.Id);
         command.Parameters.AddWithValue("timeZone", universe.ScheduleTimeZoneId);
         command.Parameters.AddWithValue("points", NpgsqlDbType.Array | NpgsqlDbType.Integer, EpisodeLadderScoring.ScoreTable());
@@ -98,7 +106,7 @@ public sealed class AdminPlayersRepository(NpgsqlDataSource dataSource, Universe
                 reader.GetFieldValue<DateTimeOffset>(4),membership,Date(reader,5),reader.GetInt32(6),reader.GetInt32(7),
                 characterAttempts,characterWins,WinRate(characterWins,characterAttempts),reader.IsDBNull(10) ? null : reader.GetDecimal(10),
                 quoteAttempts,quoteWins,WinRate(quoteWins,quoteAttempts),reader.IsDBNull(13) ? null : reader.GetDecimal(13),
-                points,days,days == 0 ? 0 : Math.Round(points/(decimal)days,2)));
+                points,days,days == 0 ? 0 : Math.Round(points/(decimal)days,2),reader.GetBoolean(23) ? "Shadow Banned" : "Normal"));
         }
         return rows;
     }
