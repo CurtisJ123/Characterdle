@@ -9,6 +9,7 @@ let RouteLink;
 let GameAction;
 let PreviousGamesGrid;
 let LeaderboardTable;
+let LeaderboardHero;
 let LeaderboardPage;
 let EpisodeLadderLeaderboardTable;
 let EpisodeLadderLeaderboardView;
@@ -53,7 +54,7 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, ProfilePage, createProfileFixture, withGuestLadderDayProgress, storeLadderProgress }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardHero, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, ProfilePage, createProfileFixture, withGuestLadderDayProgress, storeLadderProgress }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
 });
 
@@ -147,6 +148,30 @@ test('Streaks is the first leaderboard tab and the default visible leaderboard',
   assert.doesNotMatch(html, /Episode Ladder Overview/);
 });
 
+test('champion avatar uses the player photo and keeps initials and empty-state fallbacks', () => {
+  const props = { displayName: 'A Player', avatarUrl: '/images/avatars/champion.webp', stats: [], children: null };
+  const photo = render(LeaderboardHero, props);
+  assert.match(photo, /user-avatar--hero champion-avatar/);
+  assert.match(photo, /<img src="\/images\/avatars\/champion.webp" alt=""/);
+  assert.doesNotMatch(photo, /user-avatar__initials/);
+  const initials = render(LeaderboardHero, { ...props, avatarUrl: null });
+  assert.match(initials, /class="user-avatar__initials">AP</);
+  assert.doesNotMatch(initials, /<img/);
+  const empty = render(LeaderboardHero, { ...props, displayName: null, avatarUrl: null });
+  assert.match(empty, /No ranked players yet/);
+  assert.match(empty, /class="user-avatar__initials">--</);
+});
+
+test('Episode Ladder champion photo belongs to the top player, not the signed-in player', () => {
+  const top = ladderRow({ avatarUrl: '/images/avatars/champion.webp' });
+  const currentUser = ladderRow({ userId: 'me', rank: 2, avatarUrl: '/images/avatars/me.webp' });
+  const data = { overview: { playerCount: 2, totalPoints: 200, daysPlayed: 4, pointsPerDay: 50 }, rows: [top, currentUser], currentUser };
+  const html = render(EpisodeLadderLeaderboardView, { data, loading: false, error: null, onRetry: noop });
+  const hero = html.slice(html.indexOf('champion-avatar-shell'), html.indexOf('champion-copy'));
+  assert.match(hero, /src="\/images\/avatars\/champion.webp"/);
+  assert.doesNotMatch(hero, /me.webp/);
+});
+
 test('Ladder leaderboard preserves backend ranks, integer points, averages, zero scores and premium avatars', () => {
   const html = render(EpisodeLadderLeaderboardTable, { rows: [
     ladderRow(), ladderRow({ userId: 'tied', rank: 1, displayName: 'Tied Player', pointsPerDay: 33.33, daysPlayed: 3 }),
@@ -171,10 +196,11 @@ test('Ladder leaderboard keeps personal standings in the shared table without ex
   assert.match(html, /class="rank-medal" role="cell">72</);
   assert.equal((html.match(/role="table"/g) ?? []).length, 1);
   assert.equal((html.match(/>My Standing</g) ?? []).length, 1);
-  assert.match(html, /class="champion-avatar" aria-hidden="true">AP</);
+  assert.match(html, /user-avatar--hero champion-avatar/);
+  assert.match(html, /class="user-avatar__initials">AP</);
   assert.equal((html.match(/class="champion-stat-card"/g) ?? []).length, 3);
   assert.equal((html.match(/class="metric-row"/g) ?? []).length, 3);
-  assert.doesNotMatch(html, /ladder-leaderboard|user-avatar--hero|card-kicker|Up to 100 points/);
+  assert.doesNotMatch(html, /ladder-leaderboard|card-kicker|Up to 100 points/);
   const inTop = render(EpisodeLadderLeaderboardView, { data: { ...data, rows: [top, me] }, loading: false, error: null, onRetry: noop });
   assert.equal(inTop, html);
 });

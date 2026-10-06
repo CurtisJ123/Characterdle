@@ -47,6 +47,18 @@ public sealed partial class AnnouncementEndpointTests
     }
 
     [Fact]
+    public async Task CatalogAdminCanDeactivateAndReactivateCharacters()
+    {
+        SignIn("admin");
+        foreach (var active in new[] { false, true })
+        {
+            var response = await client.PutAsJsonAsync("/api/admin/got/characters/345", CharacterEdit() with { IsActive = active });
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(active, catalog.CharacterRequest!.IsActive);
+        }
+    }
+
+    [Fact]
     public async Task CatalogRejectsInvalidAndIncompleteCharacterUpdates()
     {
         SignIn("admin");

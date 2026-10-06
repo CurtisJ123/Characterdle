@@ -28,6 +28,7 @@ export class UniverseGameApiError extends Error {
 
 interface UniverseCharacterPayload {
   id: number;
+  canGuess?: boolean;
   displayName: string;
   aliases: string[];
   attributes: Record<string, UniverseAttributeValue>;
@@ -306,6 +307,7 @@ function mapAttributeDefinition(payload: UniverseAttributeDefinitionPayload): Un
 
 function mapCharacter(payload: UniverseCharacterPayload): UniverseCharacter {
   return {
+    canGuess: payload.canGuess !== false,
     aliases: payload.aliases,
     attributes: payload.attributes,
     displayName: payload.displayName,

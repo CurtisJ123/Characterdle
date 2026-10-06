@@ -54,11 +54,6 @@
 .ladder-legend .is-correct, .ladder-attempt .is-correct { background: var(--ladder-correct); }
 .ladder-legend .is-adjacent, .ladder-attempt .is-adjacent { background: var(--ladder-adjacent); }
 .ladder-attempt .is-incorrect { background: var(--ladder-incorrect); }
-.ladder-help-dialog { width: min(620px, calc(100% - 32px)); max-height: 85dvh; margin: auto; padding: 28px; color: var(--on-surface); overflow-y: auto; line-height: 1.65; }
-.ladder-help-dialog::backdrop { background: #000a; backdrop-filter: blur(5px); }
-.ladder-help-dialog > button { float: right; }
-.ladder-help-dialog h2 { font-family: var(--heading-font); }
-.ladder-help-dialog li { margin: 12px 0; }
 .ladder-attempts { display: grid; justify-content: center; gap: 8px; margin: 24px 0; }
 .ladder-attempt { display: flex; align-items: center; gap: 6px; }
 .ladder-attempt > span { width: 22px; color: var(--primary); font-size: .8rem; }

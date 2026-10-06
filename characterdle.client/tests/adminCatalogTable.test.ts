@@ -45,6 +45,18 @@ test('invalid numeric edits are not converted to zero or silently rounded', () =
   for (const season of ['', '1.5', 'wat', '9007199254740992'])
     assert.throws(() => catalogPayload({ ...draft, season }, columns, '123'), /whole number/);
 });
+test('active edits serialize in both directions independently of alive status', () => {
+  const fields: CatalogColumn<{ isActive: boolean; alive: boolean }>[] = [
+    { key: 'isActive', label: 'Active', kind: 'boolean', value: r => r.isActive ? 'Yes' : 'No' },
+    { key: 'alive', label: 'Status', kind: 'boolean', value: r => r.alive ? 'Alive' : 'Dead' },
+  ];
+  for (const isActive of [true, false]) {
+    const draft = catalogDraft({ isActive, alive: false }, fields);
+    assert.equal(draft.isActive, String(isActive));
+    assert.deepEqual(catalogPayload({ ...draft, isActive: String(!isActive) }, fields, '123'),
+      { isActive: !isActive, alive: false, expectedVersion: '123' });
+  }
+});
 test('quote foreign key selections remain numeric, including optional null references', () => {
   const fields: CatalogColumn<{ characterId: number; episodeTitleId: number | null }>[] = [
     { key: 'characterId', label: 'Character', kind: 'select', value: r => r.characterId },

@@ -26,6 +26,7 @@ export function EpisodeLadderLeaderboardView({ data, loading, error, onRetry }: 
     <>
       <LeaderboardHero
         displayName={top?.displayName}
+        avatarUrl={top?.avatarUrl}
         stats={[
           { label: 'Total Points', value: top?.totalPoints ?? 0 },
           { label: 'Points per Day', value: top?.pointsPerDay.toFixed(2) ?? '--' },

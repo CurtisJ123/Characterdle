@@ -9,6 +9,9 @@ export function CatalogField<Row>({ column, draft, setDraft, label, disabled = f
       setDraft(column.change?.(draft, event.target.value) ?? { ...draft, [column.key]: event.target.value }) };
   if (column.kind === 'list' || column.kind === 'multiline') return <textarea {...props} rows={column.kind === 'list' ? 4 : 6}
     required={!column.optional && column.kind !== 'list'} maxLength={column.maxLength} placeholder={column.kind === 'list' ? 'One value per line' : undefined} />;
+  if (column.kind === 'boolean' && column.key === 'isActive') return <input type="checkbox" aria-label={label}
+    disabled={disabled} checked={draft[column.key] === 'true'}
+    onChange={event => setDraft({ ...draft, [column.key]: String(event.target.checked) })} />;
   if (column.kind === 'boolean') return <select {...props} required><option value="" disabled>Choose...</option><option value="true">Alive</option><option value="false">Dead</option></select>;
   if (column.kind === 'select') return <select {...props} required={!column.optional}>
     <option value="" disabled={!column.optional}>{column.optional ? 'None' : 'Choose...'}</option>

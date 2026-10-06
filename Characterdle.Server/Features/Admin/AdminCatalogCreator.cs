@@ -37,8 +37,8 @@ public sealed class AdminCatalogCreator(NpgsqlDataSource dataSource, IAdminPortr
                     }
                     await using var cmd = new NpgsqlCommand($"""
                         insert into public."GOTCharacters"
-                          (display_name, aliases, gender, species, house, occupation, debut_season, last_season, alive, portrait_url)
-                        values (@name, @aliases, @gender, @species, @house, @occupation, @debut, @last, @alive, @portrait)
+                          (display_name, aliases, gender, species, house, occupation, debut_season, last_season, alive, portrait_url, is_active)
+                        values (@name, @aliases, @gender, @species, @house, @occupation, @debut, @last, @alive, @portrait, @isActive)
                         returning {CharacterColumns}
                         """, connection, transaction);
                     CharacterParameters(cmd, r);

@@ -150,9 +150,7 @@ export function LeaderboardPage() {
   const currentUser = rankedRows.find((row) => row.isCurrentUser) ?? null;
   const topStreakPlayer = streakRows[0] ?? null;
   const currentUserStreak = data?.currentUserStreak ?? null;
-  const featuredDisplayName = selectedView === 'streak'
-    ? topStreakPlayer?.displayName
-    : topPlayer?.displayName;
+  const featuredPlayer = selectedView === 'streak' ? topStreakPlayer : topPlayer;
 
   return (
     <main className="page">
@@ -192,7 +190,8 @@ export function LeaderboardPage() {
           error={ladder.error?.message ?? null} onRetry={ladder.retry} />
       ) : <>
       <LeaderboardHero
-        displayName={featuredDisplayName}
+        displayName={featuredPlayer?.displayName}
+        avatarUrl={featuredPlayer?.avatarUrl}
         emptyTitle={selectedView === 'streak' ? 'No streaks yet' : 'No ranked players yet'}
         stats={selectedView === 'streak' ? [
           { label: 'Current Streak', value: `${topStreakPlayer?.currentStreak ?? 0} days` },

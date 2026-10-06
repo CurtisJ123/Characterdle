@@ -4,7 +4,7 @@ import type {
   UniverseStreak,
 } from '../types/leaderboard';
 import { buildApiUrl } from '../lib/runtimeConfig';
-import { clearEpisodeLadderLeaderboardCache } from './episodeLadderLeaderboardApi';
+import { clearEpisodeLadderLeaderboardCache, episodeLadderLeaderboardResource } from './episodeLadderLeaderboardApi';
 import { leaderboardHeaders, leaderboardScope } from '../lib/guestIdentity';
 import { LeaderboardResource } from '../lib/leaderboardResource';
 
@@ -17,6 +17,12 @@ export const leaderboardCacheKey = (universeId: string, token: string | null, sc
 export function clearLeaderboardCache(universeId?: string) {
   clearEpisodeLadderLeaderboardCache(universeId);
   leaderboardResource.clear(key => !universeId || (JSON.parse(key) as string[])[0] === universeId);
+}
+
+export function clearLeaderboardIdentityCache(identity: string) {
+  const matches = (key: string) => (JSON.parse(key) as string[])[1] === identity;
+  episodeLadderLeaderboardResource.clear(matches);
+  leaderboardResource.clear(matches);
 }
 
 export function getLeaderboard(

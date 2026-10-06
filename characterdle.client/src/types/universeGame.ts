@@ -16,6 +16,7 @@ export interface UniverseAttributeDefinition {
 
 export interface UniverseCharacter {
   id: number;
+  canGuess?: boolean;
   displayName: string;
   aliases: string[];
   attributes: Record<string, UniverseAttributeValue>;

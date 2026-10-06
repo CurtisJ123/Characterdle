@@ -150,7 +150,7 @@ export function CharacterGamePage({
     : !data;
 
   const guessableCharacters = currentCharacters.filter(
-    (character) => !currentRound.guessedCharacterIds.includes(character.id),
+    (character) => character.canGuess !== false && !currentRound.guessedCharacterIds.includes(character.id),
   );
   const matchingCharacters = deferredQuery
     ? getOrderedCharacterPrefixMatches(guessableCharacters, deferredQuery).slice(0, 8)

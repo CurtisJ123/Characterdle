@@ -8,10 +8,11 @@ public sealed record NewAdminCharacter(
     [property: JsonRequired] string Gender, [property: JsonRequired] string Species,
     [property: JsonRequired] string[] House, [property: JsonRequired] string[] Occupation,
     [property: JsonRequired] int DebutSeason, [property: JsonRequired] int LastSeason,
-    [property: JsonRequired] bool Alive, [property: JsonRequired] string? PortraitUrl)
+    [property: JsonRequired] bool Alive, [property: JsonRequired] string? PortraitUrl,
+    bool IsActive = true)
 {
     public SaveAdminCharacter AsEdit() => new("0", DisplayName, Aliases, Gender, Species, House,
-        Occupation, DebutSeason, LastSeason, Alive, PortraitUrl);
+        Occupation, DebutSeason, LastSeason, Alive, PortraitUrl, IsActive);
 }
 
 public sealed record NewAdminQuote(

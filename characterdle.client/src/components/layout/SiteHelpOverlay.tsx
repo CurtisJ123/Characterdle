@@ -1,41 +1,35 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import type { GameMode } from '../../types/game';
+import './SiteHelpOverlay.css';
 
 interface SiteHelpOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  gameMode?: GameMode;
 }
 
-export function SiteHelpOverlay({ isOpen, onClose }: SiteHelpOverlayProps) {
+export function SiteHelpOverlay({ isOpen, onClose, gameMode = 'character' }: SiteHelpOverlayProps) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const isEpisodeLadder = gameMode === 'episode_ladder';
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+    const element = dialog.current;
+    if (isOpen && !element?.open) element?.showModal();
+    else if (!isOpen && element?.open) element.close();
+    return () => { if (element?.open) element.close(); };
+  }, [isOpen]);
 
   return (
-    <div
+    <dialog
+      ref={dialog}
       className={`site-help-overlay${isOpen ? ' is-open' : ''}`}
-      role="dialog"
-      aria-modal="false"
       aria-hidden={!isOpen}
-      aria-label="How to play Characterdle"
+      aria-label={`How to play ${isEpisodeLadder ? 'Episode Ladder' : 'Characterdle'}`}
+      onCancel={event => { event.preventDefault(); onClose(); }}
     >
       <button
         className="site-help-overlay-scrim"
         type="button"
-        tabIndex={isOpen ? 0 : -1}
+        tabIndex={-1}
         aria-label="Close how to play popup"
         onClick={onClose}
       />
@@ -45,6 +39,7 @@ export function SiteHelpOverlay({ isOpen, onClose }: SiteHelpOverlayProps) {
           className="site-help-overlay-close"
           type="button"
           tabIndex={isOpen ? 0 : -1}
+          autoFocus
           aria-label="Close how to play popup"
           onClick={onClose}
         >
@@ -53,13 +48,43 @@ export function SiteHelpOverlay({ isOpen, onClose }: SiteHelpOverlayProps) {
 
         <div className="site-help-panel-copy">
           <p className="card-kicker">How To Play</p>
-          <h2>Characterdle is a daily Game of Thrones guessing game.</h2>
+          <h2>{isEpisodeLadder ? 'Episode Ladder' : 'Characterdle is a daily Game of Thrones guessing game.'}</h2>
           <p className="muted-copy">
-            Each day you can play a character round and a quote round. Use the clues,
-            compare what you learn from each guess, and try to solve both boards before midnight.
+            {isEpisodeLadder
+              ? 'Order five Game of Thrones events by episode, earliest to latest. Each event comes from a different episode. You have four attempts per difficulty.'
+              : 'Each day you can play a character round and a quote round. Use the clues, compare what you learn from each guess, and try to solve both boards before midnight.'}
           </p>
         </div>
 
+        {isEpisodeLadder ? <>
+          <div className="site-help-panel-grid">
+            <section className="site-help-panel-section">
+              <h3>Arrange the events</h3>
+              <ul>
+                <li>Drop onto the middle of a card to swap positions. The highlighted card nudges toward your starting position.</li>
+                <li>Drop near a card&apos;s top or bottom edge, or between cards, to insert instead. A gap shows where the event will go.</li>
+                <li>Drop above or below the board to move an event to the first or last available position. Only unlocked events shift.</li>
+                <li>On touch screens, drag using the grip. With a keyboard, focus a card and use Up/Down to swap with the next unlocked card. Press Escape to cancel a drag.</li>
+              </ul>
+            </section>
+            <section className="site-help-panel-section">
+              <h3>Read the feedback</h3>
+              <ul>
+                <li>Green events are correct and locked in place.</li>
+                <li>Yellow means one position away. Grey means farther away.</li>
+                <li>Flashbacks follow episode and on-screen order, not story chronology.</li>
+                <li>Start with Easy and work up to Impossible. Impossible uses five consecutive episodes; easier difficulties spread events farther apart. Completed difficulties turn grey.</li>
+              </ul>
+            </section>
+          </div>
+          <section className="site-help-panel-section site-help-panel-section--full">
+            <h3>Daily flow</h3>
+            <ul>
+              <li>Daily and archive difficulties cannot be replayed after a win or loss. Random games are separate practice rounds.</li>
+              <li>Signed-in players can read and post comments after completing all five difficulties for that day, win or lose.</li>
+            </ul>
+          </section>
+        </> : <>
         <div className="site-help-panel-grid">
           <section className="site-help-panel-section">
             <h3>Character game</h3>
@@ -89,7 +114,8 @@ export function SiteHelpOverlay({ isOpen, onClose }: SiteHelpOverlayProps) {
             <li>Use the leaderboard and profile page to track wins, plays, completion, and average guesses.</li>
           </ul>
         </section>
+        </>}
       </article>
-    </div>
+    </dialog>
   );
 }
