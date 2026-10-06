@@ -4,7 +4,7 @@ namespace Characterdle.Server.Features.Admin;
 
 public sealed record AdminCharacter(long Id, string Version, string DisplayName, string[] Aliases,
     string Gender, string Species, string[] House, string[] Occupation, int DebutSeason, int LastSeason,
-    bool Alive, string? PortraitUrl);
+    bool Alive, string? PortraitUrl, bool IsActive = true);
 public sealed record AdminQuote(long Id, string Version, long CharacterId, string QuoteText,
     int SeasonNumber, int EpisodeNumber, long? EpisodeTitleId);
 public sealed record AdminEpisode(long Id, int SeasonNumber, int EpisodeNumber, string Title);
@@ -15,7 +15,8 @@ public sealed record SaveAdminCharacter(
     [property: JsonRequired] string[] Aliases, [property: JsonRequired] string Gender,
     [property: JsonRequired] string Species, [property: JsonRequired] string[] House,
     [property: JsonRequired] string[] Occupation, [property: JsonRequired] int DebutSeason,
-    [property: JsonRequired] int LastSeason, [property: JsonRequired] bool Alive, [property: JsonRequired] string? PortraitUrl);
+    [property: JsonRequired] int LastSeason, [property: JsonRequired] bool Alive, [property: JsonRequired] string? PortraitUrl,
+    bool? IsActive = null);
 public sealed record SaveAdminQuote(
     [property: JsonRequired] string ExpectedVersion, [property: JsonRequired] long CharacterId,
     [property: JsonRequired] string QuoteText, [property: JsonRequired] int SeasonNumber,

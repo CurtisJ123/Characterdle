@@ -17,19 +17,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         UniverseDefinition universe,
         CancellationToken cancellationToken)
     {
-        var sql =
-            $"""
-            select
-              characters.id,
-              characters.display_name,
-              characters.portrait_url
-            from {universe.CharacterTableName} as characters
-            where characters.portrait_url is not null
-              and btrim(characters.portrait_url) <> ''
-            order by characters.display_name;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = dataSource.CreateCommand(BuildAvatarOptionsQuery(universe));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var characters = new List<UniverseCharacterAvatarOptionResponse>();
 
@@ -43,6 +31,14 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
 
         return characters;
     }
+
+    internal static string BuildAvatarOptionsQuery(UniverseDefinition universe) =>
+        $"""
+        select characters.id, characters.display_name, characters.portrait_url
+        from {universe.CharacterTableName} as characters
+        where characters.portrait_url is not null and btrim(characters.portrait_url) <> ''
+        order by characters.display_name;
+        """;
 
     public async Task<DateTime?> GetMostRecentGameDateTimeUtcAsync(
         UniverseDefinition universe,
@@ -93,7 +89,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         var normalizedMode = string.Equals(mode, "quote", StringComparison.OrdinalIgnoreCase)
             ? "quote"
             : "character";
-        var characters = await LoadAllCharactersAsync(universe, cancellationToken);
+        var characters = await LoadAllCharactersAsync(universe, null, cancellationToken);
 
         if (characters.Count == 0)
         {
@@ -276,11 +272,11 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         var resolvedGameId = gameReader.GetInt64(0);
         var playedAt = gameReader.GetDateTime(1);
         var quotePrompt = ReadQuotePrompt(gameReader, 2);
-        var answerCharacter = ReadCharacter(gameReader, 8, universe.AttributeDefinitions);
+        var answerCharacter = ReadCharacter(gameReader, 8, universe.AttributeDefinitions, resolvedGameId);
 
         await gameReader.CloseAsync();
 
-        var characters = await LoadAllCharactersAsync(universe, cancellationToken);
+        var characters = await LoadAllCharactersAsync(universe, resolvedGameId, cancellationToken);
         var modeStats = await LoadModeStatsAsync(universe, resolvedGameId, cancellationToken);
         var characterStats = modeStats.TryGetValue("character", out var resolvedCharacterStats)
             ? resolvedCharacterStats
@@ -355,12 +351,34 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         CancellationToken cancellationToken)
     {
         var scheduledAt = DateTime.SpecifyKind(scheduledAtUtc, DateTimeKind.Utc);
+        await using var command = dataSource.CreateCommand(BuildScheduledGameQuery(universe));
+        command.Parameters.AddWithValue("scheduledAtUtc", scheduledAt);
+        command.Parameters.AddWithValue("selectionSeed", selectionSeed);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+
+        var hasCharacters = reader.GetBoolean(0);
+        var alreadyExists = reader.GetBoolean(1);
+        long? gameId = reader.IsDBNull(2) ? null : reader.GetInt64(2);
+
+        return new ScheduledUniverseGameCreationResult(
+            Created: gameId.HasValue,
+            AlreadyExists: alreadyExists,
+            HasCharacters: hasCharacters,
+            GameId: gameId);
+    }
+
+    internal static string BuildScheduledGameQuery(UniverseDefinition universe)
+    {
         var quoteSelectionSql = string.IsNullOrWhiteSpace(universe.QuoteTableName)
-            ? "null::bigint as id where false"
+            ? "select null::bigint as id where false"
             : $"""
               select
                 quotes.id
               from {universe.QuoteTableName} as quotes
+              join {universe.CharacterTableName} as speakers
+                on speakers.id = quotes.character_id and speakers.is_active
               left join {universe.GameTableName} as games
                 on games.quote_id = quotes.id
               group by quotes.id, quotes.quote_text
@@ -377,7 +395,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             ? "@scheduledAtUtc, chosen_character.id"
             : "@scheduledAtUtc, chosen_character.id, chosen_quote.id";
 
-        var sql =
+        return
             $"""
             with existing_game as (
               select 1 as found
@@ -390,6 +408,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
               from {universe.CharacterTableName} as characters
               left join {universe.GameTableName} as games
                 on games.character_id = characters.id
+              where characters.is_active
               group by characters.id, characters.display_name
               order by
                 count(games.id),
@@ -404,7 +423,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
               insert into {universe.GameTableName} {insertColumns}
               select {insertValues}
               from chosen_character
-              {(!string.IsNullOrWhiteSpace(universe.QuoteTableName) ? "cross join chosen_quote" : string.Empty)}
+              {(!string.IsNullOrWhiteSpace(universe.QuoteTableName) ? "left join chosen_quote on true" : string.Empty)}
               where not exists (select 1 from existing_game)
               returning id
             )
@@ -413,23 +432,6 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
               exists(select 1 from existing_game) as already_exists,
               (select id from inserted_game) as game_id;
             """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        command.Parameters.AddWithValue("scheduledAtUtc", scheduledAt);
-        command.Parameters.AddWithValue("selectionSeed", selectionSeed);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        await reader.ReadAsync(cancellationToken);
-
-        var hasCharacters = reader.GetBoolean(0);
-        var alreadyExists = reader.GetBoolean(1);
-        long? gameId = reader.IsDBNull(2) ? null : reader.GetInt64(2);
-
-        return new ScheduledUniverseGameCreationResult(
-            Created: gameId.HasValue,
-            AlreadyExists: alreadyExists,
-            HasCharacters: hasCharacters,
-            GameId: gameId);
     }
 
     private async Task<Dictionary<string, UniverseGameModeStatsResponse>> LoadModeStatsAsync(
@@ -501,6 +503,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
 
     private async Task<List<UniverseCharacterRecord>> LoadAllCharactersAsync(
         UniverseDefinition universe,
+        long? gameId,
         CancellationToken cancellationToken)
     {
         var charactersSql =
@@ -518,7 +521,8 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
 
         while (await charactersReader.ReadAsync(cancellationToken))
         {
-            characters.Add(ReadCharacter(charactersReader, 0, universe.AttributeDefinitions));
+            // Keep the full catalog for restoring previous guesses, but restrict new submissions.
+            characters.Add(ReadCharacter(charactersReader, 0, universe.AttributeDefinitions, gameId));
         }
 
         return characters;
@@ -528,22 +532,22 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         UniverseDefinition universe,
         CancellationToken cancellationToken)
     {
-        var sql =
-            $"""
-            select
-              {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 0)}
-            from {universe.CharacterTableName} as characters
-            order by random()
-            limit 1;
-            """;
-
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = dataSource.CreateCommand(BuildRandomCharacterQuery(universe));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         return await reader.ReadAsync(cancellationToken)
             ? ReadCharacter(reader, 0, universe.AttributeDefinitions)
             : null;
     }
+
+    internal static string BuildRandomCharacterQuery(UniverseDefinition universe) =>
+        $"""
+        select {BuildCharacterSelectProjection("characters", universe.AttributeDefinitions, 0)}
+        from {universe.CharacterTableName} as characters
+        where characters.is_active
+        order by random()
+        limit 1;
+        """;
 
     private async Task<UniverseCharacterRecord?> LoadCharacterByIdAsync(
         UniverseDefinition universe,
@@ -577,6 +581,16 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             return null;
         }
 
+        await using var command = dataSource.CreateCommand(BuildRandomQuoteQuery(universe));
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken)
+            ? ReadQuotePrompt(reader, 0)
+            : null;
+    }
+
+    internal static string BuildRandomQuoteQuery(UniverseDefinition universe)
+    {
         var hasEpisodeTitleTable = !string.IsNullOrWhiteSpace(universe.EpisodeTitleTableName);
         var episodeTitleProjection = hasEpisodeTitleTable
             ? "episode_titles.title"
@@ -587,7 +601,7 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
               on episode_titles.id = quotes.episode_title_id
             """
             : string.Empty;
-        var sql =
+        return
             $"""
             select
               quotes.id,
@@ -597,23 +611,12 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
               quotes.episode_number,
               {episodeTitleProjection} as episode_title
             from {universe.QuoteTableName} as quotes
+            join {universe.CharacterTableName} as speakers
+              on speakers.id = quotes.character_id and speakers.is_active
             {episodeTitleJoin}
             order by random()
             limit 1;
             """;
-
-        await using var command = dataSource.CreateCommand(sql);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-        return await reader.ReadAsync(cancellationToken)
-            ? new UniverseQuotePromptRecord(
-                reader.GetInt64(0),
-                reader.GetInt64(1),
-                reader.GetString(2),
-                reader.GetInt32(3),
-                reader.GetInt32(4),
-                reader.IsDBNull(5) ? null : reader.GetString(5))
-            : null;
     }
 
     private static string BuildCharacterSelectProjection(
@@ -632,6 +635,8 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
         };
 
         columns.AddRange(attributeDefinitions.Select(definition => $"{qualifiedPrefix}{definition.ColumnName}"));
+        columns.Add($"{qualifiedPrefix}is_active");
+        columns.Add($"{qualifiedPrefix}inactive_after_game_id");
 
         return string.Join($",\n{indent}", columns);
     }
@@ -639,7 +644,8 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
     private static UniverseCharacterRecord ReadCharacter(
         NpgsqlDataReader reader,
         int offset,
-        IReadOnlyList<UniverseAttributeDefinition> attributeDefinitions)
+        IReadOnlyList<UniverseAttributeDefinition> attributeDefinitions,
+        long? gameId = null)
     {
         var attributes = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
 
@@ -662,7 +668,12 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
             reader.GetString(offset + 1),
             reader.GetFieldValue<string[]>(offset + 2),
             reader.IsDBNull(offset + 3) ? null : reader.GetString(offset + 3),
-            attributes);
+            attributes,
+            UniverseCharacterEligibility.CanGuess(
+                reader.GetBoolean(offset + 4 + attributeDefinitions.Count),
+                reader.IsDBNull(offset + 5 + attributeDefinitions.Count)
+                    ? null : reader.GetInt64(offset + 5 + attributeDefinitions.Count),
+                gameId));
     }
 
     private static UniverseQuotePromptRecord? ReadQuotePrompt(

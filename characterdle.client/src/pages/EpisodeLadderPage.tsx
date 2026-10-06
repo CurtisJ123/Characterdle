@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { GameComments } from '../components/game/GameComments';
 import { EpisodeLadderPortrait } from '../components/game/EpisodeLadderPortrait';
 import { PremiumArchiveGateOverlay } from '../components/game/PremiumArchiveGateOverlay';
+import { SiteHelpOverlay } from '../components/layout/SiteHelpOverlay';
 import { DiceIcon } from '../components/ui/DiceIcon';
 import { LoadingOverlay } from '../components/ui/LoadingOverlay';
 import { RouteLink } from '../components/ui/RouteLink';
@@ -179,19 +180,7 @@ export function EpisodeLadderView({ selectedGameId, onNavigate, onOpenGame, onOp
           })}
         </div>
       </header>
-      {helpOpen && <dialog className="glass-card ladder-help-dialog" aria-label="How to play Episode Ladder" onCancel={() => setHelpOpen(false)}
-        ref={element => { if (element && !element.open) element.showModal(); }}>
-        <button className="secondary-button" type="button" onClick={() => setHelpOpen(false)}>Close</button>
-        <p className="card-kicker">How to play</p><h2>Episode Ladder</h2>
-        <p>Order five events by episode, earliest to latest. Each event comes from a different episode. You have four attempts per difficulty.</p>
-        <ul><li>Drop onto the middle of a card to swap positions. The highlighted card nudges toward your starting position. Drop near a card's top or bottom edge, or between cards, to insert instead; a small gap opens where it will go. Dropping above or below the board moves the event to the first or last available position. Only unlocked events shift.</li>
-          <li>On touch screens, drag using the grip. With a keyboard, focus a card and use Up/Down to swap with the next unlocked card. Press Escape to cancel a drag.</li>
-          <li>Green events are correct and locked. Yellow means one position away. Grey means farther away.</li>
-          <li>Flashbacks follow episode and on-screen order, not story chronology.</li>
-          <li>Start with Easy and work up to Impossible. Impossible uses five consecutive episodes; easier difficulties spread events farther apart. Completed difficulties turn grey.</li>
-          <li>Daily and archive difficulties cannot be replayed after a win or loss. Random games are separate practice rounds.</li>
-          <li>Signed-in players can read and post comments after completing all five difficulties for that day, win or lose.</li></ul>
-      </dialog>}
+      {helpOpen && <SiteHelpOverlay isOpen gameMode="episode_ladder" onClose={() => setHelpOpen(false)} />}
       {ladder.locked && <PremiumArchiveGateOverlay gameLabel="Episode Ladder" onGoHome={() => onNavigate('launcher')}
         {...(isRandom ? { featureLabel: 'Premium random game', headline: 'Subscribe to premium to play random games.',
           message: 'Play unlimited Episode Ladder practice rounds without changing your daily progress.' } : {})}

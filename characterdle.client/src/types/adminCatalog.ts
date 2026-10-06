@@ -10,6 +10,7 @@ export interface AdminCharacter {
   debutSeason: number;
   lastSeason: number;
   alive: boolean;
+  isActive: boolean;
   portraitUrl: string | null;
 }
 export interface AdminQuote {

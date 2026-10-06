@@ -7,6 +7,7 @@ import { EditableCatalogTable } from './EditableCatalogTable';
 const characters: CatalogColumn<AdminCharacter>[] = [
   { key: 'id', label: 'ID', kind: 'readonly', value: r => r.id },
   { key: 'displayName', label: 'Name', kind: 'text', maxLength: 200, value: r => r.displayName, wide: true },
+  { key: 'isActive', label: 'Active', kind: 'boolean', value: r => r.isActive ? 'Yes' : 'No' },
   { key: 'aliases', label: 'Aliases', kind: 'list', value: r => r.aliases.join('\n') || null, wide: true },
   { key: 'gender', label: 'Gender', kind: 'text', maxLength: 100, value: r => r.gender },
   { key: 'species', label: 'Species', kind: 'text', maxLength: 100, value: r => r.species },

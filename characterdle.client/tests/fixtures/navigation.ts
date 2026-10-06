@@ -4,6 +4,7 @@ export { RouteLink } from '../../src/components/ui/RouteLink';
 export { GameAction } from '../../src/components/game/GameAction';
 export { PreviousGamesGrid } from '../../src/components/history/PreviousGamesGrid';
 export { LeaderboardTable } from '../../src/components/leaderboard/LeaderboardTable';
+export { LeaderboardHero } from '../../src/components/leaderboard/LeaderboardHero';
 export { LeaderboardPage } from '../../src/pages/LeaderboardPage';
 export { EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView } from '../../src/components/leaderboard/EpisodeLadderLeaderboard';
 export { GameResultPanel } from '../../src/components/game/GameResultPanel';

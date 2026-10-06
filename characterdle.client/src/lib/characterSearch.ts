@@ -50,6 +50,7 @@ export function getOrderedCharacterPrefixMatches(
   const lastNameMatches: UniverseCharacter[] = [];
 
   for (const character of characters) {
+    if (character.canGuess === false) continue;
     if (displayNameStartsWith(character, normalizedQuery)) {
       nameMatches.push(character);
       continue;
@@ -72,6 +73,7 @@ export function resolveCharacterSearch(
   query: string,
   characters: UniverseCharacter[],
 ): CharacterSearchMatchResult {
+  characters = characters.filter(character => character.canGuess !== false);
   const normalizedQuery = normalizeSearchValue(query);
 
   if (!normalizedQuery) {

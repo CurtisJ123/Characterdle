@@ -5,7 +5,7 @@ namespace Characterdle.Server.Features.Admin;
 
 public sealed class AdminCatalogRepository(NpgsqlDataSource dataSource) : IAdminCatalogRepository
 {
-    internal const string CharacterColumns = "id, xmin::text, display_name, aliases, gender, species, house, occupation, debut_season, last_season, alive, portrait_url";
+    internal const string CharacterColumns = "id, xmin::text, display_name, aliases, gender, species, house, occupation, debut_season, last_season, alive, portrait_url, is_active";
     internal const string QuoteColumns = "id, xmin::text, character_id, quote_text, season_number, episode_number, episode_title_id";
 
     public async Task<IReadOnlyList<AdminCharacter>> CharactersAsync(CancellationToken ct)
@@ -46,7 +46,8 @@ public sealed class AdminCatalogRepository(NpgsqlDataSource dataSource) : IAdmin
         await using var cmd = dataSource.CreateCommand($"""
             update public."GOTCharacters" set display_name = @name, aliases = @aliases, gender = @gender,
               species = @species, house = @house, occupation = @occupation, debut_season = @debut,
-              last_season = @last, alive = @alive, portrait_url = @portrait
+              last_season = @last, alive = @alive, portrait_url = @portrait,
+              is_active = coalesce(@isActive, is_active)
             where id = @id and xmin::text = @version
             returning {CharacterColumns}
             """);
@@ -68,6 +69,7 @@ public sealed class AdminCatalogRepository(NpgsqlDataSource dataSource) : IAdmin
         cmd.Parameters.AddWithValue("debut", r.DebutSeason);
         cmd.Parameters.AddWithValue("last", r.LastSeason);
         cmd.Parameters.AddWithValue("alive", r.Alive);
+        cmd.Parameters.AddWithValue("isActive", NpgsqlDbType.Boolean, (object?)r.IsActive ?? DBNull.Value);
         cmd.Parameters.AddWithValue("portrait", NpgsqlDbType.Text, (object?)r.PortraitUrl ?? DBNull.Value);
     }
 
@@ -122,7 +124,7 @@ public sealed class AdminCatalogRepository(NpgsqlDataSource dataSource) : IAdmin
 
     internal static AdminCharacter Character(NpgsqlDataReader r) => new(r.GetInt64(0), r.GetString(1), r.GetString(2),
         r.GetFieldValue<string[]>(3), r.GetString(4), r.GetString(5), r.GetFieldValue<string[]>(6), r.GetFieldValue<string[]>(7),
-        r.GetInt32(8), r.GetInt32(9), r.GetBoolean(10), r.IsDBNull(11) ? null : r.GetString(11));
+        r.GetInt32(8), r.GetInt32(9), r.GetBoolean(10), r.IsDBNull(11) ? null : r.GetString(11), r.GetBoolean(12));
     internal static AdminQuote Quote(NpgsqlDataReader r) => new(r.GetInt64(0), r.GetString(1), r.GetInt64(2), r.GetString(3),
         r.GetInt32(4), r.GetInt32(5), r.IsDBNull(6) ? null : r.GetInt64(6));
 }

@@ -57,6 +57,9 @@
 .admin-catalog-portrait p, .admin-catalog-create-footer > span { color: var(--admin-muted); font-size: .75rem; }
 .admin-catalog-create-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-top: 20px; }
 .admin-catalog-create-footer > div { display: flex; gap: 8px; margin-left: auto; }
+.admin-page .admin-catalog :is(.admin-catalog-table, .admin-catalog-create) input[type="checkbox"] {
+  width: 20px; height: 20px; min-height: 20px; margin: 10px 0; padding: 0; accent-color: #245a87;
+}
 @media (max-width: 760px) {
   .updates-page.admin-page .admin-sidebar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .admin-catalog-heading { flex-wrap: wrap; }

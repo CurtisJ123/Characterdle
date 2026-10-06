@@ -10,7 +10,7 @@ export function CatalogCreateForm<Row extends { id: number; version: string }>({
 }) {
   const character = path === '/api/admin/got/characters';
   const [draft, setDraft] = useState<CatalogDraft>((): CatalogDraft => character
-    ? { species: 'Human', house: 'Lowborn', debutSeason: '1', lastSeason: '1' }
+    ? { species: 'Human', house: 'Lowborn', debutSeason: '1', lastSeason: '1', isActive: 'true' }
     : { seasonNumber: '1', episodeNumber: '1' });
   const [portrait, setPortrait] = useState<{ file: File; url: string } | null>(null);
   const previewUrl = useRef<string | null>(null);
@@ -78,7 +78,8 @@ export function CatalogCreateForm<Row extends { id: number; version: string }>({
       </div>
     </div>}
     <UpdatesError message={error} />
-    <div className="admin-catalog-create-footer"><span>Available to games immediately after saving.</span><div>
+    <div className="admin-catalog-create-footer"><span>{character && draft.isActive === 'false'
+      ? 'Inactive character' : 'Available to games immediately after saving.'}</span><div>
       <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>Discard</button>
       <button type="submit" className="primary-button" disabled={busy}>{busy ? 'Saving...' : 'Save'}</button>
     </div></div>

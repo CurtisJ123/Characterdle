@@ -127,6 +127,10 @@ public static class LeaderboardEndpoints
 
             return Results.Ok(streak);
         }
+        catch (InactiveCharacterGuessException exception)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["guessedCharacterIds"] = [exception.Message] });
+        }
         catch (GameReplayNotAvailableException exception)
         {
             return Results.Problem(title: exception.Message, statusCode: StatusCodes.Status409Conflict);

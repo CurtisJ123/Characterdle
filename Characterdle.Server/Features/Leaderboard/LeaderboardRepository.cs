@@ -69,6 +69,13 @@ public sealed class LeaderboardRepository(NpgsqlDataSource dataSource) : ILeader
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var validation = UniverseCharacterEligibility.ValidateGuesses(universe, gameId, guessedCharacterIds))
+        {
+            validation.Connection = connection;
+            validation.Transaction = transaction;
+            if (await validation.ExecuteScalarAsync(cancellationToken) is not true)
+                throw new InactiveCharacterGuessException();
+        }
         await using var command = new NpgsqlCommand(BuildUpsertQuery(), connection, transaction);
         command.Parameters.AddWithValue("userId", userId);
         command.Parameters.AddWithValue("universeId", universe.Id);

@@ -46,3 +46,24 @@ test('blank or unmatched input retains existing no-match validation rather than 
   }
   assert.equal(getSuggestedCharacterGuess('EDD', []), 'EDD');
 });
+
+test('inactive characters cannot be suggested or submitted by name, alias, or surname', () => {
+  const inactive = { ...character(345, 'Little Sam', ['Sammy']), canGuess: false };
+  const catalog = [...characters, inactive];
+  for (const query of ['Little Sam', 'Little', 'Sammy', 'Sam']) {
+    assert.deepEqual(getOrderedCharacterPrefixMatches(catalog, query), []);
+    assert.equal(resolveCharacterSearch(query, catalog).reason, 'not_found');
+  }
+  assert.equal(catalog.find(c => c.id === 345), inactive); // Still available to render saved guesses.
+});
+
+test('historically eligible inactive characters are searchable like every other character', () => {
+  const historical = { ...character(345, 'Little Sam', ['Sammy']), canGuess: true };
+  assert.equal(getOrderedCharacterPrefixMatches([historical], 'Sam')[0].id, 345);
+  assert.equal(resolveCharacterSearch('Sammy', [historical]).character?.id, 345);
+});
+
+test('an inactive exact alias cannot shadow a selectable character', () => {
+  const catalog = [{ ...character(345, 'Little Sam', ['Jon']), canGuess: false }, ...characters];
+  assert.equal(resolveCharacterSearch('Jon', catalog).character?.id, 3);
+});

@@ -69,6 +69,42 @@ test('failed requests can retry instead of poisoning the cache', async t => {
   assert.equal(fetch.mock.callCount(), 2);
 });
 
+test('repeated identity cleanup preserves both new-account requests and retires old-account data', async t => {
+  const response = deferred();
+  const fetch = t.mock.method(globalThis, 'fetch', async () => {
+    await response.promise;
+    return Response.json(data());
+  });
+  const oldOrdinary = api.getLeaderboard('got', 'old-token', 'old-account');
+  const oldLadder = api.getEpisodeLadderLeaderboard('got', 'old-token', 'old-account');
+  api.clearLeaderboardIdentityCache('user:old-account');
+  const ordinary = api.getLeaderboard('got', 'new-token', 'new-account');
+  // The second hook must not cancel the first hook's authenticated request.
+  api.clearLeaderboardIdentityCache('user:old-account');
+  const ladder = api.getEpisodeLadderLeaderboard('got', 'new-token', 'new-account');
+  api.clearLeaderboardIdentityCache('user:old-account');
+
+  assert.deepEqual(fetch.mock.calls.map(call => call.arguments[1].signal.aborted), [true, true, false, false]);
+  response.resolve();
+  await Promise.all([oldOrdinary, oldLadder, ordinary, ladder]);
+  assert.equal(api.leaderboardResource.peek(api.leaderboardCacheKey('got', 'old-token', 'old-account')), api.leaderboardResource.empty);
+  assert.equal(api.getEpisodeLadderLeaderboardSnapshot('got', 'old-account'), api.emptyEpisodeLadderLeaderboard);
+  assert.ok(api.leaderboardResource.peek(api.leaderboardCacheKey('got', 'new-token', 'new-account')).data);
+  assert.ok(api.getEpisodeLadderLeaderboardSnapshot('got', 'new-account').data);
+  assert.equal(await api.getLeaderboard('got', 'new-token', 'new-account'), await ordinary);
+  assert.equal(await api.getEpisodeLadderLeaderboard('got', 'new-token', 'new-account'), await ladder);
+  assert.equal(fetch.mock.callCount(), 4);
+});
+
+test('identity cleanup leaves other guests and accounts cached', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json(data()));
+  const guest = await api.getLeaderboard('got', null, 'guest');
+  const account = await api.getEpisodeLadderLeaderboard('got', 'token', 'account');
+  api.clearLeaderboardIdentityCache('user:another-account');
+  assert.equal(await api.getLeaderboard('got', null, 'guest'), guest);
+  assert.equal(await api.getEpisodeLadderLeaderboard('got', 'token', 'account'), account);
+});
+
 test('invalidation notifies mounted views during loading and ignores late stale responses', async t => {
   const stale = deferred();
   const fetch = t.mock.method(globalThis, 'fetch', () => stale.promise);

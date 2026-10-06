@@ -68,7 +68,7 @@ public sealed class UniverseGameScheduler(
                 if (!result.HasCharacters)
                 {
                     logger.LogWarning(
-                        "Universe {UniverseId} has no characters available, so the game scheduled for {ScheduledDate} could not be generated.",
+                        "Universe {UniverseId} has no active characters available, so the game scheduled for {ScheduledDate} could not be generated.",
                         universe.Id,
                         scheduledDate);
                     break;

@@ -7,4 +7,5 @@ public sealed record UniverseCharacterRecord(
     string DisplayName,
     IReadOnlyList<string> Aliases,
     string? PortraitUrl,
-    IReadOnlyDictionary<string, JsonElement> Attributes);
+    IReadOnlyDictionary<string, JsonElement> Attributes,
+    bool CanGuess = true);
