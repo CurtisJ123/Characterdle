@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import lockClosedIcon from '../../assets/lock-closed-heroicons.svg';
 import { RouteLink } from '../ui/RouteLink';
 import { buildRoutePath } from '../../lib/routePaths';
@@ -14,6 +15,7 @@ interface PreviousGamesGridProps {
   onOpenGame: (gameId: number | null) => void;
   universeTitle: string;
   universeId: string;
+  premiumOffer?: ReactNode;
 }
 
 function formatGameDate(value: string): string {
@@ -33,11 +35,45 @@ export function PreviousGamesGrid({
   onOpenGame,
   universeTitle,
   universeId,
+  premiumOffer,
 }: PreviousGamesGridProps) {
   const modeLabel = gameMode === 'episode_ladder' ? 'Episode Ladder' : gameMode === 'quote' ? 'quote' : 'character';
+  const regionRef = useRef<HTMLDivElement>(null);
+  const offerRef = useRef<HTMLDivElement>(null);
+  const hasPremiumOffer = Boolean(premiumOffer) && games.some((game, index) =>
+    game.id !== currentGameId && accessibleGameCount >= 0 && index - 1 >= accessibleGameCount);
+
+  useLayoutEffect(() => {
+    const region = regionRef.current;
+    const offer = offerRef.current;
+    const grid = region?.querySelector<HTMLElement>('.archive-grid');
+    if (!hasPremiumOffer || !region || !offer || !grid) return;
+
+    // Clear every playable row, including when the free games wrap on mobile.
+    const positionOffer = () => {
+      const regionTop = region.getBoundingClientRect().top;
+      const freeTiles = grid.querySelectorAll<HTMLElement>('.archive-tile:not(.is-locked)');
+      const freeBottom = Math.max(0, ...Array.from(freeTiles, tile => tile.getBoundingClientRect().bottom - regionTop));
+      const gap = Number.parseFloat(getComputedStyle(grid).rowGap) || 0;
+      const top = freeTiles.length ? freeBottom + gap : 0;
+      offer.style.top = `${top}px`;
+      offer.style.visibility = 'visible';
+      region.style.minHeight = `${top + offer.offsetHeight}px`;
+    };
+
+    positionOffer();
+    const observer = new ResizeObserver(positionOffer);
+    observer.observe(grid);
+    observer.observe(offer);
+    return () => {
+      observer.disconnect();
+      region.style.removeProperty('min-height');
+    };
+  }, [hasPremiumOffer, games, accessibleGameCount, currentGameId]);
 
   return (
     <section className="archive-grid-shell glass-card" aria-label={`${universeTitle} ${modeLabel} games`}>
+      <div className="archive-grid-region" ref={regionRef}>
       <div className="archive-grid">
       {games.map((game, index) => {
         const isCurrentGame = game.id === currentGameId;
@@ -91,6 +127,8 @@ export function PreviousGamesGrid({
           </RouteLink>
         );
       })}
+      </div>
+      {hasPremiumOffer && <div className="archive-premium-overlay" ref={offerRef}>{premiumOffer}</div>}
       </div>
     </section>
   );

@@ -3,6 +3,8 @@ export { renderToStaticMarkup } from 'react-dom/server.edge';
 export { RouteLink } from '../../src/components/ui/RouteLink';
 export { GameAction } from '../../src/components/game/GameAction';
 export { PreviousGamesGrid } from '../../src/components/history/PreviousGamesGrid';
+export { ArchivePremiumOffer } from '../../src/components/history/ArchivePremiumOffer';
+export { PremiumPage } from '../../src/pages/PremiumPage';
 export { LeaderboardTable } from '../../src/components/leaderboard/LeaderboardTable';
 export { LeaderboardHero } from '../../src/components/leaderboard/LeaderboardHero';
 export { LeaderboardPage } from '../../src/pages/LeaderboardPage';

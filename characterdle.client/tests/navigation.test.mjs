@@ -8,6 +8,8 @@ let renderToStaticMarkup;
 let RouteLink;
 let GameAction;
 let PreviousGamesGrid;
+let ArchivePremiumOffer;
+let PremiumPage;
 let LeaderboardTable;
 let LeaderboardHero;
 let LeaderboardPage;
@@ -54,7 +56,7 @@ before(async () => {
     build: { ssr: 'tests/fixtures/navigation.ts', write: false },
   });
   const entry = bundle.output.find(item => item.type === 'chunk' && item.isEntry);
-  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, LeaderboardTable, LeaderboardHero, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, ProfilePage, createProfileFixture, withGuestLadderDayProgress, storeLadderProgress }
+  ({ createElement, renderToStaticMarkup, RouteLink, GameAction, PreviousGamesGrid, ArchivePremiumOffer, PremiumPage, LeaderboardTable, LeaderboardHero, LeaderboardPage, EpisodeLadderLeaderboardTable, EpisodeLadderLeaderboardView, GameResultPanel, QuoteGameBoard, SiteHeader, DeferredContent, HistoryEduIcon, EpisodeLadderPortrait, EpisodeLadderView, CharacterGamePage, UniverseContext, LauncherPage, PublicPage, ProfilePage, createProfileFixture, withGuestLadderDayProgress, storeLadderProgress }
     = await import(`data:text/javascript;base64,${Buffer.from(`${entry.code}\n//# sourceURL=navigation-test-bundle.mjs`).toString('base64')}`));
 });
 
@@ -551,6 +553,178 @@ test('premium archive access keeps every tile available as a link', () => {
   });
   assert.equal((html.match(/<a /g) ?? []).length, 3);
   assert.ok(!html.includes('<button'));
+});
+
+for (const days of [undefined, 0, 3, 7]) {
+  test(`header and archive trial copy respects eligible trial days: ${days}`, () => {
+    const header = render(SiteHeader, {
+      currentPage: 'history', currentGameMode: 'character', universeId: 'got', currentStreak: 0,
+      isAuthenticated: true, isPremiumLoading: false, isPremiumActive: false, isPremiumUser: false,
+      monthlyTrialDays: days, onNavigate: noop, onAuthNavigate: noop,
+    });
+    const offer = render(ArchivePremiumOffer, { isAuthenticated: true, monthlyTrialDays: days ?? 0, onUpgrade: noop });
+    assert.match(header, /Go Premium/);
+    assert.match(offer, /Unlock with Premium/);
+    for (const html of [header, offer]) {
+      assert.match(html, /href="\/premium"/);
+      if (days > 0) {
+        assert.match(html, /Start Free Trial/);
+        assert.doesNotMatch(html, /50¢/);
+      } else {
+        assert.match(html, /50¢/);
+        assert.doesNotMatch(html, /Start Free Trial/);
+      }
+    }
+    if (days > 0) assert.match(offer, new RegExp(`<strong>${days} days<`));
+  });
+}
+
+test('guest archive offer advertises the three-day trial without any pricing', () => {
+  for (const monthlyTrialDays of [0, 3, 7]) {
+    const html = render(ArchivePremiumOffer, { isAuthenticated: false, monthlyTrialDays, onUpgrade: noop });
+    assert.match(html, /free 3-day trial/);
+    assert.match(html, /Start Free Trial/);
+    assert.match(html, /href="\/premium"/);
+    assert.doesNotMatch(html, /50\u00a2|\$|a week|billed annually|after trial|check your free trial eligibility/);
+  }
+});
+
+for (const gameMode of ['character', 'quote', 'episode_ladder']) {
+  for (const accessibleGameCount of [0, 1, 3, Number.MAX_SAFE_INTEGER]) {
+    test(`${gameMode} archive renders one separate overlay for locked games (access ${accessibleGameCount})`, () => {
+      const html = render(PreviousGamesGrid, {
+        accessibleGameCount, currentGameId: 50, gameMode,
+        games: [50, 49, 48, 47, 46, 45].map(id => ({ id, dateTime: '2026-09-20T00:00:00Z' })),
+        gameOutcomes: new Map(), onOpenGame: noop, universeTitle: 'Game of Thrones', universeId: 'got',
+        premiumOffer: createElement(ArchivePremiumOffer, { isAuthenticated: true, monthlyTrialDays: 3, onUpgrade: noop }),
+      });
+      const locked = Math.max(0, 5 - accessibleGameCount);
+      assert.equal((html.match(/aria-label="Unlock the archive with Premium"/g) ?? []).length, locked ? 1 : 0);
+      assert.equal((html.match(/class="archive-premium-overlay"/g) ?? []).length, locked ? 1 : 0);
+      assert.equal((html.match(/disabled=""/g) ?? []).length, locked);
+      if (locked) {
+        assert.match(html, /<\/button><\/div><div class="archive-premium-overlay"><aside/);
+      }
+    });
+  }
+}
+
+test('premium page does not promise trials to returning or loading accounts', () => {
+  for (const [trialDays, loading, active] of [[3, false, false], [0, false, false], [3, true, false], [3, false, true]]) {
+    const html = render(PremiumPage, {
+      isAuthenticated: true, isPremiumLoading: loading,
+      premiumAccess: { isPremium: active, monthlyTrialDays: trialDays },
+      onAuthNavigate: noop, onNavigate: noop, onStartCheckout: noop, onOpenBillingPortal: noop,
+    });
+    if (trialDays > 0 && !loading && !active) assert.match(html, /3-day free trial|Start Free Trial/);
+    else assert.doesNotMatch(html, /free trial|Start Free Trial/i);
+  }
+});
+
+test('premium pricing has one action per plan and puts the savings on the yearly plan', () => {
+  const html = render(PremiumPage, {
+    isAuthenticated: true, isPremiumLoading: false,
+    premiumAccess: { isPremium: false, monthlyTrialDays: 3 },
+    onAuthNavigate: noop, onNavigate: noop, onStartCheckout: noop, onOpenBillingPortal: noop,
+  });
+  assert.equal((html.match(/premium-plan-button/g) ?? []).length, 2);
+  assert.equal((html.match(/Start Free Trial/g) ?? []).length, 1);
+  assert.match(html, /class="premium-plan-card is-featured" aria-labelledby="premium-yearly-title"/);
+  assert.match(html, /class="premium-savings-badge">50% OFF/);
+  assert.match(html, /<s>\$47\.88<\/s> compared with 12 monthly payments/);
+  assert.match(html, /Billed \$23\.99 annually/);
+  assert.match(html, /Free for 3 days, then \$3\.99\/month/);
+  assert.equal((html.match(/<details class="premium-details-section">/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /<details[^>]+open|Upgrade the way you play|ad-free/i);
+});
+
+test('premium page never shows trial copy to guests or accounts without eligibility data', () => {
+  for (const [authenticated, access] of [[false, null], [false, { monthlyTrialDays: 3 }], [true, null], [true, {}]]) {
+    const html = render(PremiumPage, {
+      isAuthenticated: authenticated, isPremiumLoading: false, premiumAccess: access,
+      onAuthNavigate: noop, onNavigate: noop, onStartCheckout: noop, onOpenBillingPortal: noop,
+    });
+    assert.doesNotMatch(html, /free trial|free for|days free/i);
+    assert.match(html, /Choose Monthly/);
+    assert.match(html, /Choose Yearly/);
+  }
+});
+
+test('premium page disables purchases during eligibility loading and for active subscribers', () => {
+  for (const [loading, active] of [[true, false], [false, true]]) {
+    const html = render(PremiumPage, {
+      isAuthenticated: true, isPremiumLoading: loading,
+      premiumAccess: { isPremium: active, monthlyTrialDays: 3 },
+      onAuthNavigate: noop, onNavigate: noop, onStartCheckout: noop, onOpenBillingPortal: noop,
+    });
+    assert.equal((html.match(/premium-plan-button"[^>]+disabled=""/g) ?? []).length, 2);
+    assert.doesNotMatch(html, /free trial/i);
+    if (active) assert.match(html, /Manage Billing/);
+    else assert.match(html, /Checking your subscription/);
+  }
+});
+
+test('premium account status keeps scheduled cancellation information', () => {
+  const html = render(PremiumPage, {
+    isAuthenticated: true, isPremiumLoading: false,
+    premiumAccess: { isPremium: true, cancelAt: '2026-12-01T12:00:00Z' },
+    onAuthNavigate: noop, onNavigate: noop, onStartCheckout: noop, onOpenBillingPortal: noop,
+  });
+  assert.match(html, /Premium is active until/);
+  assert.match(html, /Your subscription will not renew/);
+  assert.match(html, /Manage Billing/);
+});
+
+for (const [monthly, yearly, authenticated, loading, active] of [
+  [3, 3, true, false, false], [0, 3, true, false, false], [3, 0, true, false, false],
+  [7, 14, true, false, false], [0, 0, true, false, false],
+  [3, 3, false, false, false], [3, 3, true, true, false], [3, 3, true, false, true],
+]) {
+  test(`Premium trial text is plan-specific (${monthly}/${yearly}, auth ${authenticated}, loading ${loading}, active ${active})`, () => {
+    const html = render(PremiumPage, {
+      isAuthenticated: authenticated, isPremiumLoading: loading,
+      premiumAccess: { isPremium: active, monthlyTrialDays: monthly, yearlyTrialDays: yearly },
+      onAuthNavigate: noop, onNavigate: noop, onStartCheckout: noop, onOpenBillingPortal: noop,
+    });
+    const canOffer = authenticated && !loading && !active;
+    const monthCard = html.match(/<article[^>]+aria-labelledby="premium-monthly-title">(.*?)<\/article>/s)[1];
+    const yearCard = html.match(/<article[^>]+aria-labelledby="premium-yearly-title">(.*?)<\/article>/s)[1];
+    assert.equal(monthCard.includes('Start Free Trial'), canOffer && monthly > 0);
+    assert.equal(yearCard.includes('Start Free Trial'), canOffer && yearly > 0);
+    assert.match(yearCard, /50% OFF/);
+    if (canOffer && yearly > 0) {
+      assert.match(yearCard, new RegExp(`${yearly}-day free trial`));
+      assert.match(yearCard, /then \$23\.99\/year/);
+      assert.match(html, new RegExp(`Yearly includes a ${yearly}-day free trial`));
+    }
+    if (!canOffer || !(monthly > 0 || yearly > 0)) assert.doesNotMatch(html, /free trial|free for/i);
+  });
+}
+
+test('header and archive can offer a yearly-only trial without promising monthly trial pricing', () => {
+  const header = render(SiteHeader, {
+    currentPage: 'history', currentGameMode: 'character', universeId: 'got', currentStreak: 0,
+    isAuthenticated: true, isPremiumLoading: false, isPremiumActive: false, isPremiumUser: false,
+    monthlyTrialDays: 0, yearlyTrialDays: 3, onNavigate: noop, onAuthNavigate: noop,
+  });
+  const offer = render(ArchivePremiumOffer, {
+    isAuthenticated: true, monthlyTrialDays: 0, yearlyTrialDays: 3, onUpgrade: noop,
+  });
+  assert.match(header, /Start Free Trial/);
+  assert.match(offer, /Start Free Trial/);
+  assert.match(offer, /\$23\.99\/year after trial/);
+  assert.doesNotMatch(offer, /\$3\.99|50\u00a2/);
+});
+
+test('header hides the upgrade offer while loading or already Premium', () => {
+  for (const [loading, active] of [[true, false], [false, true]]) {
+    const html = render(SiteHeader, {
+      currentPage: 'history', currentGameMode: 'character', universeId: 'got', currentStreak: 0,
+      isAuthenticated: true, isPremiumLoading: loading, isPremiumActive: active, isPremiumUser: active,
+      monthlyTrialDays: 3, onNavigate: noop, onAuthNavigate: noop,
+    });
+    assert.doesNotMatch(html, /Start Free Trial|Go Premium/);
+  }
 });
 
 for (const status of ['won', 'lost']) {

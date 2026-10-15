@@ -1,4 +1,5 @@
 import { PreviousGamesGrid } from '../components/history/PreviousGamesGrid';
+import { ArchivePremiumOffer } from '../components/history/ArchivePremiumOffer';
 import { RouteLink } from '../components/ui/RouteLink';
 import { buildRoutePath } from '../lib/routePaths';
 import { useAuth } from '../hooks/useAuth';
@@ -141,6 +142,14 @@ export function PreviousGamesPage({
             onOpenGame={(gameId) => onOpenGame(selectedGameMode, gameId)}
             universeTitle={selectedUniverse.title}
             universeId={selectedUniverse.id}
+            premiumOffer={hasFullArchiveAccess ? undefined : (
+              <ArchivePremiumOffer
+                isAuthenticated={Boolean(user)}
+                monthlyTrialDays={premiumAccess?.monthlyTrialDays ?? 0}
+                yearlyTrialDays={premiumAccess?.yearlyTrialDays ?? 0}
+                onUpgrade={() => onNavigate('premium')}
+              />
+            )}
           />
         )}
 

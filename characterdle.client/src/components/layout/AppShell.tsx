@@ -350,6 +350,8 @@ export function AppShell({
         isPremiumActive={isPremiumActive}
         isPremiumUser={showSupporterBadge}
         isPremiumLoading={isPremiumLoading}
+        monthlyTrialDays={premiumAccess?.monthlyTrialDays ?? 0}
+        yearlyTrialDays={premiumAccess?.yearlyTrialDays ?? 0}
         autoUseStreakSavers={premiumAccess?.autoUseStreakSavers ?? true}
         availableStreakSavers={premiumAccess?.availableStreakSavers ?? 0}
         currentPage={currentPage}
