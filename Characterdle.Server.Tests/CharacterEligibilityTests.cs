@@ -28,8 +28,47 @@ public sealed class CharacterEligibilityTests
         Assert.Contains("where characters.is_active", sql);
         Assert.Contains("speakers.id = quotes.character_id and speakers.is_active", sql);
         Assert.Contains("left join chosen_quote on true", sql); // No eligible quotes must not block character games.
-        Assert.Contains("count(games.id)", sql);
-        Assert.Contains("@selectionSeed", sql);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ScheduledCharactersAreRandomWithoutHistoryBasedExclusionsOrWeighting(bool hasQuotes)
+    {
+        var universe = UniverseCatalog.CreateDefault().Universes[0];
+        if (!hasQuotes) universe = universe with { QuoteTableName = null };
+        var sql = SupabaseUniverseGameRepository.BuildScheduledGameQuery(universe);
+        var characterSelection = sql[
+            sql.IndexOf("chosen_character as (", StringComparison.Ordinal)..
+            sql.IndexOf("chosen_quote as (", StringComparison.Ordinal)];
+
+        Assert.Contains($"from {universe.CharacterTableName} as characters", characterSelection);
+        Assert.Contains("where characters.is_active", characterSelection);
+        Assert.Contains("order by random()", characterSelection);
+        Assert.Contains("limit 1", characterSelection);
+        Assert.DoesNotContain(universe.GameTableName, characterSelection);
+        Assert.DoesNotContain("count(", characterSelection);
+        Assert.DoesNotContain("max(", characterSelection);
+        Assert.DoesNotContain("md5(", characterSelection);
+        Assert.DoesNotContain("@selectionSeed", characterSelection);
+        Assert.Contains("where games.datetime = @scheduledAtUtc", sql);
+        Assert.Contains("where not exists (select 1 from existing_game)", sql);
+    }
+
+    [Fact]
+    public void ScheduledQuotesKeepTheirExistingRotationRules()
+    {
+        var sql = SupabaseUniverseGameRepository.BuildScheduledGameQuery(UniverseCatalog.CreateDefault().Universes[0]);
+        var quoteSelection = sql[
+            sql.IndexOf("chosen_quote as (", StringComparison.Ordinal)..
+            sql.IndexOf("inserted_game as (", StringComparison.Ordinal)];
+
+        Assert.Contains("speakers.id = quotes.character_id and speakers.is_active", quoteSelection);
+        Assert.Contains("on games.quote_id = quotes.id", quoteSelection);
+        Assert.Contains("count(games.id)", quoteSelection);
+        Assert.Contains("coalesce(max(games.datetime), '-infinity'::timestamptz)", quoteSelection);
+        Assert.Contains("md5(@selectionSeed || ':quote:'", quoteSelection);
+        Assert.DoesNotContain("random()", quoteSelection);
     }
 
     [Fact]

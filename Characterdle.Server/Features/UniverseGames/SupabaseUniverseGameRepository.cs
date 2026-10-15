@@ -406,14 +406,8 @@ public sealed class SupabaseUniverseGameRepository(NpgsqlDataSource dataSource) 
               select
                 characters.id
               from {universe.CharacterTableName} as characters
-              left join {universe.GameTableName} as games
-                on games.character_id = characters.id
               where characters.is_active
-              group by characters.id, characters.display_name
-              order by
-                count(games.id),
-                coalesce(max(games.datetime), '-infinity'::timestamptz),
-                md5(@selectionSeed || ':' || characters.id::text || ':' || characters.display_name)
+              order by random()
               limit 1
             ),
             chosen_quote as (
