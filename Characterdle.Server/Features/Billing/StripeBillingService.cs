@@ -46,11 +46,29 @@ public sealed class StripeBillingService(IOptions<StripeOptions> options)
         VerifiedSupabaseUser user,
         string stripeCustomerId,
         BillingCheckoutPlan plan,
-        bool includeMonthlyTrial,
+        bool includeTrial,
         CancellationToken cancellationToken)
     {
         EnsureBillingConfigured();
 
+        var checkoutOptions = BuildCheckoutOptions(user, stripeCustomerId, plan, includeTrial);
+        var service = new Stripe.Checkout.SessionService(CreateClient());
+        var session = await service.CreateAsync(checkoutOptions, cancellationToken: cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(session.Url))
+        {
+            throw new InvalidOperationException("Stripe checkout did not return a redirect URL.");
+        }
+
+        return new BillingSessionResponse(session.Url);
+    }
+
+    internal Stripe.Checkout.SessionCreateOptions BuildCheckoutOptions(
+        VerifiedSupabaseUser user,
+        string stripeCustomerId,
+        BillingCheckoutPlan plan,
+        bool includeTrial)
+    {
         var resolvedPriceId = ResolvePriceId(plan);
         var resolvedPlanCode = plan == BillingCheckoutPlan.Yearly ? "yearly" : "monthly";
         var subscriptionMetadata = new Dictionary<string, string>
@@ -81,20 +99,15 @@ public sealed class StripeBillingService(IOptions<StripeOptions> options)
             },
         };
 
-        if (plan == BillingCheckoutPlan.Monthly && includeMonthlyTrial && options.Value.MonthlyTrialDays > 0)
+        var trialDays = plan == BillingCheckoutPlan.Yearly
+            ? options.Value.YearlyTrialDays
+            : options.Value.MonthlyTrialDays;
+        if (includeTrial && trialDays > 0)
         {
-            checkoutOptions.SubscriptionData.TrialPeriodDays = options.Value.MonthlyTrialDays;
+            checkoutOptions.SubscriptionData.TrialPeriodDays = trialDays;
         }
 
-        var service = new Stripe.Checkout.SessionService(CreateClient());
-        var session = await service.CreateAsync(checkoutOptions, cancellationToken: cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(session.Url))
-        {
-            throw new InvalidOperationException("Stripe checkout did not return a redirect URL.");
-        }
-
-        return new BillingSessionResponse(session.Url);
+        return checkoutOptions;
     }
 
     public async Task<BillingSessionResponse> CreatePortalSessionAsync(

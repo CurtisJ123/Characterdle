@@ -19,6 +19,8 @@ export interface PremiumAccess {
   streakSaversPerCycle: number;
   availableStreakSavers: number;
   autoUseStreakSavers: boolean;
+  monthlyTrialDays?: number;
+  yearlyTrialDays?: number;
 }
 
 export interface PremiumState {

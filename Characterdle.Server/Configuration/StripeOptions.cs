@@ -14,6 +14,8 @@ public sealed class StripeOptions
 
     public int MonthlyTrialDays { get; set; }
 
+    public int YearlyTrialDays { get; set; }
+
     public string SuccessUrl { get; set; } = string.Empty;
 
     public string CancelUrl { get; set; } = string.Empty;

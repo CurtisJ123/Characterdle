@@ -484,6 +484,20 @@
   .mobile-header-menu .mobile-premium-link {
     color: var(--primary);
   }
+
+  .mobile-premium-link .premium-cta-copy {
+    gap: 4px;
+  }
+
+  .mobile-premium-link .premium-cta-copy > span {
+    font-size: 0.72rem;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  .mobile-premium-link .premium-cta-price {
+    font-size: inherit;
+  }
 }
 
 @media (max-width: 420px) {

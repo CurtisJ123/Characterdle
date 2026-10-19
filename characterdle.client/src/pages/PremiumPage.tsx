@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
+import calendarIcon from '../assets/calendar-days-heroicons.svg';
+import { DiceIcon } from '../components/ui/DiceIcon';
 import { PremiumCrownIcon } from '../components/ui/PremiumCrownIcon';
 import type { AuthMode, NavigateToPage } from '../types/routes';
 import type { BillingCheckoutPlan } from '../types/billing';
 import type { PremiumAccess } from '../types/premium';
+import './PremiumPage.css';
 
 interface PremiumPageProps {
   isAuthenticated: boolean;
@@ -14,56 +17,34 @@ interface PremiumPageProps {
   premiumAccess: PremiumAccess | null;
 }
 
-interface PremiumFeature {
-  detail: string;
-  title: string;
-}
-
-const livePremiumFeatures: PremiumFeature[] = [
-  {
-    title: 'Ad-free play',
-    detail: 'Remove the ad layer while you are logged in with Premium so the game board stays front and center.',
-  },
-  {
-    title: 'Full archive access',
-    detail: 'Open the entire archive instead of being limited to only the three most recent previous games.',
-  },
-  {
-    title: 'Random practice games',
-    detail: 'Spin up unlimited random character and quote rounds pulled directly from the live database without touching daily stats, streaks, archives, or leaderboards.',
-  },
-  {
-    title: 'Streak protection',
-    detail: 'Receive one streak saver each billing cycle and choose whether it should be used automatically to preserve your daily streak.',
-  },
-  {
-    title: 'Supporter styling',
-    detail: 'Show your premium supporter treatment across your profile, avatar presentation, and leaderboard presence.',
-  },
+const premiumFeatures = [
+  { title: 'Full archive access', detail: 'Every past Character, Quote, and Episode Ladder game.' },
+  { title: 'Unlimited practice', detail: 'Random games without affecting daily stats or leaderboards.' },
+  { title: 'Streak protection', detail: 'One streak saver each month, with optional automatic use.' },
+  { title: 'Premium styling', detail: 'Premium styling for your profile and avatar, plus your leaderboard badge.' },
 ];
 
 function formatDate(value: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-  }).format(new Date(value));
+  if (!value) return null;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value));
 }
 
 export function PremiumPage({
   isAuthenticated,
   isPremiumLoading,
   onAuthNavigate,
-  onNavigate,
   onOpenBillingPortal,
   onStartCheckout,
   premiumAccess,
 }: PremiumPageProps) {
   const [actionError, setActionError] = useState<string>();
   const [busyAction, setBusyAction] = useState<'monthly' | 'yearly' | 'portal' | null>(null);
-  const isPremiumActive = premiumAccess?.isPremium === true;
+  const isPremiumActive = isAuthenticated && premiumAccess?.isPremium === true;
+  const trialDays = isAuthenticated && !isPremiumLoading && !isPremiumActive
+    ? premiumAccess?.monthlyTrialDays ?? 0 : 0;
+  const yearlyTrialDays = isAuthenticated && !isPremiumLoading && !isPremiumActive
+    ? premiumAccess?.yearlyTrialDays ?? 0 : 0;
+  const checkoutDisabled = isPremiumLoading || isPremiumActive || busyAction !== null;
   const renewalDate = useMemo(
     () => formatDate(premiumAccess?.currentPeriodEnd ?? null),
     [premiumAccess?.currentPeriodEnd],
@@ -75,18 +56,20 @@ export function PremiumPage({
     ),
     [premiumAccess?.cancelAt, premiumAccess?.cancelAtPeriodEnd, premiumAccess?.currentPeriodEnd],
   );
-  const premiumStatusCopy = isPremiumActive
-    ? scheduledCancellationDate
-      ? `Premium stays active through ${scheduledCancellationDate}, and then it will end unless you renew.`
-      : renewalDate
-        ? `Premium is active. Your current billing period is set through ${renewalDate}.`
-        : 'Premium is active on this account.'
-    : 'Upgrade to unlock the full Characterdle Premium experience on this account.';
+  const premiumStatusCopy = scheduledCancellationDate
+    ? `Premium is active until ${scheduledCancellationDate}. Your subscription will not renew.`
+    : renewalDate
+      ? `Premium is active. Current billing period ends ${renewalDate}.`
+      : 'Premium is active on your account.';
 
   async function handleCheckout(plan: BillingCheckoutPlan) {
+    if (checkoutDisabled) return;
+    if (!isAuthenticated) {
+      onAuthNavigate('signup');
+      return;
+    }
     setActionError(undefined);
     setBusyAction(plan);
-
     try {
       await onStartCheckout(plan);
     } catch (error) {
@@ -98,7 +81,6 @@ export function PremiumPage({
   async function handleOpenPortal() {
     setActionError(undefined);
     setBusyAction('portal');
-
     try {
       await onOpenBillingPortal();
     } catch (error) {
@@ -109,193 +91,117 @@ export function PremiumPage({
 
   return (
     <main className="page premium-page">
-      <section className="glass-card premium-hero">
-        <div className="premium-hero-copy">
-          <span className="pill premium-hero-pill">
-            <PremiumCrownIcon className="premium-hero-pill-icon" />
-            Characterdle Premium
-          </span>
-          <h1>Upgrade the way you play.</h1>
-          <p className="muted-copy">
-            Premium gives you the full archive, ad-free play, random practice games, streak protection,
-            and supporter styling across the site.
-          </p>
-          <p className="premium-status-copy">{premiumStatusCopy}</p>
-          <div className="premium-hero-actions">
-            {isAuthenticated ? (
-              isPremiumActive ? (
-                <button
-                  className="secondary-button premium-hero-button"
-                  type="button"
-                  disabled={busyAction === 'portal'}
-                  onClick={() => { void handleOpenPortal(); }}
-                >
-                  {busyAction === 'portal' ? 'Opening...' : 'Manage Billing'}
-                </button>
-              ) : (
-                <>
-                  <button
-                    className="primary-button premium-hero-button"
-                    type="button"
-                    disabled={busyAction !== null}
-                    onClick={() => { void handleCheckout('monthly'); }}
-                  >
-                    {busyAction === 'monthly' ? 'Redirecting...' : 'Start Monthly Premium'}
-                  </button>
-                  <button
-                    className="secondary-button premium-hero-button"
-                    type="button"
-                    disabled={busyAction !== null}
-                    onClick={() => { void handleCheckout('yearly'); }}
-                  >
-                    {busyAction === 'yearly' ? 'Redirecting...' : 'Choose Yearly Premium'}
-                  </button>
-                </>
-              )
-            ) : (
-              <>
-                <button className="primary-button premium-hero-button" type="button" onClick={() => onAuthNavigate('signup')}>
-                  Create Account
-                </button>
-                <button className="secondary-button premium-hero-button" type="button" onClick={() => onAuthNavigate('login')}>
-                  Log In
-                </button>
-              </>
-            )}
-            <button className="secondary-button premium-hero-button" type="button" onClick={() => onNavigate('launcher')}>
-              Back Home
+      <section className="premium-hero" aria-labelledby="premium-title">
+        <header className="premium-hero-copy">
+          <PremiumCrownIcon className="premium-hero-icon" />
+          <h1 id="premium-title">Characterdle Premium</h1>
+          <ul className="premium-hero-perks" aria-label="Included in both plans">
+            <li><img className="premium-perk-icon" src={calendarIcon} alt="" />Full archive</li>
+            <li><DiceIcon className="premium-perk-icon" />Unlimited practice</li>
+            <li><span className="premium-perk-icon premium-perk-icon--streak" aria-hidden="true" />Streak protection</li>
+          </ul>
+        </header>
+
+        {isPremiumLoading ? (
+          <p className="premium-status-copy" role="status">Checking your subscription...</p>
+        ) : isPremiumActive && (
+          <div className="premium-account-status">
+            <p className="premium-status-copy">{premiumStatusCopy}</p>
+            <button className="secondary-button" type="button" disabled={busyAction !== null}
+              onClick={() => { void handleOpenPortal(); }}>
+              {busyAction === 'portal' ? 'Opening...' : 'Manage Billing'}
             </button>
           </div>
-          {actionError && <p className="error-copy premium-action-error">{actionError}</p>}
-        </div>
+        )}
 
         <div className="premium-pricing-grid" aria-label="Premium pricing">
-          <article className="glass-card premium-plan-card is-featured">
-            <div className="premium-plan-badge-row">
-              <span className="pill">Monthly</span>
-              <span className="premium-plan-note">3-day trial</span>
+          <article className="premium-plan-card" aria-labelledby="premium-monthly-title">
+            <div className="premium-plan-heading">
+              <h2 id="premium-monthly-title">Monthly</h2>
+              <span className="premium-plan-note">{trialDays > 0 ? `${trialDays}-day free trial` : 'Billed monthly'}</span>
             </div>
             <div className="premium-plan-price-block">
-              <strong>$3.99</strong>
-              <span>per month</span>
+              <strong>$3.99</strong><span>/ month</span>
             </div>
-            <p className="muted-copy">
-              Start with the monthly plan to unlock premium right away, including full archive access,
-              random practice games, and streak protection.
+            <p className="premium-plan-billing">
+              {trialDays > 0 ? `Free for ${trialDays} days, then $3.99/month.` : '$3.99 billed monthly. Cancel anytime.'}
             </p>
-            {isAuthenticated ? (
-              isPremiumActive ? (
-                <button className="primary-button premium-plan-button" disabled type="button">
-                  Premium Active
-                </button>
-              ) : (
-                <button
-                  className="primary-button premium-plan-button"
-                  type="button"
-                  disabled={busyAction !== null}
-                  onClick={() => { void handleCheckout('monthly'); }}
-                >
-                  {busyAction === 'monthly' ? 'Redirecting...' : 'Start 3-Day Trial'}
-                </button>
-              )
-            ) : (
-              <button className="primary-button premium-plan-button" type="button" onClick={() => onAuthNavigate('signup')}>
-                Sign Up to Upgrade
-              </button>
-            )}
+            <button className="secondary-button premium-plan-button" type="button" disabled={checkoutDisabled}
+              onClick={() => { void handleCheckout('monthly'); }}>
+              {isPremiumLoading ? 'Checking...' : isPremiumActive ? 'Premium Active' : busyAction === 'monthly'
+                ? 'Redirecting...' : trialDays > 0 ? 'Start Free Trial' : 'Choose Monthly'}
+            </button>
           </article>
 
-          <article className="glass-card premium-plan-card">
-            <div className="premium-plan-badge-row">
-              <span className="pill">Yearly</span>
-              <span className="premium-plan-note">Save 50%</span>
+          <article className="premium-plan-card is-featured" aria-labelledby="premium-yearly-title">
+            <div className="premium-plan-heading">
+              <h2 id="premium-yearly-title">Yearly</h2>
+              <strong className="premium-savings-badge">50% OFF</strong>
             </div>
             <div className="premium-plan-price-block">
-              <strong>$23.99</strong>
-              <span>per year</span>
+              <strong>$23.99</strong><span>/ year</span>
             </div>
-            <p className="muted-copy">
-              Best for daily players who want the full archive, supporter perks, and the best long-term rate.
+            <p className="premium-plan-billing premium-yearly-comparison">
+              <s>$47.88</s> compared with 12 monthly payments.
             </p>
-            {isAuthenticated ? (
-              isPremiumActive ? (
-                <button className="secondary-button premium-plan-button" disabled type="button">
-                  Premium Active
-                </button>
-              ) : (
-                <button
-                  className="secondary-button premium-plan-button"
-                  type="button"
-                  disabled={busyAction !== null}
-                  onClick={() => { void handleCheckout('yearly'); }}
-                >
-                  {busyAction === 'yearly' ? 'Redirecting...' : 'Go Yearly'}
-                </button>
-              )
-            ) : (
-              <button className="secondary-button premium-plan-button" type="button" onClick={() => onAuthNavigate('login')}>
-                Log In to Upgrade
-              </button>
-            )}
+            <p className="premium-yearly-rate">{yearlyTrialDays > 0
+              ? <><strong>{yearlyTrialDays}-day free trial</strong>, then $23.99/year.</>
+              : <>Under <strong>50&cent;</strong> a week. Billed $23.99 annually.</>}
+            </p>
+            <button className="primary-button premium-plan-button" type="button" disabled={checkoutDisabled}
+              onClick={() => { void handleCheckout('yearly'); }}>
+              {isPremiumLoading ? 'Checking...' : isPremiumActive ? 'Premium Active'
+                : busyAction === 'yearly' ? 'Redirecting...' : yearlyTrialDays > 0 ? 'Start Free Trial' : 'Choose Yearly'}
+            </button>
           </article>
+        </div>
+
+        {actionError && <p className="error-copy premium-action-error" role="alert">{actionError}</p>}
+        <div className="premium-checkout-note">
+          <p>Both plans include all Premium features. Cancel anytime.</p>
+          <p>Checkout with Stripe.</p>
+          {!isAuthenticated && <p>Already have an account?{' '}
+            <button className="premium-login-link" type="button" onClick={() => onAuthNavigate('login')}>Log in</button>
+          </p>}
         </div>
       </section>
 
-      <section className="glass-card premium-benefit-column" aria-label="Premium benefits">
-        <div className="premium-section-heading">
-          <p className="card-kicker">Available now</p>
-          <h2>What Premium unlocks</h2>
-        </div>
-        <div className="premium-benefit-list">
-          {livePremiumFeatures.map((feature) => (
-            <article key={feature.title} className="premium-benefit-item">
-              <div className="premium-benefit-topline">
+      <section className="premium-details" aria-label="More about Premium">
+        <details className="premium-details-section">
+          <summary>What&apos;s included</summary>
+          <div className="premium-detail-grid">
+            {premiumFeatures.map(feature => (
+              <article key={feature.title}>
                 <h3>{feature.title}</h3>
-                <span className="pill premium-benefit-pill is-live">Live</span>
-              </div>
-              <p className="muted-copy">{feature.detail}</p>
+                <p>{feature.detail}</p>
+              </article>
+            ))}
+          </div>
+        </details>
+        <details className="premium-details-section">
+          <summary>Billing &amp; cancellation</summary>
+          <div className="premium-detail-grid">
+            <article>
+              <h3>Billing</h3>
+              <p>{trialDays > 0
+                ? `Monthly includes a ${trialDays}-day free trial, then renews at $3.99/month.`
+                : 'Monthly renews at $3.99/month.'}
+                {' '}{yearlyTrialDays > 0
+                  ? `Yearly includes a ${yearlyTrialDays}-day free trial, then renews at $23.99/year.`
+                  : 'Yearly is billed at $23.99/year.'}
+                {' '}Both plans renew automatically until canceled.</p>
             </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="glass-card premium-details-panel">
-        <div className="premium-section-heading">
-          <p className="card-kicker">Subscription details</p>
-          <h2>Simple pricing, flexible management</h2>
-        </div>
-        <div className="premium-detail-grid">
-          <article>
-            <h3>Billing</h3>
-            <p className="muted-copy">
-              Monthly Premium starts at $3.99 with a 3-day trial. Yearly Premium is $23.99 and is the lowest effective weekly cost.
-            </p>
-          </article>
-          <article>
-            <h3>Cancellation</h3>
-            <p className="muted-copy">
-              Billing is managed through Stripe, so you can return to the billing portal anytime to review, cancel, or update payment details.
-            </p>
-          </article>
-          <article>
-            <h3>Account access</h3>
-            <p className="muted-copy">
-              Premium follows your account, not the browser, so your supporter perks and archive access stay with you anywhere you log in.
-            </p>
-          </article>
-          <article>
-            <h3>Status</h3>
-            <p className="muted-copy">
-              {isPremiumLoading
-                ? 'Checking your current premium access now.'
-                : isPremiumActive
-                  ? 'Your account is currently recognized as Premium.'
-                  : 'Your account is currently on the free tier.'}
-            </p>
-          </article>
-        </div>
+            <article>
+              <h3>Cancellation</h3>
+              <p>Cancel or update your payment details through Manage Billing. Your access lasts until the end of your current period.</p>
+            </article>
+            <article>
+              <h3>Your account</h3>
+              <p>Premium works wherever you sign in to your Characterdle account.</p>
+            </article>
+          </div>
+        </details>
       </section>
     </main>
   );
 }
-import './PremiumPage.css';

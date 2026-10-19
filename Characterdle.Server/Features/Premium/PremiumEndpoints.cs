@@ -1,5 +1,8 @@
+using Characterdle.Server.Configuration;
+using Characterdle.Server.Features.Billing;
 using Characterdle.Server.Features.Leaderboard;
 using Characterdle.Server.Infrastructure.Auth;
+using Microsoft.Extensions.Options;
 
 namespace Characterdle.Server.Features.Premium;
 
@@ -19,13 +22,18 @@ public static class PremiumEndpoints
     }
 
     private static async Task<IResult> GetPremiumStateAsync(
+        HttpResponse response,
         IHostEnvironment hostEnvironment,
         ICurrentSupabaseUserAccessor currentUserAccessor,
         ILeaderboardRepository leaderboardRepository,
         IPremiumRepository premiumRepository,
+        IBillingRepository billingRepository,
+        IOptions<StripeOptions> stripeOptions,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
+        response.Headers.CacheControl = "no-store";
+        response.Headers.Vary = "Authorization";
         try
         {
             var user = await currentUserAccessor.GetCurrentUserAsync(cancellationToken);
@@ -37,6 +45,18 @@ public static class PremiumEndpoints
 
             await leaderboardRepository.EnsurePlayerProfileAsync(user, cancellationToken);
             var premiumState = await premiumRepository.GetPremiumStateAsync(user.UserId, cancellationToken);
+            var monthlyTrialDays = Math.Max(0, stripeOptions.Value.MonthlyTrialDays);
+            var yearlyTrialDays = Math.Max(0, stripeOptions.Value.YearlyTrialDays);
+            var isTrialEligible = !premiumState.Access.IsPremium && (monthlyTrialDays > 0 || yearlyTrialDays > 0)
+                && !await billingRepository.HasStartedPremiumAsync(user.UserId, cancellationToken);
+            premiumState = premiumState with
+            {
+                Access = premiumState.Access with
+                {
+                    MonthlyTrialDays = isTrialEligible ? monthlyTrialDays : 0,
+                    YearlyTrialDays = isTrialEligible ? yearlyTrialDays : 0,
+                }
+            };
             return Results.Ok(premiumState);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)

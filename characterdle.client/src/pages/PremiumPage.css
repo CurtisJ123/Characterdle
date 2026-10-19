@@ -1,238 +1,268 @@
 .premium-page {
+  max-width: 960px;
   display: grid;
-  gap: 24px;
-}
-
-.premium-hero,
-.premium-benefit-column,
-.premium-details-panel {
-  border-radius: var(--radius-panel);
-  padding: clamp(22px, 4vw, 34px);
+  align-content: start;
+  gap: 32px;
+  letter-spacing: 0;
 }
 
 .premium-hero {
   display: grid;
-  gap: 22px;
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--primary) 18%, transparent), transparent 30%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-container) 94%, transparent),
-      color-mix(in srgb, var(--surface-container-lowest) 98%, transparent)
-    );
-}
-
-.premium-hero-copy h1,
-.premium-section-heading h2,
-.premium-benefit-item h3,
-.premium-details-panel h3 {
-  margin: 0;
-  color: var(--on-surface);
-  font-family: var(--heading-font);
+  gap: 24px;
 }
 
 .premium-hero-copy {
   display: grid;
-  gap: 16px;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.premium-hero-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--primary);
 }
 
 .premium-hero-copy h1 {
-  font-size: clamp(2.6rem, 6vw, 5rem);
-  line-height: 0.94;
-}
-
-.premium-hero-pill {
-  gap: 8px;
-  align-items: center;
-}
-
-.premium-hero-pill-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.premium-status-copy {
   margin: 0;
-  color: color-mix(in srgb, var(--on-surface) 78%, transparent);
-  font-weight: 800;
-  line-height: 1.6;
+  color: var(--on-surface);
+  font-family: var(--heading-font);
+  font-size: 2.75rem;
+  line-height: 1.1;
 }
 
-.premium-hero-actions {
+.premium-hero-perks {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-}
-
-.premium-hero-button {
-  min-width: 210px;
   justify-content: center;
+  gap: 12px 24px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
 }
 
-.premium-action-error {
-  margin: 0;
+.premium-hero-perks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.premium-pricing-grid,
-.premium-benefits-grid,
-.premium-detail-grid {
+.premium-perk-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.premium-perk-icon--streak {
+  background: var(--primary);
+  mask: url('../assets/fire-heroicons.svg') center / contain no-repeat;
+}
+
+.premium-pricing-grid {
   display: grid;
-  gap: 18px;
-}
-
-.premium-pricing-grid,
-.premium-benefits-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.premium-plan-card,
-.premium-benefit-column {
-  display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .premium-plan-card {
-  border-radius: var(--radius-panel);
-  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: 8px;
+  background: var(--surface-container-lowest);
 }
 
 .premium-plan-card.is-featured {
-  border-color: color-mix(in srgb, var(--primary) 34%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--white) 6%, transparent),
-    0 16px 36px color-mix(in srgb, var(--primary) 14%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent),
+    0 8px 24px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
-.premium-plan-badge-row,
-.premium-benefit-topline {
+.premium-plan-heading {
+  min-height: 36px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
+}
+
+.premium-plan-heading h2 {
+  margin: 0;
+  font-family: var(--heading-font);
+  font-size: 1.6rem;
+  color: var(--on-surface);
 }
 
 .premium-plan-note {
-  color: var(--primary);
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.premium-savings-badge {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: var(--surface-base);
+  font-family: var(--body-font);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .premium-plan-price-block {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--body-font);
+  font-variant-numeric: tabular-nums;
 }
 
 .premium-plan-price-block strong {
   color: var(--on-surface);
   font-family: var(--body-font);
-  font-size: clamp(3.2rem, 8vw, 5.2rem);
-  font-variant-numeric: tabular-nums;
-  line-height: 0.88;
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .premium-plan-price-block span {
-  color: var(--outline);
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  font-size: 0.95rem;
 }
 
-.premium-plan-button {
-  width: 100%;
-  justify-content: center;
-}
-
-.premium-section-heading {
-  display: grid;
-  gap: 10px;
-}
-
-.premium-section-heading h2 {
-  font-size: clamp(2rem, 4vw, 3.1rem);
-  line-height: 0.96;
-}
-
-.premium-benefit-list {
-  display: grid;
-  gap: 14px;
-}
-
-.premium-benefit-item {
-  display: grid;
-  gap: 10px;
-  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
-  border-radius: var(--radius-soft);
-  padding: 18px;
-  background: color-mix(in srgb, var(--surface-container-lowest) 64%, transparent);
-}
-
-.premium-benefit-item h3 {
-  font-size: 1.3rem;
-}
-
-.premium-benefit-item p {
+.premium-plan-billing,
+.premium-yearly-rate {
   margin: 0;
+  color: var(--on-surface-variant);
+  font-family: var(--body-font);
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
-.premium-benefit-pill {
-  font-size: 0.58rem;
+.premium-yearly-comparison s {
+  white-space: nowrap;
 }
 
-.premium-benefit-pill.is-live {
-  --accent: var(--status-success);
+.premium-yearly-rate strong {
+  color: var(--primary);
 }
 
-.premium-benefit-pill.is-soon {
-  --accent: var(--primary);
+.premium-page .premium-plan-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: auto;
+  letter-spacing: 0;
 }
 
-.premium-details-panel {
+.premium-plan-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.premium-checkout-note {
   display: grid;
-  gap: 18px;
+  gap: 6px;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.premium-checkout-note p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.premium-login-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.premium-status-copy,
+.premium-action-error {
+  margin: 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.premium-account-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 20px;
+  padding-block: 16px;
+  border-block: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.premium-details-section {
+  border-top: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.premium-details-section:last-child {
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.premium-details-section summary {
+  padding: 20px 0;
+  color: var(--on-surface);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.premium-details-section summary::marker {
+  color: var(--primary);
 }
 
 .premium-detail-grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-bottom: 24px;
 }
 
-.premium-detail-grid article {
-  display: grid;
-  gap: 8px;
-  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
-  border-radius: var(--radius-soft);
-  padding: 18px;
-  background: color-mix(in srgb, var(--surface-container-lowest) 64%, transparent);
+.premium-detail-grid h3 {
+  margin: 0 0 6px;
+  color: var(--on-surface);
+  font-size: 0.95rem;
 }
 
 .premium-detail-grid p {
   margin: 0;
-}
-
-@media (max-width: 900px) {
-  .premium-pricing-grid,
-  .premium-benefits-grid,
-  .premium-detail-grid {
-    grid-template-columns: 1fr;
-  }
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 @media (max-width: 640px) {
-  .premium-hero-actions {
-    display: grid;
+  .premium-hero-copy h1 {
+    font-size: 2.2rem;
   }
 
-  .premium-hero-button {
-    width: 100%;
-    min-width: 0;
+  .premium-pricing-grid,
+  .premium-detail-grid {
+    grid-template-columns: 1fr;
   }
 
-  .premium-plan-badge-row,
-  .premium-benefit-topline {
-    align-items: flex-start;
-    justify-content: flex-start;
+  .premium-plan-card {
+    gap: 16px;
+    padding: 22px;
   }
 }

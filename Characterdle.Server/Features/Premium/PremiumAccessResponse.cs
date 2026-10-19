@@ -20,4 +20,6 @@ public sealed record PremiumAccessResponse(
     bool StreakProtection,
     int StreakSaversPerCycle,
     int AvailableStreakSavers,
-    bool AutoUseStreakSavers);
+    bool AutoUseStreakSavers,
+    int MonthlyTrialDays = 0,
+    int YearlyTrialDays = 0);

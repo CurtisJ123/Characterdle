@@ -26,6 +26,8 @@ interface SiteHeaderProps {
   universeId: string;
   isPremiumActive: boolean;
   isPremiumLoading: boolean;
+  monthlyTrialDays?: number;
+  yearlyTrialDays?: number;
   isPremiumUser: boolean;
   currentStreakSaverSettingEnabled: boolean;
   hasStreakProtection: boolean;
@@ -53,6 +55,8 @@ export function SiteHeader({
   universeId,
   isPremiumActive,
   isPremiumLoading,
+  monthlyTrialDays = 0,
+  yearlyTrialDays = 0,
   isPremiumUser,
   currentStreakSaverSettingEnabled,
   hasStreakProtection,
@@ -80,6 +84,15 @@ export function SiteHeader({
   const activeNav = currentPage === 'game' || currentPage === 'random' ? 'launcher' : currentPage;
   const profileLabel = userDisplayName ?? (isUserLoading ? 'Loading...' : 'Log in');
   const canShowPremiumCta = isAuthenticated && !isPremiumLoading && !isPremiumActive;
+  const premiumCtaCopy = (
+    <span className="premium-cta-copy">
+      <strong>Go Premium</strong>
+      <span>{monthlyTrialDays > 0 || yearlyTrialDays > 0
+        ? 'Start Free Trial'
+        : <>Under <span className="premium-cta-price">50¢</span> a week</>}
+      </span>
+    </span>
+  );
 
   useEffect(() => {
     if (!isProfileMenuOpen && !isStreakMenuOpen && !isMobileMenuOpen) {
@@ -220,7 +233,7 @@ export function SiteHeader({
                     <button type="button" onClick={() => { closeMobileMenu(); handleSettingsOpen(); }}>Settings</button>
                     {isAdmin && <RouteLink href="/admin" onNavigate={() => handleMobileNavigation('admin')}>Admin</RouteLink>}
                     {canShowPremiumCta && <RouteLink className="mobile-premium-link" href="/premium" onNavigate={() => handleMobileNavigation('premium')}>
-                      <PremiumCrownIcon className="premium-cta-icon" /> Go Premium
+                      <PremiumCrownIcon className="premium-cta-icon" />{premiumCtaCopy}
                     </RouteLink>}
                     <button className="logout-button" type="button" onClick={() => { closeMobileMenu(); handleSignOut(); }}>
                       Log out <LogoutIcon />
@@ -263,12 +276,7 @@ export function SiteHeader({
                 onNavigate={() => onNavigate('premium')}
               >
                 <PremiumCrownIcon className="premium-cta-icon" />
-                <span className="premium-cta-copy">
-                  <strong>Go Premium</strong>
-                  <span>
-                    Under <span className="premium-cta-price">50¢</span> a week
-                  </span>
-                </span>
+                {premiumCtaCopy}
               </RouteLink>
             )}
             {isAuthenticated && (

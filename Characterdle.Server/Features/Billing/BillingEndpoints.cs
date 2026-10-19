@@ -72,8 +72,7 @@ public static class BillingEndpoints
                 });
             }
 
-            var includeMonthlyTrial = plan == BillingCheckoutPlan.Monthly
-                && !await billingRepository.HasStartedPremiumAsync(user.UserId, cancellationToken);
+            var includeTrial = !await billingRepository.HasStartedPremiumAsync(user.UserId, cancellationToken);
 
             await leaderboardRepository.EnsurePlayerProfileAsync(user, cancellationToken);
 
@@ -89,7 +88,7 @@ public static class BillingEndpoints
                 user,
                 stripeCustomerId,
                 plan,
-                includeMonthlyTrial,
+                includeTrial,
                 cancellationToken);
             return Results.Ok(session);
         }
